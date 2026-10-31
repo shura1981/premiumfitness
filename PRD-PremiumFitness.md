@@ -38,6 +38,8 @@ PremiumFitness debe permitir:
 
 **Propuesta de lanzamiento:** medir una cohorte piloto durante ocho semanas, mantener seguimiento posterior para completar las ventanas de recompra y vencimiento, y fijar metas comerciales después de conocer la línea base. Los controles de aceptación financiera requieren cero recompensas duplicadas y trazabilidad de todos los movimientos.
 
+**Definición de cohorte:** grupo de usuarios que cumple el mismo evento de inclusión durante un período de medición definido y al que se hace seguimiento desde ese evento. Para activación, la cohorte está formada por entrenadores cuyo registro se completa en el período; para conversión, por clientes cuya vinculación con un entrenador se confirma en el período; y para recompra, por clientes cuya primera compra pagada ocurre en el período. Las ventanas de 7, 30 y 60 días se cuentan individualmente desde el evento de inclusión de cada usuario. El piloto fijará y documentará antes de iniciar sus fechas de inclusión, los roles invitados y el tamaño de cada cohorte.
+
 ## 4. Usuarios y permisos
 
 | Rol | Necesidad principal | Acciones permitidas |
