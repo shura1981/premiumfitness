@@ -1,0 +1,295 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2560" height="2020" viewBox="0 0 2560 2020" role="img" aria-labelledby="title desc">
+<title id="title">PremiumFitness: actores y casos de uso</title>
+<desc id="desc">Flujos de compra de cliente referido y referido de entrenador, y mapa de beneficios del entrenador. Cubre CU-01 a CU-15 de casos-de-uso-y-actores.md, diferenciando casos derivados y reglas pendientes.</desc>
+<defs><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 H 0 V 40" fill="none" stroke="#b9d4df" stroke-width="1" opacity=".55"/></pattern><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 Z" fill="#38566b"/></marker></defs>
+<g font-family="DejaVu Sans, sans-serif">
+<rect x="0" y="0" width="2560" height="2020" rx="0" fill="#edf8fc" stroke="none" stroke-width="2.5"/>
+<rect x="0" y="0" width="2560" height="2020" rx="0" fill="url(#grid)" stroke="none" stroke-width="2.5"/>
+<text x="60" y="77" font-size="49" fill="#172e41" font-weight="800" text-anchor="start">
+<tspan x="60" dy="0">PREMIUMFITNESS</tspan>
+</text>
+<text x="62" y="124" font-size="28" fill="#496578" font-weight="400" text-anchor="start">
+<tspan x="62" dy="0">Actores y casos de uso · Registro, referidos, compras y beneficios</tspan>
+</text>
+<rect x="2120" y="42" width="380" height="75" rx="20" fill="#173e56" stroke="none" stroke-width="2.5"/>
+<text x="2310" y="88" font-size="27" fill="#fff" font-weight="700" text-anchor="middle">
+<tspan x="2310" dy="0">CU-01 → CU-15</tspan>
+</text>
+<rect x="60" y="180" width="1450" height="1500" rx="24" fill="#f8fcfe" stroke="#bdd5e0" stroke-width="2.5"/>
+<rect x="1540" y="180" width="960" height="1500" rx="24" fill="#f8fcfe" stroke="#bdd5e0" stroke-width="2.5"/>
+<text x="90" y="230" font-size="29" fill="#172e41" font-weight="800" text-anchor="start">
+<tspan x="90" dy="0">01  DIAGRAMA DE FLUJO</tspan>
+</text>
+<text x="1570" y="230" font-size="29" fill="#172e41" font-weight="800" text-anchor="start">
+<tspan x="1570" dy="0">02  ACTORES Y BENEFICIOS</tspan>
+</text>
+<rect x="460" y="270" width="650" height="110" rx="18" fill="#fff" stroke="#2f7499" stroke-width="2.5"/>
+<text x="482" y="301" font-size="20" fill="#2f7499" font-weight="700" text-anchor="start">
+<tspan x="482" dy="0">CU-01 · ACT-01 / ENTRENADOR</tspan>
+</text>
+<text x="482" y="337" font-size="27" fill="#172e41" font-weight="700" text-anchor="start">
+<tspan x="482" dy="0">Registrarse como entrenador</tspan>
+</text>
+<text x="482" y="362" font-size="22" fill="#506777" font-weight="400" text-anchor="start">
+<tspan x="482" dy="0">Habilita los dos recorridos de QR</tspan>
+</text>
+<path d="M 785 380 V 402 H 400 V 465" fill="none" stroke="#38566b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<path d="M 785 402 H 1090 V 465" fill="none" stroke="#38566b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<text x="90" y="442" font-size="22" fill="#b96b24" font-weight="700" text-anchor="start">
+<tspan x="90" dy="0">CLIENTE REFERIDO</tspan>
+</text>
+<text x="780" y="442" font-size="22" fill="#2f7499" font-weight="700" text-anchor="start">
+<tspan x="780" dy="0">ENTRENADOR REFERIDO</tspan>
+</text>
+<rect x="90" y="465" width="620" height="105" rx="18" fill="#fff" stroke="#2f7499" stroke-width="2.5"/>
+<text x="112" y="496" font-size="20" fill="#2f7499" font-weight="700" text-anchor="start">
+<tspan x="112" dy="0">CU-02 · ENTRENADOR</tspan>
+</text>
+<text x="112" y="532" font-size="27" fill="#172e41" font-weight="700" text-anchor="start">
+<tspan x="112" dy="0">Compartir QR para clientes</tspan>
+</text>
+<path d="M 400 570 V 610" fill="none" stroke="#38566b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="90" y="610" width="620" height="125" rx="18" fill="#fff" stroke="#cb813b" stroke-width="2.5"/>
+<text x="112" y="641" font-size="20" fill="#cb813b" font-weight="700" text-anchor="start">
+<tspan x="112" dy="0">CU-03 · ACT-02 / CLIENTE</tspan>
+</text>
+<text x="112" y="677" font-size="27" fill="#172e41" font-weight="700" text-anchor="start">
+<tspan x="112" dy="0">Escanear QR y registrarse</tspan>
+</text>
+<text x="112" y="717" font-size="22" fill="#506777" font-weight="400" text-anchor="start">
+<tspan x="112" dy="0">Cookie: ID del entrenador referente</tspan>
+</text>
+<path d="M 400 735 V 780" fill="none" stroke="#38566b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="90" y="780" width="620" height="120" rx="18" fill="#fff" stroke="#cb813b" stroke-width="2.5"/>
+<text x="112" y="811" font-size="20" fill="#cb813b" font-weight="700" text-anchor="start">
+<tspan x="112" dy="0">CU-04 · CLIENTE</tspan>
+</text>
+<text x="112" y="847" font-size="27" fill="#172e41" font-weight="700" text-anchor="start">
+<tspan x="112" dy="0">Comprar con 10% de descuento</tspan>
+</text>
+<text x="112" y="882" font-size="22" fill="#506777" font-weight="400" text-anchor="start">
+<tspan x="112" dy="0">Referencia disponible para atribuir la compra</tspan>
+</text>
+<path d="M 400 900 V 945" fill="none" stroke="#38566b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<path d="M 400 945.0 L 565.0 1030 L 400 1115.0 L 235.0 1030 Z" fill="#fff9e9" stroke="#c58a29" stroke-width="2.5"/>
+<text x="400" y="1022" font-size="24" fill="#172e41" font-weight="700" text-anchor="middle">
+<tspan x="400" dy="0">¿Compra</tspan>
+<tspan x="400" dy="32">aprobada?</tspan>
+</text>
+<text x="575" y="1012" font-size="19" fill="#506777" font-weight="700" text-anchor="start">
+<tspan x="575" dy="0">No</tspan>
+</text>
+<rect x="590" y="1040" width="145" height="85" rx="12" fill="#edf3f7" stroke="#bccdd7" stroke-width="2.5"/>
+<path d="M 565 1030 H 662 V 1040" fill="none" stroke="#38566b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<text x="662" y="1075" font-size="19" fill="#506777" font-weight="400" text-anchor="middle">
+<tspan x="662" dy="0">Sin abonos</tspan>
+<tspan x="662" dy="25">por la compra</tspan>
+</text>
+<path d="M 400 1115 V 1210" fill="none" stroke="#38566b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<text x="417" y="1155" font-size="22" fill="#2f7499" font-weight="700" text-anchor="start">
+<tspan x="417" dy="0">Sí</tspan>
+</text>
+<rect x="90" y="1210" width="620" height="150" rx="18" fill="#fff" stroke="#2f7499" stroke-width="2.5"/>
+<text x="112" y="1241" font-size="20" fill="#2f7499" font-weight="700" text-anchor="start">
+<tspan x="112" dy="0">CU-05 · BENEFICIARIO: ENTRENADOR</tspan>
+</text>
+<text x="112" y="1277" font-size="27" fill="#172e41" font-weight="700" text-anchor="start">
+<tspan x="112" dy="0">Reconocer puntos y comisión</tspan>
+</text>
+<text x="112" y="1342" font-size="22" fill="#506777" font-weight="400" text-anchor="start">
+<tspan x="112" dy="0">5% en puntos + 15% de comisión sin IVA</tspan>
+</text>
+<text x="112" y="1310" font-size="21" fill="#a46612" font-weight="400" text-anchor="start">
+<tspan x="112" dy="0">Bases, redondeo y beneficiario: por confirmar.</tspan>
+</text>
+<rect x="780" y="465" width="620" height="105" rx="18" fill="#fff" stroke="#2f7499" stroke-width="2.5"/>
+<text x="802" y="496" font-size="20" fill="#2f7499" font-weight="700" text-anchor="start">
+<tspan x="802" dy="0">CU-06 · ENTRENADOR A</tspan>
+</text>
+<text x="802" y="532" font-size="27" fill="#172e41" font-weight="700" text-anchor="start">
+<tspan x="802" dy="0">Compartir QR para entrenadores</tspan>
+</text>
+<path d="M 1090 570 V 610" fill="none" stroke="#38566b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="780" y="610" width="620" height="125" rx="18" fill="#fff" stroke="#2f7499" stroke-width="2.5" stroke-dasharray="10 7"/>
+<text x="802" y="641" font-size="20" fill="#2f7499" font-weight="700" text-anchor="start">
+<tspan x="802" dy="0">CU-07 · ENTRENADOR B · DERIVADO</tspan>
+</text>
+<text x="802" y="677" font-size="27" fill="#172e41" font-weight="700" text-anchor="start">
+<tspan x="802" dy="0">Registrarse desde el QR de A</tspan>
+</text>
+<text x="802" y="717" font-size="22" fill="#506777" font-weight="400" text-anchor="start">
+<tspan x="802" dy="0">Utiliza CU-01; conserva la referencia A → B</tspan>
+</text>
+<path d="M 1090 735 V 780" fill="none" stroke="#38566b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="780" y="780" width="620" height="120" rx="18" fill="#fff9e9" stroke="#c58a29" stroke-width="2.5"/>
+<text x="802" y="815" font-size="20" fill="#a46612" font-weight="700" text-anchor="start">
+<tspan x="802" dy="0">CONDICIÓN DE NEGOCIO</tspan>
+</text>
+<text x="802" y="855" font-size="27" fill="#172e41" font-weight="700" text-anchor="start">
+<tspan x="802" dy="0">Venta con clientes en la app</tspan>
+</text>
+<text x="802" y="879" font-size="21" fill="#a46612" font-weight="400" text-anchor="start">
+<tspan x="802" dy="0">Quién vende y qué venta califica: pendientes.</tspan>
+</text>
+<path d="M 1090 900 V 945" fill="none" stroke="#38566b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<path d="M 1090 945.0 L 1240.0 1030 L 1090 1115.0 L 940.0 1030 Z" fill="#fff9e9" stroke="#c58a29" stroke-width="2.5"/>
+<text x="1090" y="1022" font-size="24" fill="#172e41" font-weight="700" text-anchor="middle">
+<tspan x="1090" dy="0">¿Cumple la</tspan>
+<tspan x="1090" dy="32">condición?</tspan>
+</text>
+<path d="M 1240 1030 H 1335 V 1040" fill="none" stroke="#38566b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<text x="1255" y="1012" font-size="19" fill="#506777" font-weight="700" text-anchor="start">
+<tspan x="1255" dy="0">No</tspan>
+</text>
+<rect x="1250" y="1040" width="200" height="85" rx="12" fill="#edf3f7" stroke="#bccdd7" stroke-width="2.5"/>
+<text x="1350" y="1075" font-size="20" fill="#506777" font-weight="400" text-anchor="middle">
+<tspan x="1350" dy="0">Incentivo</tspan>
+<tspan x="1350" dy="25">sin activar</tspan>
+</text>
+<path d="M 1090 1115 V 1210" fill="none" stroke="#38566b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<text x="1107" y="1155" font-size="22" fill="#2f7499" font-weight="700" text-anchor="start">
+<tspan x="1107" dy="0">Sí</tspan>
+</text>
+<rect x="780" y="1210" width="620" height="150" rx="18" fill="#fff" stroke="#c58a29" stroke-width="2.5"/>
+<text x="802" y="1241" font-size="20" fill="#a46612" font-weight="700" text-anchor="start">
+<tspan x="802" dy="0">CU-08 · BENEFICIARIO: ENTRENADOR A</tspan>
+</text>
+<text x="802" y="1277" font-size="27" fill="#172e41" font-weight="700" text-anchor="start">
+<tspan x="802" dy="0">Activar incentivo por referido</tspan>
+</text>
+<text x="802" y="1342" font-size="22" fill="#506777" font-weight="400" text-anchor="start">
+<tspan x="802" dy="0">Monto y condición sujetos a aclaración</tspan>
+</text>
+<text x="802" y="1310" font-size="21" fill="#506777" font-weight="400" text-anchor="start">
+<tspan x="802" dy="0">El registro por sí solo no activa los puntos.</tspan>
+</text>
+<path d="M 400 1360 V 1405 H 745 V 1445" fill="none" stroke="#38566b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<path d="M 1090 1360 V 1405 H 745" fill="none" stroke="#38566b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="200" y="1445" width="1090" height="145" rx="20" fill="#e5f1f8" stroke="#2f7499" stroke-width="2.5"/>
+<text x="745" y="1487" font-size="22" fill="#2f7499" font-weight="700" text-anchor="middle">
+<tspan x="745" dy="0">RECOMPENSAS DEL ENTRENADOR</tspan>
+</text>
+<text x="745" y="1530" font-size="28" fill="#172e41" font-weight="700" text-anchor="middle">
+<tspan x="745" dy="0">Puntos para canjear · Comisión para convertir</tspan>
+</text>
+<text x="745" y="1565" font-size="23" fill="#496578" font-weight="400" text-anchor="middle">
+<tspan x="745" dy="0">Ver gestión y beneficios en el mapa de la derecha →</tspan>
+</text>
+<text x="90" y="1640" font-size="23" fill="#506777" font-weight="400" text-anchor="start">
+<tspan x="90" dy="0">A y B son participaciones del mismo actor; no son roles de permisos distintos.</tspan>
+</text>
+<rect x="1610" y="270" width="820" height="100" rx="20" fill="#246a91" stroke="none" stroke-width="2.5"/>
+<text x="2020" y="312" font-size="30" fill="#fff" font-weight="800" text-anchor="middle">
+<tspan x="2020" dy="0">ACT-01 · ENTRENADOR</tspan>
+</text>
+<text x="2020" y="347" font-size="23" fill="#e2f1fa" font-weight="400" text-anchor="middle">
+<tspan x="2020" dy="0">Referente de clientes · A · B · Comprador</tspan>
+</text>
+<path d="M 2020 370 V 399 H 1585 V 1120" fill="none" stroke="#2f7499" stroke-width="4"/>
+<path d="M 1585 445 H 1640" fill="none" stroke="#38566b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<path d="M 1585 700 H 1640" fill="none" stroke="#38566b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<path d="M 1585 910 H 1640" fill="none" stroke="#38566b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<path d="M 1585 1120 H 1640" fill="none" stroke="#38566b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="1640" y="415" width="800" height="220" rx="18" fill="#edf6fc" stroke="#2f7499" stroke-width="2.5"/>
+<text x="1664" y="453" font-size="23" fill="#2f7499" font-weight="700" text-anchor="start">
+<tspan x="1664" dy="0">GESTIONAR PUNTOS Y COMISIONES</tspan>
+</text>
+<text x="1664" y="500" font-size="25" fill="#172e41" font-weight="700" text-anchor="start">
+<tspan x="1664" dy="0">CU-09  Consultar puntos y movimientos*</tspan>
+</text>
+<text x="1664" y="540" font-size="25" fill="#172e41" font-weight="700" text-anchor="start">
+<tspan x="1664" dy="0">CU-10  Consultar comisiones*</tspan>
+</text>
+<text x="1664" y="580" font-size="24" fill="#172e41" font-weight="700" text-anchor="start">
+<tspan x="1664" dy="0">CU-11  Convertir el total de comisión a puntos</tspan>
+</text>
+<text x="1664" y="614" font-size="21" fill="#a46612" font-weight="400" text-anchor="start">
+<tspan x="1664" dy="0">* Consultas derivadas. Fórmula de conversión pendiente.</tspan>
+</text>
+<rect x="1640" y="670" width="800" height="170" rx="18" fill="#edf6fc" stroke="#2f7499" stroke-width="2.5"/>
+<text x="1664" y="708" font-size="24" fill="#2f7499" font-weight="700" text-anchor="start">
+<tspan x="1664" dy="0">CU-12 · CANJEAR PUNTOS POR PRODUCTOS</tspan>
+</text>
+<text x="1664" y="749" font-size="26" fill="#172e41" font-weight="700" text-anchor="start">
+<tspan x="1664" dy="0">Solo en la app · Sin entrega de efectivo</tspan>
+</text>
+<text x="1664" y="787" font-size="24" fill="#172e41" font-weight="400" text-anchor="start">
+<tspan x="1664" dy="0">Equivalencia: 1 peso = 1 punto.</tspan>
+</text>
+<text x="1664" y="818" font-size="21" fill="#a46612" font-weight="400" text-anchor="start">
+<tspan x="1664" dy="0">Valor de canje y acumulación: pendientes en el documento.</tspan>
+</text>
+<rect x="1640" y="880" width="800" height="150" rx="18" fill="#edf6fc" stroke="#2f7499" stroke-width="2.5"/>
+<text x="1664" y="919" font-size="24" fill="#2f7499" font-weight="700" text-anchor="start">
+<tspan x="1664" dy="0">CU-13 · COMPRAR COMO ENTRENADOR</tspan>
+</text>
+<text x="1664" y="963" font-size="27" fill="#172e41" font-weight="700" text-anchor="start">
+<tspan x="1664" dy="0">25% de descuento en todo el portafolio</tspan>
+</text>
+<text x="1664" y="1004" font-size="22" fill="#a46612" font-weight="400" text-anchor="start">
+<tspan x="1664" dy="0">Compatibilidad con otros beneficios: por definir.</tspan>
+</text>
+<rect x="1640" y="1070" width="800" height="270" rx="18" fill="#fff9e9" stroke="#c58a29" stroke-width="2.5"/>
+<text x="1664" y="1110" font-size="24" fill="#a46612" font-weight="700" text-anchor="start">
+<tspan x="1664" dy="0">APP DE DIETAS · ACCESO CONDICIONADO</tspan>
+</text>
+<text x="1664" y="1154" font-size="25" fill="#172e41" font-weight="700" text-anchor="start">
+<tspan x="1664" dy="0">CU-14  Acceder con suscripción habilitada</tspan>
+</text>
+<path d="M 2035 1175 V 1225" fill="none" stroke="#38566b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<text x="2060" y="1205" font-size="21" fill="#a46612" font-weight="400" text-anchor="start">
+<tspan x="2060" dy="0">Si se determina incumplimiento</tspan>
+</text>
+<text x="1664" y="1263" font-size="25" fill="#172e41" font-weight="700" text-anchor="start">
+<tspan x="1664" dy="0">CU-15  Desactivar acceso a dietas</tspan>
+</text>
+<text x="1664" y="1310" font-size="23" fill="#a46612" font-weight="400" text-anchor="start">
+<tspan x="1664" dy="0">Regla de permanencia y evaluación: pendientes.</tspan>
+</text>
+<rect x="1610" y="1400" width="820" height="100" rx="20" fill="#cb813b" stroke="none" stroke-width="2.5"/>
+<text x="2020" y="1443" font-size="30" fill="#fff" font-weight="800" text-anchor="middle">
+<tspan x="2020" dy="0">ACT-02 · CLIENTE</tspan>
+</text>
+<text x="2020" y="1478" font-size="24" fill="#fff" font-weight="400" text-anchor="middle">
+<tspan x="2020" dy="0">Escanea QR · Se registra · Compra con 10%</tspan>
+</text>
+<path d="M 2020 1500 V 1535" fill="none" stroke="#38566b" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<rect x="1710" y="1535" width="620" height="85" rx="16" fill="#fff3e8" stroke="#cb813b" stroke-width="2.5"/>
+<text x="2020" y="1571" font-size="25" fill="#a45a1a" font-weight="700" text-anchor="middle">
+<tspan x="2020" dy="0">CU-03 → CU-04</tspan>
+</text>
+<text x="2020" y="1601" font-size="22" fill="#172e41" font-weight="400" text-anchor="middle">
+<tspan x="2020" dy="0">Su compra aprobada dispara CU-05.</tspan>
+</text>
+<rect x="60" y="1710" width="2440" height="245" rx="22" fill="#fff" stroke="#bdd5e0" stroke-width="2.5"/>
+<text x="90" y="1757" font-size="23" fill="#172e41" font-weight="800" text-anchor="start">
+<tspan x="90" dy="0">CÓMO LEER EL DIAGRAMA</tspan>
+</text>
+<rect x="90" y="1782" width="34" height="27" rx="6" fill="#edf6fc" stroke="#2f7499" stroke-width="2.5"/>
+<text x="139" y="1804" font-size="23" fill="#172e41" font-weight="400" text-anchor="start">
+<tspan x="139" dy="0">Confirmado</tspan>
+</text>
+<rect x="350" y="1782" width="34" height="27" rx="6" fill="#fff" stroke="#2f7499" stroke-width="2.5" stroke-dasharray="10 7"/>
+<text x="399" y="1804" font-size="23" fill="#172e41" font-weight="400" text-anchor="start">
+<tspan x="399" dy="0">Derivado / propuesto</tspan>
+</text>
+<rect x="770" y="1782" width="34" height="27" rx="6" fill="#fff9e9" stroke="#c58a29" stroke-width="2.5"/>
+<text x="819" y="1804" font-size="23" fill="#172e41" font-weight="400" text-anchor="start">
+<tspan x="819" dy="0">Regla pendiente de precisar</tspan>
+</text>
+<text x="90" y="1860" font-size="23" fill="#506777" font-weight="400" text-anchor="start">
+<tspan x="90" dy="0">Por venta: base del 5%, redondeo,</tspan>
+<tspan x="90" dy="32">base sin IVA y beneficiario del 15%.</tspan>
+</text>
+<text x="910" y="1860" font-size="23" fill="#506777" font-weight="400" text-anchor="start">
+<tspan x="910" dy="0">Por referido: monto, quién vende</tspan>
+<tspan x="910" dy="32">y evento que activa el incentivo.</tspan>
+</text>
+<text x="1720" y="1860" font-size="23" fill="#506777" font-weight="400" text-anchor="start">
+<tspan x="1720" dy="0">Conversión, dietas, cookie, canje</tspan>
+<tspan x="1720" dy="32">y acumulación: ver decisiones pendientes.</tspan>
+</text>
+<text x="60" y="1992" font-size="21" fill="#496578" font-weight="400" text-anchor="start">
+<tspan x="60" dy="0">Fuente representada: docs/casos-de-uso-y-actores.md · Detalle y decisiones: secciones 6–8 · Imagen de referencia conservada.</tspan>
+</text>
+</g></svg>

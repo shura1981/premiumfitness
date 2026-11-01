@@ -14,6 +14,14 @@ Se emplean tres categorías:
 
 Los flujos de error y controles identificados como derivados son recomendaciones de especificación. No implican que exista una implementación actual.
 
+### 1.1. Diagrama de actores y casos de uso
+
+El diagrama resume los 15 casos de uso de este documento: los recorridos de clientes y entrenadores referidos, los actores que participan y la gestión de beneficios. Distingue los casos derivados y las reglas pendientes de precisar. A y B representan participaciones del entrenador, no roles de permisos diferentes.
+
+![Diagrama de flujo y mapa de actores y casos de uso de PremiumFitness](img/actores-y-casos-de-uso.png)
+
+[Abrir imagen en tamaño completo](img/actores-y-casos-de-uso.png) · [Versión vectorial editable (SVG)](img/actores-y-casos-de-uso.svg)
+
 ## 2. Alcance funcional
 
 El alcance confirmado comprende:
