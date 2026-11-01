@@ -36,3 +36,12 @@ Beneficios para entrenadores:
 Nota: El entrenador puede convertir el valor del total de la comisión en puntos (tíene más rentabilidad porque se le da el 50% de lo que tiene en puntos acumulados, osea si tiene 100 mil puntos se le da 50 mil puntos.)
 
 1 peso es un punto. El entrenador solo puede redimir los puntos por productos, no se da dinero en efectivo y solo lo puede hacer a través de la app.
+
+
+si el entrenador no llega al tope de ventas para usar la app de deietas puede redmir los puntos acumulados para poder usar la app de dietas, pero si no llega al tope de ventas y no redime los puntos, se le desactiva la app de dietas.
+
+el entrenador compra por la app tiene el 25%, si el entrenador va a redimir los puntos que tiene acumulado por productos el valor del producto es precio full. 
+Ejemplo:
+Bipro Classic cuesta 249.900, el entrenador tiene 249.900 puntos acumulados, los va a redimir entonces no los redime con el descuento aplicado, los redime con el valor total.
+
+el sistema debe dar reporte del iva de las ventas y de las comisiones generadas por cada entrenador, así como el total de puntos acumulados y redimidos por cada entrenador.
