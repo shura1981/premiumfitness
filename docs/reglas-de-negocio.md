@@ -5,7 +5,7 @@ Reglas de negocio
 - Se saca el iva de cada producto.
 - Se saca el 5% de ese valor calculado.
 
-2. Los puntos tiene fecha de expiración, 6 meses.
+2. Los puntos tiene fecha de expiración, 6 meses por cada acumulacion.
 
 3. El entrenador tiene descuento del 25% si hace compras por la app pero no puede usar pagos mixtos entre puntos y dinero.
 
