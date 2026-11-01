@@ -1,4 +1,14 @@
-Reglas de negocio
+# Reglas de negocio
+
+## Diagrama de flujo
+
+El diagrama resume las 11 reglas de este documento: cálculo y vencimiento de puntos, canje por FIFO, compras del entrenador, incentivo por referido y acceso a dietas. Las referencias «Regla» corresponden a los numerales del listado. El importe de dietas se señala como pendiente de aclarar porque el texto menciona «50,000 mil puntos» y también 49.800 puntos por cuatro Bipro.
+
+![Diagrama de flujo de las reglas de negocio de PremiumFitness](img/reglas-de-negocio.png)
+
+[Abrir imagen en tamaño completo](img/reglas-de-negocio.png) · [Versión vectorial editable (SVG)](img/reglas-de-negocio.svg)
+
+## Detalle de las reglas
 
 1. 1 peso equivale a 1 punto, los puntos que da el 5% de de la compra de un cliente se hace de la siguiente forma:
 
