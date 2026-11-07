@@ -1,6 +1,6 @@
 ---
 name: vitest-typescript
-description: "Skill experta en configurar Vitest en proyectos TypeScript. Usar cuando se pida: configurar Vitest, agregar tests a un proyecto TypeScript, resolver errores de módulos en tests, configurar supertest para integration testing, hacer que los alias funcionen en vitest, configurar tests/tsconfig.json para VS Code, solucionar errores 'módulo no encontrado' en archivos de test, o migrar de Jest a Vitest. Cubre vitest.config.ts, resolución de aliases en tests (2 sistemas: Vitest runtime + VS Code editor), estructura de tests, y supertest. Arquitectura-agnóstica."
+description: "Skill experta en configurar Vitest en proyectos TypeScript. Usar cuando se pida: configurar Vitest, agregar tests a un proyecto TypeScript, resolver errores de módulos en tests, configurar supertest para integration testing, hacer que los alias funcionen en vitest, configurar tests/tsconfig.json para VS Code, solucionar errores 'módulo no encontrado' en archivos de test, o migrar de Jest a Vitest, o quitar los avisos 'baseUrl / moduleResolution=node10 está en desuso' de `tests/tsconfig.json` (TypeScript 6/7). Cubre vitest.config.ts, resolución de aliases en tests (2 sistemas: Vitest runtime + VS Code editor), estructura de tests, y supertest. Arquitectura-agnóstica."
 license: Complete terms in LICENSE.txt
 ---
 
@@ -37,7 +37,7 @@ Si el proyecto **NO usa aliases**, omitir `resolve.alias` y `tests/tsconfig.json
 - Node.js ≥ 18
 - TypeScript ≥ 5.0
 - Proyecto con código fuente en `src/`
-- Si usa aliases: `tsconfig.json` con `baseUrl` y `paths` ya configurados (ver skill `typescript-aliases`)
+- Si usa aliases: `tsconfig.json` con `paths` relativos (`"@x/*": ["./src/x/*"]`), **sin `baseUrl`** (ver skill `typescript-aliases`). Si todavía tiene `baseUrl` o `moduleResolution: "node"`, corre `node <skill>/scripts/fix-tsconfig-deprecations.mjs --write --verify` antes de seguir
 
 ## Paso 0 (OBLIGATORIO): Leer el Proyecto
 
@@ -106,11 +106,11 @@ Para cada entrada en `tsconfig.json` → `paths`:
 
 | tsconfig.json `paths` | vitest.config.ts `resolve.alias` |
 |------------------------|----------------------------------|
-| `"@nombre/*": ["nombre/*"]` | `"@nombre": path.resolve(__dirname, "src/nombre")` |
+| `"@nombre/*": ["./src/nombre/*"]` | `"@nombre": path.resolve(__dirname, "src/nombre")` |
 
 **Diferencias clave:**
 - tsconfig usa `"@nombre/*"` (con `/*`) → vitest usa `"@nombre"` (sin `/*`)
-- tsconfig usa rutas relativas al `baseUrl` → vitest usa `path.resolve(__dirname, ...)` desde la raíz
+- tsconfig usa rutas relativas al propio tsconfig (`./src/...`) → vitest usa `path.resolve(__dirname, ...)` desde la raíz
 
 ## Paso 3: Configurar tests/tsconfig.json (Solo si usa aliases)
 
@@ -126,8 +126,7 @@ Este archivo resuelve los errores "Cannot find module" que muestra VS Code en lo
     "extends": "../tsconfig.json",
     "compilerOptions": {
         "rootDir": "..",
-        "noEmit": true,
-        "baseUrl": "../src"
+        "noEmit": true
     },
     "include": [
         "../src/**/*",
@@ -143,6 +142,7 @@ Este archivo resuelve los errores "Cannot find module" que muestra VS Code en lo
 - `extends` hereda los `paths` del principal → aliases se resuelven automáticamente
 - `noEmit: true` → no genera archivos compilados
 - **Portátil**: no necesita modificación al cambiar aliases — los hereda del padre
+- **Sin `baseUrl` ni `ignoreDeprecations`**: TypeScript 6 (el del editor) marca `baseUrl` como obsoleto y TS 7 lo elimina. Si el padre usa `paths` relativos, el hijo los hereda bien resueltos sin declarar nada
 
 ## Paso 4: Agregar Scripts en package.json
 
@@ -192,6 +192,7 @@ proyecto/
 | Los alias tienen `/*` en vitest.config.ts | Formato incorrecto | Quitar `/*` — Vitest usa `"@nombre"`, NO `"@nombre/*"` |
 | `rootDir` error al agregar tests a `include` | Tests fuera de `rootDir` | Usar `tests/tsconfig.json` separado con `"rootDir": ".."` |
 | Tests pasan pero editor muestra errores | Vitest y VS Code son sistemas distintos | Ambos necesitan configuración independiente |
+| "`baseUrl` está en desuso" / "`moduleResolution=node10` está en desuso" en `tests/tsconfig.json` (TS5101/TS5107; en TS 7: TS5102/TS5108/TS5090) | `baseUrl` en `tests/tsconfig.json` o en el raíz, editor con TS 6+ | `node <skill>/scripts/fix-tsconfig-deprecations.mjs --write --verify`; no lo tapes con `ignoreDeprecations` |
 | Express 5: `TypeError: Cannot set property query` | `req.query` es read-only en Express 5 | Usar `Object.defineProperty` (ver sección abajo) |
 
 ## Nota: Express 5 y req.query Read-Only
