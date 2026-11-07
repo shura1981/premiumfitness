@@ -3,7 +3,7 @@ description: 'Estándares de arquitectura, código y mejores prácticas para el 
 applyTo: '**/*.ts, **/*.js, **/*.json, **/*.html, **/*.css, **/*.scss'
 ---
 
-# PremiumFitness (Antigravity Agent Instructions)
+# PremiumFitness — Estándares de código
 
 ## Priority Guidelines
 
@@ -38,18 +38,24 @@ When generating code for this repository:
 
 ## Organization & Feature Slices
 
-El backend se organiza en Vertical Slices bajo `src/`:
+Todavía no hay código de aplicación. Esta es la estructura objetivo del backend, alineada con los módulos de `docs/fases-de-desarrollo.md` (§2.2), y se valida en la fase de arquitectura. Si al crear el código se decide otra organización, actualiza esta sección.
+
+El backend se organizará en Vertical Slices bajo `src/`:
 
 ```
 src/
 ├── features/
-│   ├── auth/                  # Login, refresh token, registro, logout
-│   ├── trainers/              # Perfil de entrenador, métricas, código QR
-│   ├── clients/               # Registro de clientes, vinculación a entrenador
-│   ├── points/                # Acumulación de puntos, transacciones, saldos, expiración
-│   ├── catalog/               # Productos, categorías, canje por puntos
-│   ├── orders/                # Creación de pedidos de canje, estados
-│   └── payments/              # Pasarelas de pago (Bold, Addi, Sistecrédito, ePayco)
+│   ├── auth/                  # Registro, verificación de contacto, login, refresh token, recuperación, logout
+│   ├── trainers/              # Perfil y área del entrenador
+│   ├── clients/               # Perfil y área del cliente
+│   ├── referrals/             # QR de clientes y de entrenadores, cookie de referente, atribución, relación A → B
+│   ├── catalog/               # Productos, categorías, detalle
+│   ├── orders/                # Carrito, pedidos con descuento (25% entrenador, 10% cliente), seguimiento
+│   ├── payments/              # Pasarelas de pago y persistencia de respuestas (proveedor por definir)
+│   ├── commissions/           # Comisión del 15% sin IVA, saldo, conversión
+│   ├── points/                # Lotes de puntos, estados, vencimiento a 6 meses, consumo FIFO
+│   ├── redemptions/           # Canje de productos con puntos a precio completo
+│   └── reports/               # Reportes por período y entrenador: ventas, IVA, comisiones, puntos
 ├── infrastructure/
 │   ├── database/              # Pool MySQL, migraciones, transacciones
 │   ├── http/                  # Clientes HTTP externos (fetch con timeouts)

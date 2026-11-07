@@ -1,6 +1,6 @@
 ---
 description: 'Cómo documentar requerimientos y su progreso en el directorio specs/. Aplica cada vez que se pida implementar, planificar o modificar una funcionalidad.'
-applyTo: 'specs/**'
+applyTo: '**'
 ---
 
 # Specs y seguimiento de progreso
