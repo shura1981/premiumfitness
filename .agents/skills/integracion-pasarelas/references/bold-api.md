@@ -46,9 +46,11 @@ Bold utiliza el **Botón de Pagos Bold** (`boldPaymentButton.js`) que se abre en
 
 Bold exige concatenar **sin separadores** el identificador de orden, el monto entero en pesos, la divisa (`COP`) y la llave secreta (`BOLD_SECRET_KEY`), aplicando `sha256` en minúsculas hexadecimales:
 
-```php
-$cadena = "{$orderId}{$amount}{$currency}{$secretKey}";
-$integritySignature = hash('sha256', $cadena);
+```typescript
+import crypto from 'node:crypto';
+
+const cadena = `${orderId}${amount}${currency}${secretKey}`;
+const integritySignature = crypto.createHash('sha256').update(cadena, 'utf8').digest('hex');
 ```
 
 > **Regla crítica**: `$orderId` y `$amount` deben ser enteros positivos sin puntos, comas ni decimales (`^[1-9][0-9]*$`). Si el monto lleva decimales o separadores de miles, Bold rechazará la firma de integridad al abrir la pasarela.
@@ -86,21 +88,23 @@ El backend puede devolver solo el hash (`{"status": true, "hash": "..."}`) o el 
 
 Bold calcula la firma HMAC-SHA256 sobre el **cuerpo crudo codificado en Base64** (`base64_encode($rawBody)`), NO directamente sobre el JSON crudo:
 
-```php
-// 1. Leer SIEMPRE el body crudo exacto antes de cualquier transformación
-$rawBody = file_get_contents('php://input'); // o (string) $request->getBody() en PSR-7
+```typescript
+import crypto from 'node:crypto';
 
-// 2. Codificar el body crudo en Base64
-$encodedBody = base64_encode($rawBody);
+// 1. Leer el Buffer crudo exacto de la petición (ej. usando express.raw({ type: 'application/json' }))
+const encodedBody = rawBodyBuffer.toString('base64');
 
-// 3. Calcular HMAC-SHA256 con BOLD_SECRET_KEY
-$expectedSignature = hash_hmac('sha256', $encodedBody, $secretKey);
+// 2. Calcular HMAC-SHA256 con BOLD_SECRET_KEY
+const expectedSignature = crypto.createHmac('sha256', secretKey).update(encodedBody).digest('hex');
 
-// 4. Comparación en tiempo constante
-$receivedSignature = strtolower(trim($signatureHeader));
-if (!hash_equals($expectedSignature, $receivedSignature)) {
-    http_response_code(400);
-    exit;
+// 3. Comparación en tiempo constante
+const receivedSignature = (req.headers['x-bold-signature'] as string || '').toLowerCase().trim();
+const isValid = expectedSignature.length === receivedSignature.length &&
+  crypto.timingSafeEqual(Buffer.from(expectedSignature, 'utf8'), Buffer.from(receivedSignature, 'utf8'));
+
+if (!isValid) {
+  res.status(401).json({ error: 'Firma inválida' });
+  return;
 }
 ```
 
@@ -221,46 +225,33 @@ Para seleccionar la notificación vigente sin falsos positivos:
    - Si alguno tiene `type === 'SALE_APPROVED'`, seleccionar ese (si hay varios, el de mayor `time`).
    - En caso contrario, seleccionar el de mayor `time` global.
 
-```php
-/**
- * @param list<array<string, mixed>> $notifications
- * @return array<string, mixed>|null
- */
-function selectRelevantBoldNotification(array $notifications): ?array
-{
-    $validEvents = ['SALE_APPROVED', 'SALE_REJECTED', 'VOID_APPROVED', 'VOID_REJECTED'];
-    $latestByPaymentId = [];
+```typescript
+function selectRelevantBoldNotification(notifications: any[]): any | null {
+  const validEvents = ['SALE_APPROVED', 'SALE_REJECTED', 'VOID_APPROVED', 'VOID_REJECTED'];
+  const latestByPaymentId = new Map<string, any>();
 
-    foreach ($notifications as $ index => $notification) {
-        $type = (string) ($notification['type'] ?? '');
-        if (!in_array($type, $validEvents, true)) {
-            continue;
-        }
+  for (let i = 0; i < notifications.length; i++) {
+    const notification = notifications[i];
+    const type = notification.type;
+    if (!validEvents.includes(type)) continue;
 
-        $data = is_array($notification['data'] ?? null) ? $notification['data'] : [];
-        $paymentId = trim((string) ($data['payment_id'] ?? ''));
-        $groupKey = $paymentId !== '' ? $paymentId : 'idx_' . $index;
-        $time = (int) ($notification['time'] ?? 0);
+    const paymentId = notification.data?.payment_id?.trim() || `idx_${i}`;
+    const time = Number(notification.time) || 0;
 
-        if (!isset($latestByPaymentId[$groupKey]) || $time >= (int) ($latestByPaymentId[$groupKey]['time'] ?? 0)) {
-            $latestByPaymentId[$groupKey] = $notification;
-        }
+    const existing = latestByPaymentId.get(paymentId);
+    if (!existing || time >= (Number(existing.time) || 0)) {
+      latestByPaymentId.set(paymentId, notification);
     }
+  }
 
-    if ($latestByPaymentId === []) {
-        return null;
-    }
+  if (latestByPaymentId.size === 0) return null;
 
-    $candidates = array_values($latestByPaymentId);
-    $approved = array_values(array_filter(
-        $candidates,
-        static fn(array $n): bool => ($n['type'] ?? '') === 'SALE_APPROVED'
-    ));
+  const candidates = Array.from(latestByPaymentId.values());
+  const approved = candidates.filter((n) => n.type === 'SALE_APPROVED');
+  const pool = approved.length > 0 ? approved : candidates;
 
-    $pool = $approved !== [] ? $approved : $candidates;
-    usort($pool, static fn(array $a, array $b): int => ((int) ($b['time'] ?? 0)) <=> ((int) ($a['time'] ?? 0)));
-
-    return $pool[0] ?? null;
+  pool.sort((a, b) => (Number(b.time) || 0) - (Number(a.time) || 0));
+  return pool[0] || null;
 }
 ```
 

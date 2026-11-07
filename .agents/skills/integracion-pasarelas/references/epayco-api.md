@@ -10,13 +10,13 @@ ePayco es una pasarela de pago colombiana para cobros con tarjeta, PSE y otros m
 Frontend (pagos.nutramerican.com)
         │  Basic Auth (AUTHENTICATION_BASIC)
         ▼
-Microservicio PHP (epayco.nutramerican.com)
+Backend Node.js (Express)
         │  Bearer {token}  (cache 15 min en archivo JSON)
         ▼
 apify.epayco.co
         │  webhook server-to-server (x_* campos)
         ▼
-Endpoint de confirmación (nutramerican.com/api/confirmation.php)
+Endpoint de confirmación (/api/webhooks/epayco)
 ```
 
 ---
@@ -31,14 +31,15 @@ Ver [env-variables.md#epayco](./env-variables.md#epayco).
 
 ### Nivel 1 — Proteger la API interna con Basic Auth
 
-```php
-// Middleware BasicAuth: todas las rutas /api/epayco
-// El cliente envía:
-Authorization: <valor de AUTHENTICATION_BASIC>
-
-// El middleware compara literalmente:
-if ($_SERVER['HTTP_AUTHORIZATION'] !== $_ENV['AUTHENTICATION_BASIC']) {
-    // 401 Unauthorized
+```typescript
+// Middleware Express: protege rutas /api/epayco
+export function basicAuthMiddleware(req: Request, res: Response, next: NextFunction): void {
+  const authHeader = req.headers.authorization;
+  if (authHeader !== process.env.AUTHENTICATION_BASIC) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+  next();
 }
 ```
 
@@ -90,23 +91,16 @@ obtenerTokenEpayco()
 
 ---
 
-## Configuración cURL común
+## Configuración HTTP en Node.js
 
-Todas las peticiones a ePayco comparten esta configuración base:
+Todas las peticiones a ePayco comparten esta configuración base con `fetch`:
 
-```php
-curl_setopt_array($ch, [
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_FOLLOWLOCATION => true,
-    CURLOPT_MAXREDIRS      => 10,
-    CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
-    CURLOPT_CONNECTTIMEOUT => 10,
-    CURLOPT_TIMEOUT        => 30,
-    CURLOPT_HTTPHEADER     => [
-        'Authorization: Bearer ' . $token,
-        'Content-Type: application/json',
-    ],
-]);
+```typescript
+const headers = {
+  Authorization: `Bearer ${token}`,
+  'Content-Type': 'application/json',
+  Accept: 'application/json',
+};
 ```
 
 ---
@@ -287,7 +281,7 @@ Si no se pasa `fecha`, el controller usa `date('Y-m-d')` (hoy).
 ### Link de confirmación generado
 
 ```
-https://www.nutramerican.com/api_MegaplexStar/api/confirmation.php
+https://api.tudominio.com/api/webhooks/epayco
   ?x_ref_payco=...
   &x_transaction_id=...
   &x_amount=...
@@ -301,40 +295,14 @@ https://www.nutramerican.com/api_MegaplexStar/api/confirmation.php
 
 Los parámetros se extraen del objeto `data.log` de la respuesta de `/transaction/detail`.
 
-### Script del cron (producción)
+### Script del cron (Node.js)
 
 ```bash
-# cPanel — ejecutar cada N minutos
-php /home3/crisenri/epayco.nutramerican.com/cronJob/checkPending.php
+# Ejecutar cada N minutos vía cron de Linux / contenedor
+node dist/cron/check-pending.js
 ```
 
-El script hace un `GET` interno a `http://epayco.nutramerican.com/api/epayco/cron-job-pending` con el header `Authorization: {AUTHENTICATION_BASIC}` y guarda la respuesta en `cronJob/log/query-{millis}.json`.
-
----
-
-## Sistema de logging
-
-| Archivo | Contenido | Función |
-|---------|-----------|---------|
-| `logs/errors/{servicio}.log` | Errores: mensaje, fecha, código, response crudo | `saveLogQueryState()` |
-| `logs/responseConfirmation/confirmations.log` | Respuestas del endpoint de confirmación | `saveConfirmationLog()` |
-| `cronJob/log/query-{millis}.json` | Respuesta completa del cron job | `checkPending.php` |
-
-> Usar siempre rutas absolutas con `__DIR__` al escribir logs — las rutas relativas dependen del CWD y rompen el cron job.
-
----
-
-## Sistema de excepciones ePayco
-
-| Excepción | Hereda de | Código HTTP | Cuándo se lanza |
-|-----------|-----------|:-----------:|-----------------|
-| `EpaycoException` | `Exception` | 500 | Base para errores ePayco |
-| `TokenInvalidException` | `EpaycoException` | 401 | Token vencido o credenciales inválidas |
-| `ResponseException` | `EpaycoException` | 500 | Error en respuesta de ePayco o cURL |
-| `ValidationInvalidException` | `Exception` | 400 | Campos requeridos faltantes |
-| `InvalidJsonException` | `Exception` | 400 | JSON de respuesta inválido |
-
-`EpaycoException` expone `getResponseRequest()` con la respuesta cruda de la API.
+El script hace una consulta interna al servicio o endpoint `/api/epayco/cron-job-pending` con el header `Authorization: {AUTHENTICATION_BASIC}` y registra el resultado.
 
 ---
 
@@ -342,10 +310,10 @@ El script hace un `GET` interno a `http://epayco.nutramerican.com/api/epayco/cro
 
 ePayco envía el webhook en dos formatos posibles:
 
-| Formato | Content-Type | Lectura |
-|---------|--------------|---------|
-| Form-encoded (legacy) | `application/x-www-form-urlencoded` | `$_REQUEST['x_campo']` |
-| JSON (nuevo) | `application/json` | `json_decode(file_get_contents('php://input'))` |
+| Formato | Content-Type | Lectura en Express |
+|---------|--------------|-------------------|
+| Form-encoded (legacy) | `application/x-www-form-urlencoded` | `req.body.x_campo` (vía `express.urlencoded()`) |
+| JSON (nuevo) | `application/json` | `req.body.x_campo` (vía `express.json()`) |
 
 ### Campos principales del webhook (`x_*`)
 
@@ -366,20 +334,15 @@ ePayco envía el webhook en dos formatos posibles:
 
 ### Verificación de firma (OBLIGATORIA)
 
-```php
-$expectedSignature = hash('sha256',
-    $p_cust_id_cliente
-    . '^' . $p_key
-    . '^' . $xRefPayco
-    . '^' . $xTransactionId
-    . '^' . $xAmount
-    . '^' . $xCurrencyCode
-    . '^' . $xCodTransactionState
-);
+```typescript
+import crypto from 'node:crypto';
 
-if (!hash_equals($expectedSignature, $xSignature)) {
-    http_response_code(401);
-    exit(json_encode(['error' => 'Firma inválida']));
+const plain = `${pCustIdCliente}^${pKey}^${xRefPayco}^${xTransactionId}^${xAmount}^${xCurrencyCode}^${xCodTransactionState}`;
+const expectedSignature = crypto.createHash('sha256').update(plain, 'utf8').digest('hex');
+
+if (expectedSignature.toLowerCase() !== xSignature.toLowerCase().trim()) {
+  res.status(401).json({ error: 'Firma inválida' });
+  return;
 }
 ```
 
@@ -400,11 +363,10 @@ if (!hash_equals($expectedSignature, $xSignature)) {
 
 ### Responder siempre `200 OK`
 
-```php
+```typescript
 // Siempre responder 200 al webhook, aunque el procesamiento interno falle
 // Un código != 200 provoca reintentos indefinidos de ePayco
-http_response_code(200);
-echo json_encode(['status' => 'ok']);
+res.status(200).json({ status: 'ok' });
 ```
 
 ---

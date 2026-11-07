@@ -3,7 +3,7 @@
   PLANTILLA: Página de respuesta — Addi (BNPL)
   =============================================
   Query param de entrada : ?id_order={id}
-  Endpoint de estado     : GET https://www.nutramerican.com/api_MegaplexStar/api/webservice3.php/state-transaction?id_visita={id}
+  Endpoint de estado     : GET /api/state-transaction?id_visita={id}
   Assets                 : ./assets/ (favicon, sellos de seguridad)
 
   PERSONALIZACIÓN:
@@ -206,7 +206,7 @@
 
       // ── 2. Consultar el estado de la transacción ──
       // El endpoint intermedio normaliza la respuesta al esquema canónico x_*
-      var urlapp = 'https://www.nutramerican.com/api_MegaplexStar/api/webservice3.php/state-transaction'
+      var urlapp = '/api/state-transaction'
                  + '?id_visita=' + id_order;
 
       $.get(urlapp, function (response) {

@@ -1,6 +1,6 @@
 # Integración Frontend de Pasarelas
 
-Esta guía detalla cómo se debe consumir la respuesta de la API intermediaria (Backend PHP) desde una aplicación Frontend (como Angular, React o Vanilla JS) para cada una de las pasarelas.
+Esta guía detalla cómo se debe consumir la respuesta de la API (Backend Node.js / Express) desde una aplicación Frontend (como Angular, React o Vanilla JS) para cada una de las pasarelas.
 
 ## 0. Payload de Solicitud (Frontend -> Backend)
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Audita el contrato HTML ↔ JS ↔ CSS de la galería/lightbox de producto.
-// Agnóstico del backend: el "html" puede ser cualquier plantilla (.html, .twig, .blade.php, .ejs, .vue, .jsx…).
+// Agnóstico del backend: el "html" puede ser cualquier plantilla (.html, .component.html, .ejs, .vue, .jsx…).
 //
 // Uso:
 //   node audit-gallery.mjs --html <plantilla> --js <product-gallery.js> [--css <hoja.css>] [--page <pagina-que-carga-scripts>]

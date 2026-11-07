@@ -102,9 +102,8 @@ const boldTxStatus = getQueryParam("bold-tx-status");
 ### Endpoint de consulta de estado
 
 ```
-GET https://www.nutramerican.com/api_MegaplexStar/api/webservice3.php/state-transaction?id_visita={id_order}
+GET /api/state-transaction?id_visita={id_order}
 ```
-*(O en la API moderna: `GET /api/payment-gateway/state-transaction?id_visita={id_order}`)*
 
 > **Fallback inmediato con `bold-tx-status`**: Si el usuario llega a la página de respuesta milisegundos antes de que Bold entregue el webhook al backend, `state-transaction` puede no tener aún `payment_state_json` o el webhook procesado. En ese caso, la página puede mostrar el estado preliminar según `bold-tx-status` (`approved`, `rejected`, `pending`) o consultar el endpoint de conciliación de Bold.
 
@@ -128,7 +127,7 @@ Idéntico al formato canónico `x_*` usado por Addi y Sistecrédito (`x_id_invoi
 ### Endpoint de consulta de estado
 
 ```
-GET https://www.nutramerican.com/api_MegaplexStar/api/webservice3.php/state-transaction?id_visita={id_order}
+GET /api/state-transaction?id_visita={id_order}
 ```
 
 > Este endpoint intermedio ya normaliza la respuesta al formato canónico `x_*`.
@@ -152,7 +151,7 @@ Si `x_cod_response == 1` se dispara el evento de compra:
 
 ```js
 function eventPurchase(id_invoice) {
-  fetch(`https://nutramerican.com/api_MegaplexStar/api/webservice3.php/products-shoppin?id_visita=${id_invoice}`)
+  fetch(`/api/products-shopping?id_visita=${id_invoice}`)
     .then(r => r.json())
     .then(data => {
       import('./datalayer/push_purchase.min.js?v=2').then(module => {
@@ -194,7 +193,7 @@ Todos los assets (sellos de seguridad, favicon, banner) están incluidos en `ass
 ### Endpoint de consulta de estado
 
 ```
-GET https://www.nutramerican.com/api_MegaplexStar/api/webservice3.php/state-transaction?id_visita={orderId}
+GET /api/state-transaction?id_visita={orderId}
 ```
 
 ### Mapeo de campos → DOM
@@ -232,7 +231,7 @@ Todos los assets están en `assets/` junto a las plantillas — rutas relativas 
 | Aspecto | Addi / Sistecrédito | ePayco |
 |---------|---------------------|--------|
 | Query param | `id_order` / `orderId` | `ref_payco` |
-| Endpoint consulta | API intermediaria (`webservice3.php`) | **Directo a ePayco**: `https://secure.epayco.co/validation/v1/reference/{ref_payco}` |
+| Endpoint consulta | API backend (`/api/state-transaction`) | **Directo a ePayco**: `https://secure.epayco.co/validation/v1/reference/{ref_payco}` |
 | Campos en respuesta | Estructura canónica `x_*` | Estructura nativa ePayco `x_*` anidada en `response.data` |
 | Header banner | — | Imagen `./assets/deportistas.webp` |
 | Footer sellos | 3 sellos + footer azul | Solo badge ePayco + sin footer |
