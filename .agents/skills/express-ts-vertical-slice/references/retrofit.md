@@ -22,7 +22,7 @@ Lee `package.json`, `tsconfig.json`, el árbol de `src/` y `tests/`, y revisa:
 | Área | Qué buscar |
 | ---- | ---------- |
 | Proyecto | ¿TypeScript? ¿Express 4 o 5? ¿`.nvmrc`? |
-| Aliases | `paths` + `baseUrl` en tsconfig; `tsconfig-paths` y `tsc-alias` instalados y en los scripts; imports `../../` en `src/` |
+| Aliases | `paths` relativos en tsconfig (si hay `baseUrl`, `moduleResolution: "node"` o `ignoreDeprecations`, migrarlos: TS 6 los marca y TS 7 los elimina); `tsconfig-paths` y `tsc-alias` instalados y en los scripts; imports `../../` en `src/` |
 | Biome | `biome.json`, `@biomejs/biome`, scripts `check`/`check:fix`; ¿quedan ESLint o Prettier? |
 | Testing | Vitest o Jest; `supertest`; `resolve.alias` en `vitest.config.ts`; `tests/tsconfig.json`; scripts de test que apunten a carpetas inexistentes |
 | REST Client | Archivos `.http`; `.vscode/extensions.json` |
@@ -54,7 +54,7 @@ Presenta al usuario un resumen corto (qué está bien, qué falta, qué propones
 ## 2. Agregar aliases
 
 1. Un alias por carpeta de primer nivel de `src/` que se importe (`@features`, `@shared`; en MVC: `@controllers`, `@models`…).
-2. `tsconfig.json`: `baseUrl`, `paths` e `ignoreDeprecations` (`setup.md` §3).
+2. `tsconfig.json`: `paths` relativos al tsconfig y `module`/`moduleResolution: "node16"`, sin `baseUrl` ni `ignoreDeprecations` (`setup.md` §3). Si el proyecto ya tenía `baseUrl: "./src"`, antepón `./src/` a cada ruta de `paths` y bórralo.
 3. `npm i -D tsconfig-paths tsc-alias`.
 4. Scripts: `-r tsconfig-paths/register` en dev (tsx, ts-node o nodemon) y `tsc && tsc-alias` en build.
 5. Si hay tests: `resolve.alias` en `vitest.config.ts` y `tests/tsconfig.json` (`setup.md` §8).

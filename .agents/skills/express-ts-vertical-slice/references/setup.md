@@ -57,7 +57,7 @@ Versiones de referencia: express 5.2, typescript 5.9, zod 4.3, mysql 2.18 (+ @ty
 {
 	"compilerOptions": {
 		"target": "ES2024",
-		"module": "commonjs",
+		"module": "node16",
 		"lib": ["ES2024"],
 		"outDir": "./dist",
 		"rootDir": "./src",
@@ -69,12 +69,10 @@ Versiones de referencia: express 5.2, typescript 5.9, zod 4.3, mysql 2.18 (+ @ty
 		"declaration": true,
 		"declarationMap": true,
 		"sourceMap": true,
-		"moduleResolution": "node",
-		"ignoreDeprecations": "5.0",
-		"baseUrl": "./src",
+		"moduleResolution": "node16",
 		"paths": {
-			"@shared/*": ["shared/*"],
-			"@features/*": ["features/*"]
+			"@shared/*": ["./src/shared/*"],
+			"@features/*": ["./src/features/*"]
 		}
 	},
 	"include": ["src/**/*"],
@@ -82,8 +80,8 @@ Versiones de referencia: express 5.2, typescript 5.9, zod 4.3, mysql 2.18 (+ @ty
 }
 ```
 
-- `commonjs` + `moduleResolution: node`: es la combinación con la que `tsconfig-paths` y `tsc-alias` funcionan sin fricción. Pasar a ESM obliga a cambiar la estrategia de aliases.
-- `ignoreDeprecations: "5.0"` silencia el aviso de `baseUrl`.
+- `module`/`moduleResolution: "node16"` sin `"type": "module"` en `package.json` emite CommonJS (`require()`), que es lo que piden `@sap/hana-client` y la estrategia de aliases con `tsconfig-paths` + `tsc-alias`. Pasar a ESM obliga a cambiar esa estrategia.
+- **Sin `baseUrl`, sin `moduleResolution: "node"` y sin `ignoreDeprecations`.** TypeScript 6 (el que trae VS Code) marca las dos primeras como obsoletas aunque el proyecto use TS 5.9, `ignoreDeprecations: "5.0"` no lo silencia, y TypeScript 7 las elimina. Los `paths` se escriben relativos al propio tsconfig (`./src/...`); `tsconfig-paths` 4 y `tsc-alias` funcionan así. Verificado en batch-record con TS 5.9, 6 y 7.
 - `rootDir: ./src` + `include: src/**`: los tests no se compilan a `dist/`.
 
 ## 4. Aliases: los 4 lugares
@@ -301,8 +299,6 @@ export default defineConfig({
 // tests/tsconfig.json — aliases y tipos de Vitest para el editor
 {
 	"compilerOptions": {
-		"baseUrl": "../src",
-		"ignoreDeprecations": "5.0",
 		"noEmit": true,
 		"rootDir": "..",
 		"types": ["vitest/globals", "node"]
@@ -496,6 +492,7 @@ npm run dev   # debe arrancar; GET a una ruta protegida sin token → 401
 | Lo mismo, pero en `node dist/server.js` | El build no corre `tsc-alias` | `"build": "tsc && tsc-alias"` |
 | Los tests no encuentran `@features/...` | Falta `resolve.alias` en `vitest.config.ts` | §8 |
 | VS Code subraya los imports en `tests/` | Falta `tests/tsconfig.json` | §8 |
+| VS Code marca `baseUrl` o `moduleResolution=node10` como obsoletos | El editor usa TS 6+ y el tsconfig trae opciones viejas | Quitar `baseUrl`/`ignoreDeprecations`, `paths` con `./src/...`, `node16` (§3) |
 | `The vi variable is undeclared` (Biome) | Faltan los globals de Vitest en Biome | `overrides` en §6 |
 | `Cannot set property query` | Express 5: `req.query` es solo getter | `validate` con `Object.defineProperty` |
 | `[Config] Variables de entorno inválidas` | Falta una variable o no cumple el schema | Completar `.env` según `.env.example` |
