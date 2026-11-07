@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<!--
+  PLANTILLA: Página de respuesta — ePayco
+  ========================================
+  Query param de entrada : ?ref_payco={referencia}
+  Endpoint de estado     : GET https://secure.epayco.co/validation/v1/reference/{ref_payco}
+                           (API PÚBLICA de ePayco — no requiere autenticación)
+  Evento de compra       : NO aplica (ePayco no usa GTM datalayer en esta página)
+  GTM / FB Pixel         : NO incluidos
+  Imágenes               :
+    - Banner cabecera : https://nutramerican.com/img/deportistas.webp
+    - Badge ePayco    : https://369969691f476073508a-60bf0867add971908d4f26a64519c2aa.ssl.cf5.rackcdn.com/btns/epayco/pagos_procesados_por_epayco_260px.png
+
+  DIFERENCIAS CLAVE respecto a Addi / Sistecrédito:
+  - Query param: "ref_payco" (no "id_order" / "orderId")
+  - Endpoint: directo a ePayco, NO pasa por webservice intermedio
+  - Estructura de respuesta: mismos campos x_* pero en response.data de ePayco
+  - Sin GTM, sin FB Pixel, sin eventPurchase
+  - Incluye banner de imagen en el header
+  - Footer simplificado: solo badge ePayco, sin sellos de seguridad propios
+
+  PERSONALIZACIÓN:
+  - Reemplazar la URL del banner de cabecera si se usa otra imagen
+  - El badge de ePayco es estático desde el CDN de ePayco — no cambiar
+-->
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+  <meta http-equiv="x-ua-compatible" content="ie=edge" />
+  <link rel="icon" href="./assets/favicon.ico" type="image/x-icon" />
+
+  <!-- Estilos MDB / Bootstrap 4 -->
+  <link rel="stylesheet" href="https://nutramerican.com/css/mdb.min.css">
+  <script defer src="https://nutramerican.com/js/mdb.min.js"></script>
+
+  <!-- Fuente Lato -->
+  <link rel="stylesheet" href="https://pagos.nutramerican.com/response-addy/fuentes/Lato/stylesheet.css">
+  <!-- Font Awesome 5 -->
+  <link rel="stylesheet" href="https://pagos.nutramerican.com/response-addy/fuentes/fontawesome-free-5.15.3-web/css/all.min.css">
+
+  <title>RESPUESTA DE LA TRANSACCIÓN EPAYCO</title>
+  <meta name="robots" content="noindex, nofollow" />
+
+  <!-- Open Graph -->
+  <meta property="og:locale" content="es_ES" />
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="Respuesta de la transacción — ePayco" />
+  <meta property="og:description" content="Consulta el estado de tu pago con tarjeta o PSE" />
+  <meta property="og:url" content="https://pagos.nutramerican.com/checkout/respuesta.html" />
+  <meta property="og:site_name" content="PAGOS SEGUROS NUTRAMERICAN" />
+  <meta property="og:image" content="https://nutramerican.com/img/deportistas.webp" />
+  <meta property="og:image:width" content="400" />
+  <meta property="og:image:height" content="400" />
+  <meta name="twitter:card" content="summary_large_image" />
+</head>
+
+<body>
+
+  <!-- =====================================================================
+       CABECERA CON BANNER DE IMAGEN
+       (específico de ePayco — Addi/Sistecrédito no tienen header)
+       ===================================================================== -->
+  <header id="main-header" style="margin-top:20px">
+    <div class="container">
+      <div class="row justify-content-center">
+        <div class="col-12 col-md-6">
+          <img class="d-block mx-auto img-fluid"
+            height="300px"
+            style="border-radius: 6px; box-shadow: 2px 0px 10px #c21680;"
+            src="./assets/deportistas.webp"
+            alt="Nutramerican">
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- =====================================================================
+       TABLA DE ESTADO DE LA TRANSACCIÓN
+       ===================================================================== -->
+  <div class="container">
+    <div class="row justify-content-center" style="margin-top:20px">
+      <div class="col-lg-8 col-12">
+        <h4 class="text-center">Respuesta de la Transacción</h4>
+        <hr>
+      </div>
+      <div class="col-lg-8 col-12">
+        <div class="table-responsive">
+          <table class="table table-bordered">
+            <tbody>
+              <tr>
+                <td>Referencia</td>
+                <td id="referencia"></td>
+              </tr>
+              <tr>
+                <td class="bold">Fecha</td>
+                <td id="fecha"></td>
+              </tr>
+              <tr>
+                <td>Respuesta</td>
+                <td id="respuesta"></td>
+              </tr>
+              <tr>
+                <td>Motivo</td>
+                <td id="motivo"></td>
+              </tr>
+              <tr>
+                <td class="bold">Banco</td>
+                <td class="bold" id="banco"></td>
+              </tr>
+              <tr>
+                <td class="bold">Recibo</td>
+                <td id="recibo"></td>
+              </tr>
+              <tr>
+                <td class="bold">Total</td>
+                <td class="bold" id="total"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       BADGE EPAYCO
+       (imagen estática del CDN de ePayco — no cambiar la URL)
+       ===================================================================== -->
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-8 col-12">
+        <img src="https://369969691f476073508a-60bf0867add971908d4f26a64519c2aa.ssl.cf5.rackcdn.com/btns/epayco/pagos_procesados_por_epayco_260px.png"
+          class="img-fluid"
+          alt="Pagos procesados por ePayco">
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       SCRIPTS
+       ===================================================================== -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+  <script>
+    /**
+     * Extrae el valor de un parámetro de la query string.
+     * @param {string} param - Nombre del parámetro.
+     * @returns {string|null}
+     */
+    function getQueryParam(param) {
+      var foundValue = null;
+      location.search.substr(1).split('&').some(function (item) {
+        var kv = item.split('=');
+        if (kv[0] === param) { foundValue = decodeURIComponent(kv[1]); return true; }
+        return false;
+      });
+      return foundValue;
+    }
+
+    $(document).ready(function () {
+      // ── 1. Leer la referencia enviada por ePayco en la URL de respuesta ──
+      // ePayco agrega ?ref_payco=XXXX a la URL configurada como "response" en la sesión
+      var ref_payco = getQueryParam('ref_payco');
+      if (ref_payco === null) {
+        alert('Sin id de orden');
+        return;
+      }
+
+      // ── 2. Consultar el estado directamente en la API pública de ePayco ──
+      // No requiere autenticación. Retorna los campos x_* nativos de ePayco.
+      var urlapp = 'https://secure.epayco.co/validation/v1/reference/' + ref_payco;
+
+      $.get(urlapp, function (response) {
+        if (!response.success) {
+          // No alertar al usuario — puede ser un estado temporal
+          console.warn('ePayco: respuesta no exitosa', response);
+          return;
+        }
+
+        var data = response.data;
+
+        // ── 3. Interpretar código de respuesta ──
+        if (data.x_cod_response == 1) {
+          console.log('transacción aceptada');
+        } else if (data.x_cod_response == 2) {
+          console.log('transacción rechazada');
+        } else if (data.x_cod_response == 3) {
+          console.log('transacción pendiente');
+        } else if (data.x_cod_response == 4) {
+          console.log('transacción fallida');
+        }
+
+        // ── 4. Rellenar la tabla HTML ──
+        $('#referencia').text(data.x_id_invoice);
+        $('#fecha').html(data.x_transaction_date);
+        $('#respuesta').html(data.x_response);
+        $('#motivo').text(data.x_response_reason_text);
+        $('#banco').text(data.x_bank_name);
+        $('#recibo').text(data.x_transaction_id);
+        // x_approval_code existe en la respuesta pero no hay celda en la tabla por defecto.
+        // Para mostrarlo agregar: <tr><td>Autorización</td><td id="autorizacion"></td></tr>
+        // $('#autorizacion').text(data.x_approval_code);
+
+        var formatter = new Intl.NumberFormat('en-US', {
+          style: 'currency', currency: 'USD', minimumFractionDigits: 0
+        });
+        $('#total').text(formatter.format(data.x_amount) + ' ' + data.x_currency_code);
+      });
+    });
+  </script>
+
+</body>
+</html>

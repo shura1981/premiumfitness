@@ -1,0 +1,9 @@
+{
+  "name": "portable-sms-otp-template",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --experimental-transform-types otp.test.ts",
+    "typecheck": "tsc --noEmit"
+  }
+}

@@ -1,0 +1,57 @@
+<!--
+  Galería de producto + lightbox. Marcado agnóstico del backend.
+  Sustituye los {{ ... }} / el bucle por el motor de plantillas que uses
+  (Twig, Blade, EJS, JSX, Vue, Astro…). Cada slide: src, thumb, bigSrc, alt.
+  Requiere Swiper (bundle) cargado ANTES de product-gallery.js.
+-->
+<section class="pg" data-product-gallery aria-label="Galería de producto">
+
+  <!-- Slider principal: abre el lightbox con clic / Enter / Space -->
+  <div class="swiper pg-main" data-gallery-main role="button" tabindex="0"
+       aria-label="Ampliar imágenes de {{ product.name }}">
+    <div class="swiper-wrapper">
+      <!-- repetir por cada slide; la primera con fetchpriority="high", las demás loading="lazy" -->
+      <div class="swiper-slide pg-slide">
+        <img class="pg-main-img" src="{{ slide.src }}"
+             srcset="{{ slide.thumb }} 480w, {{ slide.src }} 1200w"
+             sizes="(min-width: 768px) 45vw, 100vw" width="900" height="900"
+             alt="{{ slide.alt }}" draggable="false" fetchpriority="high">
+      </div>
+    </div>
+    <span class="pg-zoom-hint" aria-hidden="true">Ampliar</span>
+  </div>
+
+  <!-- Miniaturas: renderizar sólo si hay más de una imagen -->
+  <div class="swiper pg-thumbs" data-gallery-thumbs>
+    <div class="swiper-wrapper">
+      <button class="swiper-slide pg-thumb" type="button" aria-label="Mostrar imagen {{ n }} de {{ total }}">
+        <img src="{{ slide.thumb }}" width="96" height="96" loading="lazy" alt="{{ slide.alt }}" draggable="false">
+      </button>
+    </div>
+  </div>
+
+  <!-- Lightbox: <dialog> nativo (focus trap, Esc y ::backdrop gratis) -->
+  <dialog class="pg-modal" data-gallery-modal aria-label="Vista ampliada de las imágenes">
+    <div class="pg-modal-backdrop" data-gallery-close aria-hidden="true"></div>
+
+    <div class="swiper pg-modal-slider" data-gallery-modal-slider>
+      <div class="swiper-wrapper">
+        <div class="swiper-slide pg-modal-slide">
+          <!-- la <img> DEBE ir dentro de .swiper-zoom-container para que funcione el zoom -->
+          <div class="swiper-zoom-container">
+            <div class="pg-loader" aria-hidden="true"><span></span><b>Cargando…</b></div>
+            <img class="pg-modal-img" data-gallery-modal-image
+                 src="{{ slide.bigSrc }}" alt="{{ slide.alt }}" loading="lazy" draggable="false">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button class="pg-close" type="button" data-gallery-close aria-label="Cerrar vista ampliada">✕</button>
+    <!-- flechas y contador: sólo si hay más de una imagen -->
+    <button class="pg-nav pg-nav--prev" type="button" data-gallery-prev aria-label="Imagen anterior">‹</button>
+    <button class="pg-nav pg-nav--next" type="button" data-gallery-next aria-label="Imagen siguiente">›</button>
+    <p class="pg-counter" data-gallery-counter aria-live="polite"></p>
+    <p class="pg-modal-hint">Pellizca o usa la rueda · Doble toque para ampliar</p>
+  </dialog>
+</section>

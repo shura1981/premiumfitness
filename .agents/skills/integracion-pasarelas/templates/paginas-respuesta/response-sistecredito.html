@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<!--
+  PLANTILLA: Página de respuesta — Sistecrédito (Credinet)
+  =========================================================
+  Query param de entrada : ?orderId={id}
+  Endpoint de estado     : GET https://www.nutramerican.com/api_MegaplexStar/api/webservice3.php/state-transaction?id_visita={id}
+  Assets                 : ./assets/ (favicon, sellos de seguridad)
+
+  DIFERENCIA CLAVE con response-addi.html:
+  - Query param: "orderId" en lugar de "id_order"
+
+  PERSONALIZACIÓN:
+  - Reemplazar API_STATE_URL → URL del endpoint de estado
+  - Ajustar título y metas OG según el cliente
+-->
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="user-scalable=no,width=device-width, initial-scale=1, maximum-scale=1">
+  <meta http-equiv="x-ua-compatible" content="ie=edge" />
+  <!-- Favicon -->
+  <link rel="icon" href="./assets/favicon.ico" type="image/x-icon" />
+
+  <!-- Estilos MDB / Bootstrap 4 -->
+  <link rel="stylesheet" href="https://nutramerican.com/css/mdb.min.css">
+  <script defer src="https://nutramerican.com/js/mdb.min.js"></script>
+
+  <!-- Fuente Lato -->
+  <link rel="stylesheet" href="https://pagos.nutramerican.com/response-addy/fuentes/Lato/stylesheet.css">
+  <!-- Font Awesome 5.15.3 -->
+  <link rel="stylesheet" href="https://pagos.nutramerican.com/response-addy/fuentes/fontawesome-free-5.15.3-web/css/all.min.css">
+
+  <title>RESPUESTA DE LA TRANSACCIÓN SISTECRÉDITO</title>
+  <meta name="robots" content="noindex, nofollow" />
+
+  <!-- Open Graph -->
+  <meta property="og:locale" content="es_ES" />
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="Respuesta de la transacción — Nutramerican" />
+  <meta property="og:description" content="Consulta el estado de tu pedido" />
+  <meta property="og:url" content="https://pagos.nutramerican.com/response-sistecredito" />
+  <meta property="og:site_name" content="PAGOS SEGUROS NUTRAMERICAN" />
+  <meta property="og:image" content="https://pagos.nutramerican.com/response-addy/img/productos.jpg" />
+  <meta property="og:image:width" content="400" />
+  <meta property="og:image:height" content="400" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <style>
+    * { font-family: 'Lato', sans-serif; }
+    .img-fluid { max-width: 100%; height: auto; }
+    #respuesta { font-weight: 800; }
+    .unique-color-dark { background: #1d69e4; color: white; }
+  </style>
+</head>
+
+<body>
+
+  <!-- =====================================================================
+       TABLA DE ESTADO DE LA TRANSACCIÓN
+       ===================================================================== -->
+  <div class="container">
+    <div class="row justify-content-center" style="margin-top:40px">
+      <div class="col-lg-8 col-12">
+        <h4 class="text-center">Respuesta de la Transacción</h4>
+        <hr>
+      </div>
+      <div class="col-lg-8 col-12">
+        <div class="table-responsive">
+          <table class="table table-bordered">
+            <tbody>
+              <tr>
+                <td>Referencia</td>
+                <td id="referencia"></td>
+              </tr>
+              <tr>
+                <td class="bold">Fecha</td>
+                <td id="fecha"></td>
+              </tr>
+              <tr>
+                <td>Respuesta</td>
+                <td id="respuesta"></td>
+              </tr>
+              <tr>
+                <td>Motivo</td>
+                <td id="motivo"></td>
+              </tr>
+              <tr>
+                <td class="bold">Banco</td>
+                <td class="bold" id="banco"></td>
+              </tr>
+              <tr>
+                <td class="bold">Recibo</td>
+                <td id="recibo"></td>
+              </tr>
+              <tr>
+                <td class="bold">Total</td>
+                <td class="bold" id="total"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       FOOTER — SELLOS DE SEGURIDAD + INFO
+       ===================================================================== -->
+  <div class="container-fluid">
+    <div class="page-footer font-small unique-color-dark mt-5">
+
+      <!-- Banda de sellos de seguridad (URLs absolutas) -->
+      <div style="background-color: #F2F2F2;">
+        <div class="container">
+          <div class="row py-4 d-flex align-items-center">
+            <div class="col-md-6 col-lg-2 text-center text-md-left mb-4 mb-md-0">
+              <h6 class="mb-0 pl-md-2"
+                style="color: rgb(31, 30, 30); font-weight: 800; font-family: FuturaHb, Source Sans Pro, sans-serif;">
+                PAGOS SEGUROS</h6>
+            </div>
+            <div class="col-md-6 col-lg-10 text-center text-md-right">
+              <!-- Comodo SSL -->
+              <picture>
+                <source alt="Comodo SSL" height="64px" class="mx-md-4 mb-3 mb-md-0"
+                  srcset="./assets/sellos/comodo.webp" type="image/webp">
+                <img alt="Comodo SSL" height="64px" class="mx-md-4 mb-3 mb-md-0"
+                  src="./assets/sellos/comodo.png">
+              </picture>
+              <!-- Intel McAfee -->
+              <picture>
+                <source alt="Intel McAfee" height="64px"
+                  srcset="./assets/sellos/intel-mcafee1.webp" type="image/webp">
+                <img alt="Intel McAfee" height="64px"
+                  src="./assets/sellos/intel-mcafee1.png">
+              </picture>
+              <!-- Cámara Colombiana de CE -->
+              <picture>
+                <source alt="Cámara Colombiana de Comercio Electrónico" height="64px"
+                  class="mx-md-4 mt-3 mt-md-0"
+                  srcset="./assets/sellos/CamaraColombianadeCE.webp" type="image/webp">
+                <img alt="Cámara Colombiana de Comercio Electrónico" height="64px"
+                  class="mx-md-4 mt-3 mt-md-0"
+                  src="./assets/sellos/CamaraColombianadeCE.png">
+              </picture>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Links del footer -->
+      <div class="container text-center text-md-left mt-5">
+        <div class="row mt-3 justify-content-center">
+          <div class="col-12 col-md-4 mb-4 text-center">
+            <h6 class="text-uppercase font-weight-bold text-center"
+              style="font-weight: 800; font-family: FuturaHb, Source Sans Pro, sans-serif;">
+              PROTECCIÓN AL COMPRADOR</h6>
+            <i class="fas fa-shield-alt fa-3x"></i>
+          </div>
+          <div class="col-12 col-md-4 mb-4 text-center">
+            <h6 class="text-uppercase font-weight-bold text-center"
+              style="font-weight: 800; font-family: FuturaHb, Source Sans Pro, sans-serif;">
+              ASESORÍA TELEFÓNICA</h6>
+            <i class="fas fa-headset fa-3x"></i>
+            <span style="font-size: 3em;"> #590</span>
+          </div>
+          <div class="col-12 col-md-4 mb-4 text-center">
+            <h6 class="text-uppercase font-weight-bold text-center"
+              style="font-weight: 800; font-family: FuturaHb, Source Sans Pro, sans-serif;">
+              RASTREA TU PEDIDO</h6>
+            <i class="fas fa-map-marked-alt fa-3x"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-copyright text-center py-3">
+        © 2020 Copyright: <a>nutramerican.com</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       SCRIPTS
+       ===================================================================== -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+  <script>
+    /**
+     * Extrae el valor de un parámetro de la query string.
+     * @param {string} param - Nombre del parámetro.
+     * @returns {string|null}
+     */
+    function getQueryParam(param) {
+      var foundValue = null;
+      location.search.substr(1).split('&').some(function (item) {
+        var kv = item.split('=');
+        if (kv[0] === param) { foundValue = decodeURIComponent(kv[1]); return true; }
+        return false;
+      });
+      return foundValue;
+    }
+
+    $(document).ready(function () {
+      // ── 1. Leer el parámetro enviado por Sistecrédito en la URL de redirección ──
+      // Sistecrédito usa "orderId"; Addi usa "id_order" — diferencia clave entre ambas páginas
+      var id_order = getQueryParam('orderId');
+      if (id_order === null) {
+        alert('Sin id de orden');
+        return;
+      }
+
+      // ── 2. Consultar el estado de la transacción ──
+      var urlapp = 'https://www.nutramerican.com/api_MegaplexStar/api/webservice3.php/state-transaction'
+                 + '?id_visita=' + id_order;
+
+      $.get(urlapp, function (response) {
+        if (!response.success) {
+          alert('Error consultando la información');
+          return;
+        }
+
+        var data = response.data;
+
+        // ── 3. Interpretar código de respuesta ──
+        if (data.x_cod_response == 1) {
+          console.log('transacción aceptada');
+        } else if (data.x_cod_response == 2) {
+          console.log('transacción rechazada');
+        } else if (data.x_cod_response == 3) {
+          console.log('transacción pendiente');
+        } else if (data.x_cod_response == 4) {
+          console.log('transacción fallida');
+        }
+
+        // ── 4. Rellenar la tabla HTML ──
+        $('#referencia').text(data.x_id_invoice);
+        $('#fecha').html(data.x_transaction_date);
+        $('#respuesta').html(data.x_response);
+        $('#motivo').text(data.x_response_reason_text);
+        $('#banco').text(data.x_bank_name);
+        $('#recibo').text(data.x_transaction_id);
+
+        var formatter = new Intl.NumberFormat('en-US', {
+          style: 'currency', currency: 'USD', minimumFractionDigits: 0
+        });
+        $('#total').text(formatter.format(data.x_amount) + ' ' + data.x_currency_code);
+      });
+    });
+
+  </script>
+
+</body>
+</html>
+
+</body>
+</html>

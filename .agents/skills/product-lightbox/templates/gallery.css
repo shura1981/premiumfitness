@@ -1,0 +1,101 @@
+/* Galería de producto + lightbox. Personaliza sólo las variables --pg-*. */
+:root {
+  --pg-radius: 16px;
+  --pg-border: #e5ded6;
+  --pg-surface: #faf6f1;
+  --pg-accent: #c2410c;
+  --pg-overlay: rgb(0 0 0 / .92);
+  --pg-font: system-ui, sans-serif;
+}
+
+.pg { position: relative; min-width: 0; }
+
+/* ---- Slider principal ---- */
+.pg-main {
+  width: 100%; aspect-ratio: 1; overflow: hidden; cursor: zoom-in;
+  border: 1px solid var(--pg-border); border-radius: var(--pg-radius); background: var(--pg-surface);
+}
+.pg-main:focus-visible { outline-offset: 3px; }
+.pg-main .swiper-wrapper { height: 100%; }
+.pg-slide { height: 100%; display: flex; align-items: center; justify-content: center; padding: clamp(1rem, 4vw, 2rem); }
+.pg-main-img { width: 100%; height: 100%; object-fit: contain; user-select: none; pointer-events: none; -webkit-user-drag: none; }
+.pg-zoom-hint {
+  position: absolute; right: .75rem; bottom: .75rem; z-index: 5; padding: .28rem .6rem; border-radius: 999px;
+  color: #fff; background: rgb(23 20 18 / .52); backdrop-filter: blur(8px);
+  font: 700 .62rem var(--pg-font); opacity: .72; pointer-events: none; transition: opacity .2s;
+}
+.pg-main:hover .pg-zoom-hint { opacity: 1; }
+
+/* ---- Miniaturas ---- */
+.pg-thumbs { width: 100%; margin-top: .65rem; padding: 2px; overflow: hidden; }
+.pg-thumbs .swiper-wrapper { justify-content: center; }
+.pg-thumb {
+  width: 72px !important; /* slidesPerView:'auto' + estilos inline de Swiper */
+  height: 72px; flex: 0 0 auto; padding: 6px; overflow: hidden; cursor: pointer;
+  border: 2px solid var(--pg-border); border-radius: 8px; background: var(--pg-surface);
+  opacity: .58; transition: border-color .2s, opacity .2s, transform .2s;
+}
+.pg-thumb:hover { border-color: var(--pg-accent); opacity: .9; transform: translateY(-1px); }
+.pg-thumb.swiper-slide-thumb-active { border-color: var(--pg-accent); opacity: 1; }
+.pg-thumb img { width: 100%; height: 100%; object-fit: contain; user-select: none; pointer-events: none; -webkit-user-drag: none; }
+
+/* ---- Lightbox (<dialog>) ---- */
+.pg-modal {
+  width: 100vw; max-width: none; height: 100dvh; max-height: none;
+  margin: 0; padding: 0; border: 0; overflow: hidden; color: #fff; background: transparent;
+}
+.pg-modal::backdrop { background: var(--pg-overlay); backdrop-filter: blur(8px); }
+.pg-modal-backdrop { position: absolute; inset: 0; background: var(--pg-overlay); }
+.pg-modal-slider { position: absolute; inset: 0; width: 100%; height: 100%; }
+.pg-modal-slider .swiper-wrapper { height: 100%; }
+.pg-modal-slide { height: 100%; display: flex; align-items: center; justify-content: center; padding: clamp(1.5rem, 5vw, 5rem); }
+.pg-modal .swiper-zoom-container {
+  position: relative; width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center; cursor: zoom-in;
+}
+.pg-modal .swiper-slide-zoomed .swiper-zoom-container { cursor: grab; }
+.pg-modal .swiper-slide-zoomed .swiper-zoom-container:active { cursor: grabbing; }
+.pg-modal-img {
+  width: 100%; height: 100%; object-fit: contain; opacity: 0; /* visible con .is-loaded */
+  user-select: none; pointer-events: none; -webkit-user-drag: none; transition: opacity .3s;
+}
+.pg-modal-slide.is-loaded .pg-modal-img { opacity: 1; }
+
+.pg-loader {
+  position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .8rem;
+  color: rgb(255 255 255 / .7); font: 700 .68rem var(--pg-font); letter-spacing: .12em; text-transform: uppercase; pointer-events: none;
+}
+.pg-loader span { width: 42px; height: 42px; border: 3px solid rgb(255 255 255 / .2); border-top-color: var(--pg-accent); border-radius: 50%; animation: pg-spin .7s linear infinite; }
+.pg-modal-slide.is-loaded .pg-loader { display: none; }
+@keyframes pg-spin { to { transform: rotate(360deg); } }
+
+.pg-close, .pg-nav {
+  position: absolute; z-index: 12; display: grid; place-items: center; width: 46px; height: 46px;
+  border: 1px solid rgb(255 255 255 / .2); border-radius: 50%; color: #fff; background: rgb(0 0 0 / .42);
+  backdrop-filter: blur(10px); font-size: 1.6rem; line-height: 1; cursor: pointer;
+  transition: background-color .2s, opacity .2s, transform .2s;
+}
+.pg-close { top: max(1rem, env(safe-area-inset-top)); right: max(1rem, env(safe-area-inset-right)); }
+.pg-nav { top: 50%; transform: translateY(-50%); }
+.pg-nav:hover { background: rgb(0 0 0 / .75); transform: translateY(-50%) scale(1.05); }
+.pg-close:hover { background: rgb(255 255 255 / .2); transform: scale(1.05); }
+.pg-nav:disabled { opacity: .28; cursor: default; transform: translateY(-50%); }
+.pg-nav--prev { left: max(.65rem, env(safe-area-inset-left)); }
+.pg-nav--next { right: max(.65rem, env(safe-area-inset-right)); }
+
+.pg-counter {
+  position: absolute; top: max(1.45rem, env(safe-area-inset-top)); left: 50%; z-index: 12; margin: 0; transform: translateX(-50%);
+  color: rgb(255 255 255 / .75); font: 700 .72rem var(--pg-font);
+}
+.pg-modal-hint {
+  position: absolute; bottom: max(1rem, env(safe-area-inset-bottom)); left: 50%; z-index: 12; margin: 0; transform: translateX(-50%);
+  white-space: nowrap; color: rgb(255 255 255 / .5); font: .65rem var(--pg-font); pointer-events: none;
+}
+
+/* Bloquear el scroll de fondo con el lightbox abierto. */
+body:has(dialog[open]) { overflow: hidden; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pg-modal-img, .pg-thumb, .pg-close, .pg-nav { transition: none; }
+  .pg-loader span { animation-duration: 2s; }
+}
