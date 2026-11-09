@@ -194,7 +194,7 @@ $app->post('/api/auth/login', [$authController, 'login'])
 
 ## Private Files
 
-- Los reportes (Excel del cierre) se guardan en `REPORTS_STORAGE_PATH`, fuera de la carpeta pública, y solo se descargan desde el admin autenticado.
+- Los archivos privados viven en `storage/private/` dentro del proyecto: credenciales (`firebase-fcm-sender.json`) y reportes (Excel del cierre). Esa carpeta está bloqueada en el `.htaccess` (como `app/`, `src/` o `vendor/`) y excluida en el `.gitignore`. Los reportes solo se descargan desde el admin autenticado.
 
 ## Environment Variables
 
@@ -232,7 +232,7 @@ COMMISSION_CONVERSION_PERCENTAGE=50
 
 # Notificaciones push (spec integraciones/01)
 FIREBASE_PROJECT_ID=premiumfitness-12ca6
-FIREBASE_CREDENTIALS_PATH=/ruta/privada/firebase-service-account.json
+FIREBASE_CREDENTIALS_PATH=storage/private/firebase-fcm-sender.json
 PUSH_MAX_ATTEMPTS=5
 PUSH_EXPIRY_NOTICE_DAYS=7
 
@@ -243,7 +243,7 @@ DIET_FREE_DAYS=30
 
 # Cierre mensual de comisión (spec negocio/05)
 COMMISSION_REPORT_RECIPIENTS=financiero1@dominio.com,financiero2@dominio.com
-REPORTS_STORAGE_PATH=/ruta/privada/fuera/de/public
+REPORTS_STORAGE_PATH=storage/private/reports
 ```
 
 ## Testing

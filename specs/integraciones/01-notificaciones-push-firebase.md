@@ -110,7 +110,7 @@ Creado el 9 nov 2026 con la cuenta de la consola de Nutramerican, en el plan Spa
 
 **Dónde va cada dato:**
 - La configuración web completa (incluida la `apiKey`) y la clave VAPID van en el `environment` de la app Angular. Son públicas por diseño, pero la `apiKey` se restringe por dominio en Google Cloud.
-- La clave privada de la cuenta de servicio **no** se guarda en este repositorio. Va al servidor, en `FIREBASE_CREDENTIALS_PATH`.
+- La clave privada de la cuenta de servicio **no** se versiona. En el servidor va dentro del proyecto desplegado, en `storage/private/firebase-fcm-sender.json`: esa carpeta está bloqueada por el `.htaccess` y excluida por el `.gitignore` (decisión del 9 nov 2026).
 
 ## Pendientes que el agente no puede hacer
 
@@ -118,7 +118,7 @@ Tareas de este proyecto que requieren acceso o datos que el agente no tiene. Las
 
 | Tarea | Por qué no la hace el agente | Cuándo |
 | --- | --- | --- |
-| Copiar `firebase-fcm-sender.json` al hosting, fuera de `public_html` y con permisos 600, y configurar `FIREBASE_PROJECT_ID` y `FIREBASE_CREDENTIALS_PATH` en el `.env` del servidor | No tiene acceso al hosting (cPanel) | Al desplegar el fork |
+| Copiar `firebase-fcm-sender.json` al hosting en `storage/private/` del proyecto (permisos 600) y configurar `FIREBASE_PROJECT_ID` y `FIREBASE_CREDENTIALS_PATH` en el `.env` del servidor | No tiene acceso al hosting (cPanel) | Al desplegar el fork |
 | Restringir la `apiKey` web por dominio en Google Cloud → Credenciales («Browser key (auto created by Firebase)»): `https://<subdominio-app>/*` y `http://localhost:4200/*` | Falta definir el subdominio de la app web | Cuando se defina el subdominio. El agente puede hacerlo si se le da |
 | Registrar las apps Android e iOS de dietas en el proyecto | Faltan el `applicationId` y el bundle ID definitivos de la app Flutter | Al integrar la app de dietas |
 | Crear la clave APNs (.p8) en Apple Developer (Keys, con «Apple Push Notifications service») y subirla en Cloud Messaging → Configuración de apps de Apple | Requiere la cuenta de Apple Developer de la empresa | Antes de probar push en iOS en la app de dietas |
@@ -170,6 +170,6 @@ Tareas de este proyecto que requieren acceso o datos que el agente no tiene. Las
 - [x] Crear el proyecto de Firebase PremiumFitness, la app web y el certificado VAPID (S-02)
 - [x] Crear la cuenta de servicio `premiumfitness-fcm-sender` con solo el rol de FCM
 - [x] Generar la clave JSON de la cuenta de servicio (9 nov 2026). Está en la máquina de desarrollo, en `~/.config/premiumfitness/firebase-fcm-sender.json` (permisos 600, fuera del repo).
-- [ ] Copiar la clave al hosting, fuera de `public_html`, y apuntar `FIREBASE_CREDENTIALS_PATH` a ella (al desplegar el fork)
+- [ ] Copiar la clave al hosting en `storage/private/` y apuntar `FIREBASE_CREDENTIALS_PATH` a ella (al desplegar el fork)
 - [ ] Restringir la `apiKey` web por dominio
 - [ ] Registrar las apps Android e iOS de dietas y subir la clave APNs (.p8) de Apple

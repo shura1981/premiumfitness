@@ -57,4 +57,5 @@ Dejar la documentación y las reglas de los agentes alineadas con la decisión d
 - [x] Corregir las menciones a Node en AGENTS.md, el PRD, las fases, el spec del DER y los specs de seguridad y negocio
 - [x] Borrar `.nvmrc`
 - [ ] Crear el fork y desactivar `login-with-credential` y el autologin por QR (primera tarea de codificación)
+- [ ] Al crear el fork, añadir `storage` a las carpetas bloqueadas del `.htaccess` y al `.gitignore` (`storage/private/`)
 - [ ] Confirmar el proveedor de SMS (S-07)

@@ -7,3 +7,4 @@ logs/
 *service-account*.json
 firebase-*.json
 premiumfitness-12ca6-*.json
+storage/private/
