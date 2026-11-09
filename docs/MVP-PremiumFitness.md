@@ -88,7 +88,7 @@ Adaptar la UX de comisiones y onboarding de `join.nutramerican.com`, la compra d
 | A-18 | Intentar consultar pedido o saldo de otro usuario | Acceso rechazado; operación autorizada sigue disponible para su dueño. |
 | A-19 | Recuperar cuenta y usar los flujos en móvil | Recuperación correcta y navegación/formularios utilizables; verificar instalación según dispositivo si se adopta PWA. |
 
-A-05 usa una base ya determinada para comprobar porcentajes; no decide el orden entre descuento y recompensa ni la tasa de IVA de un producto real.
+A-05 parte de un valor ya pagado, con el descuento aplicado y sin envío; los puntos se calculan sobre el total del pedido y se redondean al entero más cercano. Ejemplo adicional: Bipro de 249.900 con 10% → paga 224.910 → 11.246 puntos.
 
 ## 6. Condiciones previas al piloto
 

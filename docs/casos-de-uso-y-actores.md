@@ -108,7 +108,7 @@ No se incluyen como actores un operador de bodega ni un soporte, porque ni los r
 | RN-02 | Al abrir el enlace, la app de clientes guarda el id del entrenador y lleva al login. Al registrarse o iniciar sesión, el cliente sin entrenador queda asociado a ese entrenador. | Confirmado; el login como destino y la asociación al iniciar sesión los confirmó producto el 9 nov 2026. | «El cliente escanea, se registra…». |
 | RN-03 | El cliente asociado a un entrenador ve todo el catálogo con descuento: badge con el porcentaje, precio con descuento y precio real tachado. El descuento por defecto es del 10%. | Confirmado; el catálogo con descuento lo confirmó producto el 9 nov 2026. Aplica a todas sus compras mientras esté asociado. | «El cliente compra…». |
 | RN-04 | Las recompensas al entrenador por una venta se reconocen cuando la compra está aprobada. | Confirmado. Los demás estados no se definen. | «Cuando la compra sea Aprobada…». |
-| RN-05 | El entrenador recibe en puntos el 5% de lo que pagó el cliente: valor con el descuento aplicado y con IVA incluido. | Confirmado; la base la confirmó producto el 9 nov 2026. Falta el redondeo (PD-03). | Párrafo de aprobación y beneficio 1. |
+| RN-05 | El entrenador recibe en puntos el 5% de lo que pagó el cliente por los productos (con descuento y con IVA, sin envío), calculado sobre el total del pedido y redondeado al entero más cercano. | Confirmado; base, redondeo y envío definidos por producto el 9 nov 2026. | Párrafo de aprobación y beneficio 1. |
 | RN-06 | El entrenador recibe una comisión sobre el valor sin IVA de cada producto comprado. El porcentaje por defecto es del 15% y puede variar por producto (RN-22). | Confirmado por el párrafo de aprobación; existe una contradicción posterior sobre el beneficiario. | Párrafo de aprobación y beneficio 2. |
 | RN-07 | El entrenador A recibe un incentivo por referir otro entrenador, con activación condicionada a una venta con clientes en la app. | Confirmado en intención. Monto expresado como «50.000 mil puntos» y participante que debe vender pendientes de aclaración. | Párrafo posterior a «Entrenador comparte qr con otro entrenador». |
 | RN-08 | La app de dietas opera en modalidad de suscripción y se desactiva si el entrenador incumple una regla de negocio. | Confirmado. Regla, evaluación y alcance de la desactivación pendientes. | Beneficios para entrenadores, punto 1. |
@@ -129,8 +129,8 @@ No se incluyen como actores un operador de bodega ni un soporte, porque ni los r
 
 ### 4.1. Interpretación de importes y porcentajes
 
-- **Puntos por venta:** `puntos = valor pagado (con descuento y con IVA) × porcentaje de puntos` (5% por defecto), con un peso por punto. El IVA no se descuenta. Falta definir el redondeo.
-- **Ejemplo de puntos:** una Bipro de 249.900 con 10% de descuento se paga 224.910 y genera `224.910 × 0,05 = 11.245,5` puntos antes de redondear. **Diferencia con requerimientos.md:** su ejemplo asigna 12.500 puntos sobre el precio completo; prevalece la confirmación de producto del 9 nov 2026 («sobre lo que pagó, es lo justo»). No se adopta un redondeo sin confirmación.
+- **Puntos por venta:** los puntos del pedido = suma de lo pagado por los productos (con descuento y con IVA, sin el envío) × porcentaje de puntos (5% por defecto), redondeado una sola vez al entero más cercano (0,5 sube). Un peso equivale a un punto.
+- **Ejemplo de puntos:** una Bipro de 249.900 con 10% de descuento se paga 224.910; `224.910 × 0,05 = 11.245,5` → **11.246 puntos**. **Diferencia con requerimientos.md:** su ejemplo asigna 12.500 puntos sobre el precio completo; prevalece la definición de producto del 9 nov 2026 (los puntos se ganan sobre lo que el cliente pagó).
 - **Comisión:** por cada línea, `comisión = base sin IVA × porcentaje de comisión del producto` (15% por defecto; por ejemplo, 10% en Nutra Balance). No se debe confundir «quitar el IVA» con restar directamente una tasa al precio final. Los requisitos no definen las tasas ni el desglose tributario del pedido.
 - **Descuentos:** el 10% del cliente y el 25% del entrenador son valores por defecto. Cada producto puede tener su propio porcentaje (RN-22). Quedan pendientes la interacción con otras promociones, el envío y el orden de aplicación de descuentos e impuestos.
 - **Conversión:** no se establece una fórmula definitiva. La nota menciona convertir comisiones, pero calcula el 50% sobre puntos acumulados. El ejemplo de 100.000 puntos y 50.000 puntos no aclara si estos últimos se adicionan ni qué sucede con la comisión.
@@ -273,7 +273,7 @@ La restricción de no entregar efectivo se refiere expresamente al canje de punt
 
 1. El sistema reconoce la aprobación de la compra.
 2. Identifica al entrenador por el cupón guardado en el pedido.
-3. Calcula los puntos: porcentaje de puntos (5% por defecto) sobre lo que pagó el cliente, con el descuento aplicado y con IVA incluido, con el redondeo que se confirme.
+3. Calcula los puntos: los puntos del pedido = suma de lo pagado por los productos (con descuento y con IVA, sin el envío) × porcentaje de puntos (5% por defecto), redondeado una sola vez al entero más cercano (0,5 sube).
 4. Por cada línea, obtiene la base sin IVA.
 5. Calcula la comisión de cada línea con el porcentaje vigente del producto (15% por defecto; menor si el producto tiene un descuento extra) y suma las líneas.
 7. Acredita los puntos y reconoce la comisión al entrenador.
@@ -696,8 +696,8 @@ Las recompensas de CU-05 dependen de la aprobación del pago (paso 1), no del en
 | ID | Tema | Evidencia o vacío | Decisión necesaria | Casos afectados |
 | --- | --- | --- | --- | --- |
 | PD-01 | Beneficiario del 15% | El párrafo de aprobación dice «entrenador»; el beneficio 2 dice «cliente». | Confirmar y unificar el beneficiario. Este documento sigue provisionalmente la instrucción explícita del párrafo de aprobación. | CU-05, CU-10, CU-11. |
-| PD-02 | Base de los puntos | Resuelto el 9 nov 2026: lo que pagó el cliente, con descuento y con IVA. Falta definir si incluye el envío. | Definir componentes de la base y orden de cálculo. | CU-04, CU-05. |
-| PD-03 | Redondeo de puntos | El ejemplo produce matemáticamente 12.495, pero el archivo indica 12.500. | Definir precisión, redondeo y momento de aplicación. | CU-05, CU-09. |
+| PD-02 | Base de los puntos | Resuelto el 9 nov 2026: lo pagado por los productos, con descuento y con IVA, sin el envío, sobre el total del pedido. | Ninguna. | CU-04, CU-05. |
+| PD-03 | Redondeo de puntos | Resuelto el 9 nov 2026: una sola vez por pedido, al entero más cercano (0,5 sube). | Ninguna. | CU-05, CU-09. |
 | PD-04 | Base de comisión | Se exige retirar el IVA, sin detallar descuentos, tasas, envío o pedidos con tratamientos tributarios diferentes. | Definir la base sin IVA por compra o por producto. | CU-05. |
 | PD-05 | Incentivo por referido | La expresión «50.000 mil puntos» es ambigua; el diagrama muestra 50.000. | Confirmar el monto sin corregirlo por inferencia. | CU-08. |
 | PD-06 | Venta que activa el referido | No se identifica inequívocamente si vende A o B, ni si basta crear la compra o debe aprobarse. | Precisar participante, evento, número de incentivos y límites por referido. | CU-07, CU-08. |

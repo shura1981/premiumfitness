@@ -186,7 +186,7 @@ La columna de fuente remite a los numerales de [reglas-de-negocio.md](reglas-de-
 
 Para cada producto, conservar cantidad, precio, descuento, tasa de IVA, base e IVA. Si un importe incluye IVA, `base_sin_IVA = importe / (1 + tasa_IVA)`; `IVA = importe − base_sin_IVA`. La tasa pertenece al producto, no se fija una tasa única para el pedido.
 
-- Puntos de venta: calcular el 5% del valor con IVA incluido y acumular los resultados, con equivalencia 1 peso = 1 punto. *(9 nov 2026: los puntos se calculan con IVA incluido; solo la comisión discrimina el IVA.)*
+- Puntos de venta: los puntos del pedido = suma de lo pagado por los productos (con descuento y con IVA, sin el envío) × porcentaje de puntos (5% por defecto), redondeado una sola vez al entero más cercano (0,5 sube); 1 peso = 1 punto. *(Definido el 9 nov 2026.)*
 - Comisión: porcentaje de comisión de cada producto (15% por defecto) sobre su base sin IVA.
 - Compra propia: descuento de 25% sobre los productos del portafolio.
 - Canje: puntos requeridos equivalentes al precio completo del producto, sin descuento.
@@ -197,7 +197,7 @@ Para cada producto, conservar cantidad, precio, descuento, tasa de IVA, base e I
 
 **Ejemplo FIFO:** lotes disponibles de 100.000 y 200.000, en ese orden de acumulación: el canje anterior agota el primero, consume 149.900 del segundo y conserva 50.100. No se marca todo el segundo lote como usado.
 
-El ejemplo de requerimientos que asigna 12.500 puntos a un precio de 249.900 usa el precio completo; desde el 9 nov 2026 los puntos se calculan sobre lo pagado con descuento e IVA (con 10%: 224.910 → 11.245,5 antes de redondear). El orden de descuento/base y el redondeo por línea o pedido deben precisarse. Tampoco se adopta automáticamente `comisión × 1,5`: el texto del 50% mezcla comisión con puntos acumulados.
+El ejemplo de requerimientos que asigna 12.500 puntos a un precio de 249.900 usa el precio completo. Desde el 9 nov 2026 los puntos se calculan sobre lo pagado: con 10% de descuento, 224.910 × 5% = 11.245,5 → 11.246 puntos. Tampoco se adopta automáticamente `comisión × 1,5`: el texto del 50% mezcla comisión con puntos acumulados.
 
 ### 7.3. Integridad, disponibilidad y vencimiento
 
@@ -359,7 +359,7 @@ Estas decisiones completan las reglas; no dejan en duda los porcentajes, seis me
 | --- | --- | --- | --- |
 | D-01 | Moneda técnica, zona horaria y corte de períodos. | Negocio y tecnología | Arquitectura y cálculo temporal. |
 | D-02 | Catálogo, inventario, envío, entrega y cancelación de canjes. | Operación | Antes de checkout/canje real. |
-| D-03 | Base antes/después del 10%, envío/cargos elegibles, promociones y redondeo por producto/pedido. | Negocio y finanzas | Antes de activar recompensas reales; ambas bases excluyen IVA. |
+| D-03 | Puntos resueltos el 9 nov 2026: 5% de lo pagado por los productos (con descuento e IVA, sin envío), por pedido y redondeado al entero más cercano. Pendientes de la comisión: base antes o después del descuento, envío, promociones y redondeo. | Negocio y finanzas | Antes de activar recompensas reales. Los puntos incluyen IVA; la comisión lo excluye. |
 | D-04 | Fórmula del 50%: si se calcula sobre comisión o puntos acumulados y qué cantidad final acredita. | Negocio y finanzas | Bloquea conversión, no el desarrollo de los otros módulos. |
 | D-05 | Registro, verificación, coexistencia de roles y tratamiento de autorreferidos/cuentas duplicadas. | Producto y tecnología | Acceso y referidos. |
 | D-06 | Inicio de vigencia del bono inactivo y tratamiento de su caducidad antes de una venta. | Negocio | Antes de activar vencimiento de incentivos. |

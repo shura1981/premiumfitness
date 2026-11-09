@@ -59,6 +59,7 @@ Alinear las reglas de negocio, los casos de uso y el modelo de datos con el func
 | S-08 | Base64 no protege el id: cualquiera puede decodificarlo y armar el enlace de otro entrenador. Se acepta porque el enlace solo atribuye ventas. | Derivado |
 | S-09 | Un cliente ya registrado y sin entrenador que abre el enlace de un entrenador queda asociado a él al iniciar sesión. | Confirmado (9 nov 2026) |
 | S-10 | El entrenador B solo queda referido por A si se registra desde el enlace o el QR de A. No hay cupón para entrenadores. | Confirmado (9 nov 2026) |
+| S-11 | Los puntos se calculan una sola vez sobre el total del pedido (suma de lo pagado por los productos, sin el envío) y se redondean al entero más cercano (0,5 sube). | Confirmado (9 nov 2026) |
 
 **Diferencias con `docs/requerimientos.md`:**
 
