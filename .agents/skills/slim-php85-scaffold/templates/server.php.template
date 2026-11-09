@@ -1,0 +1,77 @@
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Servidor de desarrollo local integrado en PHP.
+ * Únicamente ejecutado mediante `composer start` o `php -S`.
+ *
+ * Mapea Rutas SPA de forma dinámica basado en la variable `DEV_SPA_ROUTES` 
+ * del archivo `.env`. (Ej: DEV_SPA_ROUTES='{"/profile": "/dist", "/admin": "/spa/admin"}')
+ */
+
+if (php_sapi_name() !== 'cli-server') {
+    die('Este archivo es exclusivo para el servidor de desarrollo CLI de PHP.');
+}
+
+// 1. Cargar autoloader para tener acceso a Dotenv
+require __DIR__ . '/vendor/autoload.php';
+
+use Dotenv\Dotenv;
+
+// 2. Extraer .env crudo para leer la configuración de entorno (APP_ENV)
+// (SafeLoad previene romper el servidor antes de que corra la app principal)
+Dotenv::createImmutable(__DIR__)->safeLoad();
+
+// 3. Evaluar Modo (Production ignora la emulación)
+if (($_ENV['APP_ENV'] ?? 'production') !== 'development') {
+    require __DIR__ . '/index.php';
+    return;
+}
+
+// 4. Mapeo Dinámico de Rutas de SPA en Desarrollo
+// Por defecto, si no hay variable en .env, asumimos /profile apuntando a /dist
+$spaRoutesJson = $_ENV['DEV_SPA_ROUTES'] ?? '{"/profile": "/dist"}';
+$spaRoutes = json_decode($spaRoutesJson, true) ?: [];
+
+$url  = parse_url($_SERVER['REQUEST_URI']);
+$path = $url['path'];
+
+foreach ($spaRoutes as $routePrefix => $localFolder) {
+    // Si la URL arranca con `/profile/`...
+    if (str_starts_with($path, $routePrefix . '/')) {
+        // Obtenemos solo la ruta de archivo solicitada p.ej: main.js
+        $relativePath = substr($path, strlen($routePrefix));
+        $staticFile   = __DIR__ . $localFolder . $relativePath;
+        
+        // Si el compilado existe realmente en /dist/main.js
+        if (is_file($staticFile)) {
+            $ext   = pathinfo($staticFile, PATHINFO_EXTENSION);
+            $mimes = [
+                'css'   => 'text/css',
+                'js'    => 'application/javascript',
+                'svg'   => 'image/svg+xml',
+                'png'   => 'image/png',
+                'jpg'   => 'image/jpeg',
+                'ico'   => 'image/x-icon',
+                'woff2' => 'font/woff2'
+            ];
+            
+            $type = $mimes[$ext] ?? mime_content_type($staticFile) ?: 'application/octet-stream';
+            header("Content-Type: $type");
+            readfile($staticFile);
+            
+            // Freno de ejecución (File Served)
+            return true;
+        }
+    }
+}
+
+// 5. Fallback para archivos estáticos normales en raíz (ej. /assets/style.css)
+$localFile = __DIR__ . $path;
+if (is_file($localFile)) {
+    return false; // Instruye a PHP CLI a servirlo nativamente
+}
+
+// 6. Encriptar el request y enviarlo a Slim
+require __DIR__ . '/index.php';

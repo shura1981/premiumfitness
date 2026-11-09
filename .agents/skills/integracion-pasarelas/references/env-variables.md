@@ -1,6 +1,6 @@
 # Variables de Entorno — Bold, Addi, Sistecrédito & ePayco
 
-Todas las variables se definen en el archivo `.env` del backend y se cargan con `dotenv`. Acceso en Node.js / TypeScript: `process.env.NOMBRE_VARIABLE` (siempre tipadas o dentro de métodos de configuración `fromEnv()`).
+Todas las variables se definen en el archivo `.env` de la API intermediaria o del backend y se cargan con `vlucas/phpdotenv`. Acceso en PHP: `$_ENV['NOMBRE_VARIABLE']` (siempre dentro de métodos fábrica `fromEnv()`).
 
 ---
 
@@ -35,7 +35,7 @@ Accept: application/json
 | `APPLICATION_TOKEN` | `xxxxxxxxxxxxxxxx` | Token de autenticación de la aplicación (`ApplicationToken`) |
 | `URL_RESPONSE_SISTECREDITO` | `https://tienda.com/response-sistecredito/index.html` | URL de redirección post-pago — flujo e-commerce normal (`mode == "1"`) |
 | `URL_RESPONSE_SISTECREDITO_LINKPAGO` | `https://pagos.tienda.com/response-sistecredito/index.html` | URL de redirección post-pago — flujo link de pago (`mode != "1"`) |
-| `URL_CONFIRMATION_SITECREDITO` | `https://api.tudominio.com/api/webhooks/sistecredito` | Webhook server-to-server de Credinet (callback POST) |
+| `URL_CONFIRMATION_SITECREDITO` | `https://api.tudominio.com/confirmation_sistecredito.php` | Webhook server-to-server de Credinet (callback POST) |
 | `TIMEOUT_CURL_TOKEN` | `20` | Timeout en segundos para todas las llamadas cURL (conexión + ejecución) |
 
 ### Headers hacia Credinet (construidos en el controller)
@@ -88,7 +88,7 @@ Las URLs de callback y redirección de Addi se envían **dentro del body** de ca
 ```json
 "allyUrlRedirection": {
   "logoUrl": "https://tienda.com/logo.png",
-  "callbackUrl": "https://api.tudominio.com/api/webhooks/addi",
+  "callbackUrl": "https://api.tudominio.com/confirmation_addi.php",
   "redirectionUrl": "https://tienda.com/response-addy/index.html?id_order={orderId}"
 }
 ```
@@ -129,8 +129,8 @@ EntityClientId: 'base64(P_CUST_ID_CLIENTE)'
 
 Las comillas simples son **literales** e intencionales. El header debe construirse así:
 
-```typescript
-const entityClientId = `'${Buffer.from(process.env.P_CUST_ID_CLIENTE || '').toString('base64')}'`;
+```php
+'EntityClientId: \'' . base64_encode($_ENV['P_CUST_ID_CLIENTE']) . '\''
 ```
 
 ### Headers hacia apify.epayco.co (al obtener token)
@@ -154,17 +154,16 @@ Content-Type: application/json
 
 | Variable | Descripción |
 |----------|-------------|
-| `KEY_HEADER` | Token estático Base64 que el e-commerce debe enviar en el header `Authorization` de cada request a la API (Addi/Sistecrédito). |
-| `AUTHENTICATION_BASIC` | Equivalente de `KEY_HEADER` en endpoints de ePayco. |
+| `KEY_HEADER` | Token estático Base64 que el e-commerce debe enviar en el header `Authorization` de cada request a la API intermediaria (Addi/Sistecredito). No es OAuth ni JWT — es un secreto compartido fijo. |
+| `AUTHENTICATION_BASIC` | Equivalente de `KEY_HEADER` en el microservicio ePayco. Mismo patrón pero con nombre de variable diferente. |
 
-```typescript
+```php
 // El cliente debe incluir en cada request:
 // Authorization: {valor_de_KEY_HEADER}  ← para Addi/Sistecredito
 // Authorization: {valor_de_AUTHENTICATION_BASIC}  ← para ePayco
 
-// Validación en middleware Express:
-if (req.headers.authorization !== process.env.AUTHENTICATION_BASIC) {
-  res.status(401).json({ error: 'Unauthorized' });
-  return;
+// Validación en BasicAuth middleware (ePayco):
+if ($_SERVER['HTTP_AUTHORIZATION'] !== $_ENV['AUTHENTICATION_BASIC']) {
+    // Responder 401
 }
 ```

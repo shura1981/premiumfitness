@@ -1,0 +1,73 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Infrastructure\Auth;
+
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
+use RuntimeException;
+use stdClass;
+use Throwable;
+
+/**
+ * Servicio de emisión y validación de tokens JWT (HS256).
+ *
+ * Requiere: composer require firebase/php-jwt
+ * Variables de entorno (validadas en bootstrap.php):
+ *   JWT_SECRET          — clave secreta, mínimo 32 caracteres
+ *   JWT_TTL_SECONDS     — duración del token (ej. 3600 = 1 hora)
+ *
+ * Uso:
+ *   $jwt   = JwtService::fromEnv();
+ *   $token = $jwt->issue(['sub' => $userId, 'role' => 'admin']);
+ *
+ *   $claims = $jwt->decode($token);  // stdClass con sub, role, iat, exp
+ */
+class JwtService
+{
+    private const ALGORITHM = 'HS256';
+
+    public function __construct(
+        private readonly string $secret,
+        private readonly int    $ttlSeconds,
+    ) {}
+
+    public static function fromEnv(): self
+    {
+        return new self(
+            secret:     $_ENV['JWT_SECRET'],
+            ttlSeconds: (int) $_ENV['JWT_TTL_SECONDS'],
+        );
+    }
+
+    /**
+     * Emite un token JWT con los claims dados más iat/exp automáticos.
+     *
+     * @param array<string, mixed> $claims
+     */
+    public function issue(array $claims): string
+    {
+        $now = time();
+
+        return JWT::encode(
+            array_merge($claims, ['iat' => $now, 'exp' => $now + $this->ttlSeconds]),
+            $this->secret,
+            self::ALGORITHM
+        );
+    }
+
+    /**
+     * Verifica y decodifica un token JWT.
+     *
+     * @throws RuntimeException si el token es inválido o ha expirado
+     */
+    public function decode(string $token): stdClass
+    {
+        try {
+            return JWT::decode($token, new Key($this->secret, self::ALGORITHM));
+        } catch (Throwable $e) {
+            throw new RuntimeException('Invalid or expired token.', previous: $e);
+        }
+    }
+}

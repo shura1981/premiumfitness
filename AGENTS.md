@@ -31,15 +31,21 @@ Antes de una tarea que encaje con una skill, lee su `SKILL.md` en `.agents/skill
 
 | Skill | Úsala para |
 | --- | --- |
-| `backend-testing-node-realdb` | Crear o ejecutar pruebas del backend con Vitest, Supertest y base de datos real. |
-| `clean-code-js-ts` | Escribir o refactorizar JavaScript y TypeScript. |
+| `backend-testing-pest-realdb` | Crear o ejecutar pruebas del backend Slim 4 + PHP 8.5 con Pest y base de datos real. |
+| `clean-code-php` | Escribir o refactorizar PHP limpio y moderno. |
+| `php85-coding` | Escribir código PHP 8.5 con su sintaxis nueva. |
+| `slim-php85-scaffold` | Generar módulos o proyectos Slim 4 + PHP 8.5 con Vertical Slicing. |
+| `clean-code-js-ts` | Escribir o refactorizar JavaScript y TypeScript (frontend). |
 | `frontend-design` | Diseñar interfaces, páginas y componentes web. |
-| `image-optimization` | Crear scripts o endpoints que optimicen imágenes de producto con Sharp. |
+| `image-optimization` | Crear scripts o endpoints que optimicen imágenes de producto. |
 | `image-webp-optimizer` | Convertir imágenes a WebP, generar tamaños responsive y aplicar lazy loading. |
 | `integracion-pasarelas` | Integrar pasarelas de pago colombianas y sus webhooks. |
 | `jwt-security` | Implementar autenticación con access token en memoria y refresh token en cookie `httpOnly`. |
 | `product-lightbox` | Crear la galería de producto con zoom y lightbox. |
 | `sms-account-verification` | Verificar teléfonos con códigos SMS y rate limiting. |
+| `readme-blueprint-generator` | Generar el README del repositorio a partir de su documentación. |
+
+Las skills son una copia de las de `backend-radical-nutrition`, del que este repositorio es un fork.
 
 ## Convenciones
 

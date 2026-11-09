@@ -131,6 +131,6 @@ No: el principal sólo abre el modal; el zoom pertenece a `modalSwiper`.
 ## Referencias
 
 - `references/swiper-zoom.md` — API de Swiper realmente usada, con defaults del módulo Zoom.
-- `references/datos-backend.md` — contrato de datos TypeScript / Node.js que debe entregar el backend + ejemplos en Angular/HTML.
+- `references/datos-backend.md` — contrato de datos que debe entregar cualquier backend + ejemplos de bucle en Twig/Blade/EJS/JSX.
 - `references/verificacion.md` — checklist manual (escritorio, móvil, casos límite, accesibilidad).
-- `references/implementacion-referencia.md` — arquitectura de referencia en frontend moderno y auditoría.
+- `references/implementacion-radical-nutrition.md` — dónde vive esto en este repositorio (PHP/Slim/Twig) y sus particularidades.

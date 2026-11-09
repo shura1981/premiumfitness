@@ -1,0 +1,104 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Infrastructure\Validation;
+
+use App\Shared\Exceptions\ValidationException;
+
+/**
+ * Clase base para validadores de request.
+ *
+ * Uso — crear un validador por Feature:
+ *
+ *   class LoginValidator extends AbstractValidator
+ *   {
+ *       protected function rules(): array
+ *       {
+ *           return [
+ *               'email'    => ['required', 'email'],
+ *               'password' => ['required', 'min:8', 'max:128'],
+ *           ];
+ *       }
+ *   }
+ *
+ * Reglas disponibles:
+ *   required | string | int | float | email
+ *   min:N    (longitud mínima para strings, valor mínimo para números)
+ *   max:N    (longitud máxima para strings, valor máximo para números)
+ *   in:a,b,c (valor debe estar en la lista)
+ *   regex:/patrón/
+ */
+abstract class AbstractValidator
+{
+    /** @return array<string, list<string>> */
+    abstract protected function rules(): array;
+
+    /**
+     * @param array<string, mixed> $data
+     * @throws ValidationException
+     */
+    final public function validate(array $data): void
+    {
+        $errors = [];
+
+        foreach ($this->rules() as $field => $fieldRules) {
+            foreach ($fieldRules as $rule) {
+                $message = $this->apply($rule, $field, $data[$field] ?? null);
+
+                if ($message !== null) {
+                    $errors[$field][] = $message;
+                }
+            }
+        }
+
+        if ($errors !== []) {
+            throw new ValidationException($errors);
+        }
+    }
+
+    private function apply(string $rule, string $field, mixed $value): ?string
+    {
+        [$name, $param] = array_pad(explode(':', $rule, 2), 2, null);
+
+        return match ($name) {
+            'required' => ($value === null || $value === '')
+                ? "The {$field} field is required."
+                : null,
+
+            'string'   => ($value !== null && !is_string($value))
+                ? "The {$field} field must be a string."
+                : null,
+
+            'int'      => ($value !== null && filter_var($value, FILTER_VALIDATE_INT) === false)
+                ? "The {$field} field must be an integer."
+                : null,
+
+            'float'    => ($value !== null && filter_var($value, FILTER_VALIDATE_FLOAT) === false)
+                ? "The {$field} field must be a number."
+                : null,
+
+            'email'    => ($value !== null && filter_var($value, FILTER_VALIDATE_EMAIL) === false)
+                ? "The {$field} field must be a valid email."
+                : null,
+
+            'min'      => ($value !== null && mb_strlen((string) $value) < (int) $param)
+                ? "The {$field} field must be at least {$param} characters."
+                : null,
+
+            'max'      => ($value !== null && mb_strlen((string) $value) > (int) $param)
+                ? "The {$field} field must not exceed {$param} characters."
+                : null,
+
+            'in'       => ($value !== null && !in_array($value, explode(',', (string) $param), strict: true))
+                ? "The {$field} field must be one of: {$param}."
+                : null,
+
+            'regex'    => ($value !== null && !preg_match((string) $param, (string) $value))
+                ? "The {$field} field format is invalid."
+                : null,
+
+            default    => null,
+        };
+    }
+}

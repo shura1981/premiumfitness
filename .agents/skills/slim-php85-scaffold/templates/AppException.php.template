@@ -1,0 +1,67 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Shared\Exceptions;
+
+use RuntimeException;
+
+/**
+ * Excepción base para todos los errores de dominio de la aplicación.
+ * Añade `$httpCode` para mapear directamente al código de respuesta HTTP,
+ * eliminando conversores intermedios en los Feature controllers.
+ *
+ * IMPORTANTE: No instanticiar AppException directamente.
+ * Crear excepciones derivadas semánticas (una por tipo de error):
+ *
+ *   class DatabaseException    extends AppException {}  // 500
+ *   class IoException          extends AppException {}  // 500
+ *   class NotFoundException    extends AppException {}  // 404
+ *   class UnauthorizedException extends AppException {} // 401
+ *   class ConflictException    extends AppException {}  // 409
+ *
+ * Uso — lanzar:
+ *   throw new DatabaseException('Query failed while saving user.', 500);
+ *   throw new NotFoundException('Article not found.', 404);
+ *   throw new UnauthorizedException('Token expired.', 401);
+ *
+ * Uso — capturar en un Feature controller:
+ *   try {
+ *       $result = $repository->findById($id);
+ *   } catch (NotFoundException $e) {
+ *       $response->getBody()->write(json_encode(['error' => $e->getMessage()]));
+ *       return $response->withHeader('Content-Type', 'application/json')
+ *                       ->withStatus($e->getHttpCode());
+ *   } catch (AppException $e) {
+ *       LoggerService::error($e->getMessage(), ['http_code' => $e->getHttpCode()]);
+ *       $response->getBody()->write(json_encode(['error' => 'Internal server error.']));
+ *       return $response->withHeader('Content-Type', 'application/json')
+ *                       ->withStatus($e->getHttpCode());
+ *   }
+ */
+class AppException extends RuntimeException
+{
+    public function __construct(
+        string $message,
+        private readonly int $httpCode = 500,
+        int $code = 0,
+        ?\Throwable $previous = null,
+    ) {
+        parent::__construct($message, $code, $previous);
+    }
+
+    public function getHttpCode(): int
+    {
+        return $this->httpCode;
+    }
+}
+
+// ─── Excepciones derivadas recomendadas ────────────────────────────────────────
+// Crear cada una en su propio archivo en src/Shared/Exceptions/.
+//
+// class DatabaseException     extends AppException {}
+// class IoException           extends AppException {}
+// class NotFoundException     extends AppException {}
+// class UnauthorizedException extends AppException {}
+// class ConflictException     extends AppException {}
+// class MailerException       extends AppException {}

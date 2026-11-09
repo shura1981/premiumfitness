@@ -55,7 +55,7 @@ E-commerce  redirige al usuario a paymentRedirectUrl
 
 ### 2. Body construido y enviado a Credinet
 
-Construido por `createPaymentRequestBody()` (ver plantilla `helpers/createPaymentRequestBody.ts`):
+Construido por `createPaymentRequestBody()` (ver plantilla `helpers/createPaymentRequestBody.php`):
 
 ```json
 {
@@ -66,7 +66,7 @@ Construido por `createPaymentRequestBody()` (ver plantilla `helpers/createPaymen
   "value": 128642,
   "sandbox": { "isActive": false, "status": "Approved" },
   "urlResponse": "https://tienda.com/response-sistecredito/index.html",
-  "urlConfirmation": "https://api.tudominio.com/api/webhooks/sistecredito",
+  "urlConfirmation": "https://api.tudominio.com/confirmation_sistecredito.php",
   "methodConfirmation": "POST",
   "client": { "docType": "CC", "document": "12345678" },
   "extraData": { "Authentication": "" }
@@ -135,17 +135,18 @@ Headers: (mismos 4 headers de autenticación de Credinet)
 
 ### 6. Lógica de reintento cuando `paymentRedirectUrl` llega vacía
 
-```typescript
-let paymentRedirectUrl = extraerUrlDeRespuesta(responseTransaccion.data);
+```php
+$paymentRedirectUrl = extraerUrlDeRespuesta($responseTransaccion['data']);
 
-if (!paymentRedirectUrl) {
-  await new Promise((resolve) => setTimeout(resolve, 5000)); // esperar 5 segundos
-  responseTransaccion = await queryIdTransaction(idTransaccion);
-  paymentRedirectUrl = extraerUrlDeRespuesta(responseTransaccion.data);
+if (empty($paymentRedirectUrl)) {
+    sleep(5); // esperar 5 segundos
+    $responseTransaccion = queryIdTransaction($idTransaccion);
+    $paymentRedirectUrl = extraerUrlDeRespuesta($responseTransaccion['data']);
 
-  if (!paymentRedirectUrl) {
-    throw new Error('Error al obtener la url de redirección');
-  }
+    if (empty($paymentRedirectUrl)) {
+        // Loguear respuesta y lanzar excepción
+        throw new Exception("Error al obtener la url de redirección");
+    }
 }
 ```
 
@@ -235,7 +236,7 @@ Credinet hace un `POST` al `urlConfirmation` enviado en el body de creación.
 | Código aprobación | `PaymentMethodResponse.ApprovalCode` | Código de aprobación |
 | Código autorización | `PaymentMethodResponse.AuthorizationCode` | Código de autorización |
 
-> Ver plantilla completa en `templates/webhooks/webhook-sistecredito.ts`
+> Ver plantilla completa en `templates/webhooks/webhook-sistecredito.php`
 
 ---
 

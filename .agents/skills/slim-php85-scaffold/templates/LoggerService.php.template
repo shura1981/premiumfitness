@@ -1,0 +1,130 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Infrastructure\Logger;
+
+use Monolog\Formatter\LineFormatter;
+use Monolog\Handler\RotatingFileHandler;
+use Monolog\Handler\StreamHandler;
+use Monolog\Level;
+use Monolog\Logger;
+
+/**
+ * Servicio de logging PSR-3 basado en Monolog con patrón Singleton.
+ *
+ * Requiere:
+ *   composer require monolog/monolog
+ *
+ * Genera dos canales de log en logs/ (crear el directorio y hacerlo writable):
+ *   logs/app-YYYY-MM-DD.log  — todos los niveles (DEBUG+), rotación diaria, 30 días
+ *   logs/error.log           — solo ERROR+, archivo fijo para monitorización
+ *
+ * Añadir al .gitignore:
+ *   logs/*.log
+ *
+ * Uso:
+ *   LoggerService::info('User authenticated', ['user_id' => 42]);
+ *   LoggerService::warning('Cache miss', ['key' => 'catalog_products']);
+ *   LoggerService::error('DB save failed', ['message' => $e->getMessage(), 'http' => 500]);
+ *   LoggerService::debug('Payload received', ['body' => $data]);
+ *   LoggerService::critical('Service unreachable', ['service' => 'payments']);
+ *
+ * Integrar con excepciones de dominio:
+ *   } catch (AppException $e) {
+ *       LoggerService::error($e->getMessage(), ['http_code' => $e->getHttpCode()]);
+ *       throw $e;
+ *   }
+ */
+class LoggerService
+{
+    private static ?Logger $instance    = null;
+    private static bool    $isProduction = true; // default seguro
+
+    private const LOGS_DIR  = __DIR__ . '/../../../logs';
+    private const MAX_FILES = 30; // Días de retención de logs rotativos
+
+    private function __construct() {}
+
+    /**
+     * Llamar UNA VEZ en App::create() antes del primer uso.
+     *   LoggerService::init($config->isProduction());
+     */
+    public static function init(bool $isProduction): void
+    {
+        self::$isProduction = $isProduction;
+        self::$instance     = null; // permite re-inicializar si APP_ENV cambia en tests
+    }
+
+    public static function getInstance(): Logger
+    {
+        if (self::$instance !== null) {
+            return self::$instance;
+        }
+
+        $formatter = new LineFormatter(
+            format:                     "[%datetime%] %channel%.%level_name%: %message% %context% %extra%\n",
+            dateFormat:                 'Y-m-d H:i:s',
+            allowInlineLineBreaks:      true,
+            ignoreEmptyContextAndExtra: true,
+        );
+
+        // En producción solo WARNING+ para no saturar disco con tráfico normal.
+        // En development DEBUG+ para trazabilidad completa.
+        $minLevel = self::$isProduction ? Level::Warning : Level::Debug;
+
+        // Canal rotativo diario → logs/app-2025-06-01.log
+        $rotatingHandler = new RotatingFileHandler(
+            filename: self::LOGS_DIR . '/app.log',
+            maxFiles: self::MAX_FILES,
+            level:    $minLevel,
+        );
+        $rotatingHandler->setFormatter($formatter);
+
+        // Canal de errores críticos → logs/error.log (nunca rota,
+        // monitorizable con tail -f o alertas externas)
+        $errorHandler = new StreamHandler(
+            stream: self::LOGS_DIR . '/error.log',
+            level:  Level::Error,
+        );
+        $errorHandler->setFormatter($formatter);
+
+        self::$instance = new Logger('app');
+        self::$instance->pushHandler($rotatingHandler);
+        self::$instance->pushHandler($errorHandler);
+
+        return self::$instance;
+    }
+
+    // ─── Shortcuts estáticos ───────────────────────────────────────────────────
+
+    /** @param array<string, mixed> $context */
+    public static function debug(string $message, array $context = []): void
+    {
+        self::getInstance()->debug($message, $context);
+    }
+
+    /** @param array<string, mixed> $context */
+    public static function info(string $message, array $context = []): void
+    {
+        self::getInstance()->info($message, $context);
+    }
+
+    /** @param array<string, mixed> $context */
+    public static function warning(string $message, array $context = []): void
+    {
+        self::getInstance()->warning($message, $context);
+    }
+
+    /** @param array<string, mixed> $context */
+    public static function error(string $message, array $context = []): void
+    {
+        self::getInstance()->error($message, $context);
+    }
+
+    /** @param array<string, mixed> $context */
+    public static function critical(string $message, array $context = []): void
+    {
+        self::getInstance()->critical($message, $context);
+    }
+}

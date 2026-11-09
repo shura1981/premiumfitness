@@ -1,0 +1,54 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Infrastructure\Middlewares;
+
+use App\Infrastructure\Validation\AbstractValidator;
+use App\Shared\Exceptions\ValidationException;
+use Psr\Http\Message\ResponseFactoryInterface;
+use Psr\Http\Message\ResponseInterface as Response;
+use Psr\Http\Message\ServerRequestInterface as Request;
+use Psr\Http\Server\RequestHandlerInterface as Handler;
+
+/**
+ * Middleware PSR-15 de validación.
+ *
+ * Uso en una ruta — adjuntar con el validador del Feature:
+ *
+ *   $app->post('/api/login', LoginController::class)
+ *       ->add(new ValidationMiddleware(new LoginValidator(), $app->getResponseFactory()));
+ *
+ * Si la validación falla responde 422 con el mapa de errores:
+ *   { "error": "Validation failed", "errors": { "email": ["..."] } }
+ *
+ * Si pasa, el siguiente handler recibe el request sin modificaciones.
+ */
+class ValidationMiddleware
+{
+    public function __construct(
+        private readonly AbstractValidator        $validator,
+        private readonly ResponseFactoryInterface $responseFactory,
+    ) {}
+
+    public function __invoke(Request $request, Handler $handler): Response
+    {
+        try {
+            /** @var array<string, mixed> $body */
+            $body = (array) ($request->getParsedBody() ?? []);
+            $this->validator->validate($body);
+        } catch (ValidationException $e) {
+            $response = $this->responseFactory->createResponse(422);
+            $response->getBody()->write(
+                json_encode(
+                    ['error' => 'Validation failed', 'errors' => $e->errors()],
+                    JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR
+                )
+            );
+
+            return $response->withHeader('Content-Type', 'application/json');
+        }
+
+        return $handler->handle($request);
+    }
+}

@@ -1,0 +1,56 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Infrastructure\Middlewares;
+
+use App\Infrastructure\Logger\LoggerService;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\MiddlewareInterface;
+use Psr\Http\Server\RequestHandlerInterface;
+
+/**
+ * Loguea cada request HTTP: método, path, status code y tiempo de respuesta.
+ *
+ * Registrar en src/Infrastructure/App.php (antes del routing middleware):
+ *   $slim->add(new RequestLogMiddleware());
+ *
+ * Salida en logs/app-YYYY-MM-DD.log:
+ *   [2026-04-04 12:00:00] app.INFO: [GET] /blog → 200 (12.4ms) [] []
+ *   [2026-04-04 12:00:01] app.WARNING: [POST] /api/login → 401 (5.1ms) [] []
+ *   [2026-04-04 12:00:02] app.ERROR: [GET] /api/users → 500 (8.3ms) [] []
+ *
+ * El nivel se elige automáticamente según el status code:
+ *   5xx → error  |  4xx → warning  |  resto → info
+ *
+ * Uso combinado con APP_ENV:
+ *   En producción (APP_ENV=production) el rotating handler solo captura WARNING+,
+ *   por lo que los GET 200 no ensucian el log. Solo se registran advertencias y errores.
+ *   En development (APP_ENV=development) se captura todo (DEBUG+).
+ */
+class RequestLogMiddleware implements MiddlewareInterface
+{
+    public function process(
+        ServerRequestInterface  $request,
+        RequestHandlerInterface $handler,
+    ): ResponseInterface {
+        $start    = hrtime(as_number: true);
+        $response = $handler->handle($request);
+        $ms       = round((hrtime(as_number: true) - $start) / 1_000_000, 2);
+
+        $status = $response->getStatusCode();
+        $method = $request->getMethod();
+        $path   = $request->getUri()->getPath();
+
+        $level = match (true) {
+            $status >= 500 => 'error',
+            $status >= 400 => 'warning',
+            default        => 'info',
+        };
+
+        LoggerService::$level("[{$method}] {$path} → {$status} ({$ms}ms)");
+
+        return $response;
+    }
+}

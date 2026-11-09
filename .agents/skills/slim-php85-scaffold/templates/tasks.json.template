@@ -1,0 +1,98 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "🚀 Iniciar Servidor (PHP Dev Server)",
+            "type": "shell",
+            "command": "composer run start",
+            "options": {
+                "cwd": "${workspaceFolder}/radical-nutrition"
+            },
+            "isBackground": true,
+            "problemMatcher": [
+                {
+                    "pattern": [
+                        {
+                            "regexp": ".",
+                            "file": 1,
+                            "location": 2,
+                            "message": 3
+                        }
+                    ],
+                    "background": {
+                        "activeOnStart": true,
+                        "beginsPattern": "Listening on",
+                        "endsPattern": "Listening on"
+                    }
+                }
+            ],
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "group": "build",
+            "detail": "Levanta el servidor local de PHP embebido."
+        },
+        {
+            "label": "✨ Linter: Revisar Código con PHPStan",
+            "dependsOn": "📦 Composer: Instalar COMPLETO (Prod + Dev)",
+            "type": "shell",
+            "command": "composer run lint",
+            "options": {
+                "cwd": "${workspaceFolder}/radical-nutrition"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "group": "test",
+            "detail": "Busca errores lógicos usando el linter estricto de PHP."
+        },
+        {
+            "label": "📦 Composer: Instalar COMPLETO (Prod + Dev)",
+            "type": "shell",
+            "command": "composer run install:dev",
+            "options": {
+                "cwd": "${workspaceFolder}/radical-nutrition"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "group": "build",
+            "detail": "Instala todas las dependencias incluyendo PHPStan (recomendado en local)."
+        },
+        {
+            "label": "🚀 Composer: Instalar LIGERO (Solo Producción)",
+            "type": "shell",
+            "command": "composer run build",
+            "options": {
+                "cwd": "${workspaceFolder}/radical-nutrition"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "group": "build",
+            "detail": "Instala únicamente las dependencias de ejecución, optimizando el entorno de despliegue."
+        },
+        {
+            "label": "🔄 Composer: Regenerar Autoloader (PSR-4)",
+            "type": "shell",
+            "command": "composer run dump",
+            "options": {
+                "cwd": "${workspaceFolder}/radical-nutrition"
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "group": "build",
+            "detail": "Actualiza el mapa de clases si creaste nuevas carpetas o modificaste el namespace raíz."
+        }
+    ]
+}

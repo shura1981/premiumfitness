@@ -3,7 +3,7 @@
   PLANTILLA: Página de respuesta — Bold (Botón de Pagos)
   =======================================================
   Query params de entrada : ?orderId={id}&bold-order-id={id}&bold-tx-status={approved|rejected|pending}
-  Endpoint de estado      : GET /api/state-transaction?id_visita={id}
+  Endpoint de estado      : GET https://www.nutramerican.com/api_MegaplexStar/api/webservice3.php/state-transaction?id_visita={id}
   Assets                  : ./assets/ (favicon, sellos de seguridad)
 
   PERSONALIZACIÓN:
@@ -231,7 +231,7 @@
       }
 
       // ── 2. Consultar el estado de la transacción en el backend ──
-      var urlapp = '/api/state-transaction'
+      var urlapp = 'https://www.nutramerican.com/api_MegaplexStar/api/webservice3.php/state-transaction'
                  + '?id_visita=' + encodeURIComponent(id_order);
 
       $.get(urlapp, function (response) {

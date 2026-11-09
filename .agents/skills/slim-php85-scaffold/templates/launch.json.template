@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "🌐 Lanzar Servidor y Abrir Chrome",
+            "type": "chrome",
+            "request": "launch",
+            "url": "http://localhost:8000",
+            "webRoot": "${workspaceFolder}/radical-nutrition",
+            "preLaunchTask": "🚀 Iniciar Servidor (PHP Dev Server)",
+            "presentation": {
+                "hidden": false,
+                "group": "web"
+            }
+        }
+    ]
+}

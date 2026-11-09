@@ -1,0 +1,91 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Infrastructure\Handlers;
+
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Slim\Psr7\Response as SlimResponse;
+use Slim\Views\Twig;
+use Throwable;
+
+/**
+ * Manejador de errores 404 con soporte Twig.
+ * Variante de NotFoundHandler para proyectos que incluyen slim/twig-view.
+ *
+ * Requiere:
+ *   composer require slim/twig-view
+ *
+ * REGISTRAR en src/Infrastructure/App.php (reemplaza el NotFoundHandler base):
+ *   use Slim\Views\TwigMiddleware;
+ *
+ *   $twig = Twig::create(__DIR__ . '/../../../views', [
+ *       'cache' => $_ENV['APP_ENV'] === 'production'
+ *           ? __DIR__ . '/../../../cache/twig'
+ *           : false,
+ *   ]);
+ *   $app->add(TwigMiddleware::create($app, $twig));
+ *
+ *   $errorMiddleware->setErrorHandler(
+ *       HttpNotFoundException::class,
+ *       new TwigNotFoundHandler($twig),
+ *   );
+ *
+ * Rutas API (/api/*) responden siempre JSON.
+ * Rutas web renderizan views/errors/404.html con variable:
+ *   {{ path }} — la ruta solicitada (ya escapada)
+ *
+ * Plantilla mínima (views/errors/404.html):
+ *   <h1>404 — Página no encontrada</h1>
+ *   <p>La ruta <code>{{ path }}</code> no existe.</p>
+ *   <a href="/">← Volver al inicio</a>
+ */
+class TwigNotFoundHandler
+{
+    public function __construct(private readonly Twig $twig) {}
+
+    public function __invoke(
+        ServerRequestInterface $request,
+        Throwable $exception,
+        bool $displayErrorDetails,
+        bool $logErrors,
+        bool $logErrorDetails,
+    ): ResponseInterface {
+        $path = $request->getUri()->getPath();
+
+        error_log("404 Not Found: [{$request->getMethod()}] {$path}");
+
+        return $this->isApiRequest($request)
+            ? $this->jsonResponse($path)
+            : $this->twigResponse($path);
+    }
+
+    private function isApiRequest(ServerRequestInterface $request): bool
+    {
+        return str_starts_with($request->getUri()->getPath(), '/api')
+            || str_contains($request->getHeaderLine('Accept'), 'application/json');
+    }
+
+    private function jsonResponse(string $path): ResponseInterface
+    {
+        $response = new SlimResponse();
+        $response->getBody()->write(
+            json_encode(
+                ['error' => 'Not Found', 'path' => $path],
+                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR,
+            )
+        );
+
+        return $response
+            ->withHeader('Content-Type', 'application/json')
+            ->withStatus(404);
+    }
+
+    private function twigResponse(string $path): ResponseInterface
+    {
+        return $this->twig->render(new SlimResponse(), 'errors/404.html', [
+            'path' => htmlspecialchars($path, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'),
+        ])->withStatus(404);
+    }
+}

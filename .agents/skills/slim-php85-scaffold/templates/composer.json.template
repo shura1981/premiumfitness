@@ -1,0 +1,50 @@
+{
+    "name": "your-vendor/your-project",
+    "description": "Slim project initialized with Screaming Architecture and PHP 8.5",
+    "type": "project",
+    "require": {
+        "php": ">=8.5",
+        "firebase/php-jwt": "^6.10",
+        "monolog/monolog": "^3.0",
+        "phpmailer/phpmailer": "^6.9",
+        "psr/simple-cache": "^3.0",
+        "slim/slim": "^4.15",
+        "slim/psr7": "^1.7",
+        "slim/twig-view": "^3.4",
+        "symfony/cache": "^7.1",
+        "vlucas/phpdotenv": "^5.6",
+        "ext-pdo": "*",
+        "ext-json": "*"
+    },
+    "require-dev": {
+        "phpstan/phpstan": "^2.0"
+    },
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Your Name",
+            "email": "you@example.com"
+        }
+    ],
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    },
+    "scripts": {
+        "start": "php -S 0.0.0.0:8000 server.php",
+        "lint": "vendor/bin/phpstan analyse src",
+        "build": "composer install --no-dev --optimize-autoloader",
+        "install:dev": "composer install",
+        "dump": "composer dump-autoload -o"
+    }
+}

@@ -1,0 +1,148 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Infrastructure\Http;
+
+/**
+ * Servicio estático para gestión del ciclo de vida de la sesión PHP.
+ * Centraliza las llamadas a session_start() para evitar llamadas duplicadas
+ * dispersas por los Feature controllers.
+ *
+ * Variables de entorno (.env):
+ *   TIME_LIFE_SESSION — duración en segundos (default: 1440 → 24 minutos)
+ *
+ * Uso:
+ *   // Guardar y leer el usuario autenticado
+ *   SessionService::setUser(['id' => 1, 'name' => 'Ana', 'role' => 'admin']);
+ *   $user = SessionService::getUser();   // array<string,mixed>|null
+ *
+ *   // Mensajes flash (se destruyen al leerlos)
+ *   SessionService::flash('success', 'Registro guardado correctamente.');
+ *   $msg = SessionService::getFlash('success'); // string|null
+ *
+ *   // Verificar sesión activa
+ *   if (!SessionService::isLoggedIn()) { ... }
+ *
+ *   // Cerrar sesión
+ *   SessionService::destroy();
+ */
+class SessionService
+{
+    private const KEY_USER  = 'user';
+    private const KEY_FLASH = '_flash';
+    private const DEFAULT_TTL = 1440;
+
+    private static int $ttl = self::DEFAULT_TTL;
+
+    /**
+     * Llamar UNA VEZ en App::create() antes del primer request.
+     *   SessionService::init($config->session->ttl);
+     */
+    public static function init(int $ttl): void
+    {
+        self::$ttl = $ttl;
+    }
+
+    // ─── Lifecycle ─────────────────────────────────────────────────────────────
+
+    public static function start(): void
+    {
+        ini_set('session.gc_maxlifetime',  (string) self::$ttl);
+        ini_set('session.cookie_lifetime', (string) self::$ttl);
+
+        session_start();
+    }
+
+    public static function destroy(): void
+    {
+        self::ensureStarted();
+        $_SESSION = [];
+        session_destroy();
+    }
+
+    private static function ensureStarted(): void
+    {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            self::start();
+        }
+    }
+
+    // ─── User ──────────────────────────────────────────────────────────────────
+
+    /**
+     * @param array<string, mixed> $user Datos del usuario autenticado.
+     */
+    public static function setUser(array $user): void
+    {
+        self::ensureStarted();
+        $_SESSION[self::KEY_USER] = $user;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public static function getUser(): ?array
+    {
+        self::ensureStarted();
+        $user = $_SESSION[self::KEY_USER] ?? null;
+
+        return is_array($user) ? $user : null;
+    }
+
+    public static function isLoggedIn(): bool
+    {
+        return self::getUser() !== null;
+    }
+
+    public static function removeUser(): void
+    {
+        self::ensureStarted();
+        unset($_SESSION[self::KEY_USER]);
+    }
+
+    // ─── Flash messages ────────────────────────────────────────────────────────
+
+    /**
+     * Guarda un mensaje flash. Se destruye automáticamente al leerlo con getFlash().
+     * Ideal para mensajes de éxito/error entre redirecciones.
+     */
+    public static function flash(string $key, string $message): void
+    {
+        self::ensureStarted();
+        $_SESSION[self::KEY_FLASH][$key] = $message;
+    }
+
+    /**
+     * Lee y destruye un mensaje flash.
+     */
+    public static function getFlash(string $key): ?string
+    {
+        self::ensureStarted();
+        $value = $_SESSION[self::KEY_FLASH][$key] ?? null;
+        unset($_SESSION[self::KEY_FLASH][$key]);
+
+        return is_string($value) ? $value : null;
+    }
+
+    // ─── Raw access (para datos arbitrarios por feature) ───────────────────────
+
+    public static function set(string $key, mixed $value): void
+    {
+        self::ensureStarted();
+        $_SESSION[$key] = $value;
+    }
+
+    public static function get(string $key): mixed
+    {
+        self::ensureStarted();
+
+        return $_SESSION[$key] ?? null;
+    }
+
+    public static function remove(string $key): void
+    {
+        self::ensureStarted();
+        unset($_SESSION[$key]);
+    }
+}

@@ -1,0 +1,116 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Infrastructure\Http;
+
+/**
+ * Servicio estático de gestión de cookies.
+ * No requiere instanciación — úsalo directamente en cualquier Feature controller.
+ *
+ * Convenciones de seguridad:
+ *   - IDs de usuario se guardan con base64_encode/decode (liviano, NO seguro solo).
+ *     Para datos sensibles, cifrar con JwtService antes de almacenar.
+ *   - En producción (APP_ENV=production) las cookies se marcan como `Secure`.
+ *   - Las cookies de sesión de usuario se marcan `httponly: true` para
+ *     evitar acceso desde JavaScript (protección XSS).
+ *   - Las cookies de tema se marcan `httponly: false` para que el JS pueda
+ *     leerlas y aplicar el tema sin flash de contenido.
+ *
+ * Uso:
+ *   CookieService::saveUser(42);
+ *   $userId = CookieService::getUser();        // int|null
+ *   $theme  = CookieService::getTheme();       // 'light' | 'dark'
+ *   CookieService::saveTheme('dark');
+ *   CookieService::removeUser();
+ *
+ * Para añadir nuevas cookies al proyecto, seguir el patrón de
+ * pares save/get/remove con sus propias constantes COOKIE_* y TTL_*.
+ */
+class CookieService
+{
+    private const COOKIE_USER  = '_app_user';
+    private const COOKIE_THEME = '_theme';
+
+    private const TTL_MONTH = 2_592_000;  // 30 días en segundos
+    private const TTL_YEAR  = 31_536_000; // 365 días en segundos
+
+    // ─── User ──────────────────────────────────────────────────────────────────
+
+    public static function saveUser(int $userId): void
+    {
+        setcookie(
+            name:     self::COOKIE_USER,
+            value:    base64_encode((string) $userId),
+            expires_or_options: time() + self::TTL_MONTH,
+            path:     '/',
+            secure:   self::isSecure(),
+            httponly: true,
+        );
+    }
+
+    public static function getUser(): ?int
+    {
+        if (!isset($_COOKIE[self::COOKIE_USER])) {
+            return null;
+        }
+
+        $decoded = base64_decode($_COOKIE[self::COOKIE_USER], strict: true);
+
+        return ($decoded !== false && ctype_digit($decoded))
+            ? (int) $decoded
+            : null;
+    }
+
+    public static function hasUser(): bool
+    {
+        return isset($_COOKIE[self::COOKIE_USER]);
+    }
+
+    public static function removeUser(): void
+    {
+        setcookie(self::COOKIE_USER, '', time() - 3600, '/');
+    }
+
+    // ─── Theme ─────────────────────────────────────────────────────────────────
+
+    public static function saveTheme(string $theme): void
+    {
+        $allowed = ['light', 'dark'];
+        $safe    = in_array($theme, $allowed, strict: true) ? $theme : 'light';
+
+        setcookie(
+            name:     self::COOKIE_THEME,
+            value:    $safe,
+            expires_or_options: time() + self::TTL_YEAR,
+            path:     '/',
+            secure:   self::isSecure(),
+            httponly: false, // JS necesita leer el tema para evitar flash
+        );
+    }
+
+    public static function getTheme(): string
+    {
+        $theme = $_COOKIE[self::COOKIE_THEME] ?? 'light';
+
+        return in_array($theme, ['light', 'dark'], strict: true) ? $theme : 'light';
+    }
+
+    // ─── Helpers ───────────────────────────────────────────────────────────────
+
+    private static bool $secure = true; // default seguro
+
+    /**
+     * Llamar UNA VEZ en App::create() antes del primer request.
+     *   CookieService::init($config->isProduction());
+     */
+    public static function init(bool $isProduction): void
+    {
+        self::$secure = $isProduction;
+    }
+
+    private static function isSecure(): bool
+    {
+        return self::$secure;
+    }
+}

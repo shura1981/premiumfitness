@@ -1,0 +1,89 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Infrastructure\Cache;
+
+use Symfony\Component\Cache\Adapter\FilesystemAdapter;
+use Symfony\Component\Cache\Psr16Cache;
+
+/**
+ * Servicio de caché PSR-16 basado en Symfony Cache (FileSystem).
+ *
+ * Requiere:
+ *   composer require symfony/cache psr/simple-cache
+ *
+ * Variables de entorno opcionales (.env):
+ *   CACHE_DIR  — directorio de almacenamiento (default: cache/simplecache/)
+ *   CACHE_TTL  — tiempo de vida por defecto en segundos (default: 3600)
+ *
+ * Directorios requeridos (writable por el servidor web):
+ *   cache/simplecache/   ← datos de caché PSR-16
+ *   cache/twig/          ← plantillas Twig compiladas (si se usa Twig)
+ *
+ * Uso básico:
+ *   $cache = CacheService::fromEnv();
+ *   $data  = $cache->get('my_key');
+ *
+ *   if ($data === null) {
+ *       $data = expensiveQuery();
+ *       $cache->set('my_key', $data, ttl: 1800);
+ *   }
+ *
+ * Claves de caché: definir constantes en cada Feature.
+ *   // src/Features/Catalog/CacheKeys.php
+ *   final class CacheKeys {
+ *       const PRODUCTS     = 'catalog_products';
+ *       const TTL_PRODUCTS = 1800; // 30 minutos
+ *   }
+ */
+class CacheService
+{
+    private readonly Psr16Cache $cache;
+
+    public function __construct(
+        string $directory       = 'cache/simplecache/',
+        int    $defaultLifetime = 3600,
+    ) {
+        $this->cache = new Psr16Cache(
+            new FilesystemAdapter(
+                namespace:       '',
+                defaultLifetime: $defaultLifetime,
+                directory:       $directory,
+            )
+        );
+    }
+
+    public static function fromConfig(\App\Infrastructure\CacheConfig $config): self
+    {
+        return new self(
+            directory:       $config->dir,
+            defaultLifetime: $config->ttl,
+        );
+    }
+
+    public function get(string $key): mixed
+    {
+        return $this->cache->get($key);
+    }
+
+    public function set(string $key, mixed $value, int $ttl = 3600): bool
+    {
+        return $this->cache->set($key, $value, $ttl);
+    }
+
+    public function has(string $key): bool
+    {
+        return $this->cache->has($key);
+    }
+
+    public function delete(string $key): bool
+    {
+        return $this->cache->delete($key);
+    }
+
+    public function clear(): bool
+    {
+        return $this->cache->clear();
+    }
+}

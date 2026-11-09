@@ -1,0 +1,32 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Infrastructure\Database;
+
+/**
+ * Value object de configuración de base de datos.
+ *
+ * Las variables de entorno ya están validadas y garantizadas como no vacías
+ * por dotenv en load/bootstrap.php — por eso no hay defaults silenciosos aquí.
+ */
+readonly class DatabaseConfig
+{
+    public function __construct(
+        public string $host,
+        public string $name,
+        public string $user,
+        public string $pass,
+        public string $charset = 'utf8mb4',
+    ) {}
+
+    public static function fromEnv(): self
+    {
+        return new self(
+            host: $_ENV['DB_HOST'],
+            name: $_ENV['DB_NAME'],
+            user: $_ENV['DB_USER'],
+            pass: $_ENV['DB_PASS'],
+        );
+    }
+}

@@ -1,0 +1,178 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Infrastructure;
+
+/**
+ * Centraliza todas las variables de entorno del proyecto.
+ *
+ * Las variables obligatorias (DB, JWT, MAIL, CORS) ya fueron validadas y
+ * garantizadas como no vacías por dotenv en load/bootstrap.php.
+ * Por eso no tienen defaults silenciosos aquí — si faltan, bootstrap falla primero.
+ *
+ * Las variables opcionales sí tienen fallback con ?? porque no están en el
+ * bloque required() de bootstrap.
+ *
+ * Uso:
+ *   $config = AppConfig::fromEnv();
+ *   $config->appEnv          // 'production' | 'development'
+ *   $config->isProduction()  // bool
+ *   $config->db->host        // string
+ *   $config->jwt->secret     // string
+ *   $config->mail->host      // string
+ *   $config->cache->dir      // string
+ *   $config->session->ttl    // int
+ *   $config->cors->origins   // list<string>
+ *   $config->mediaApiKey     // string
+ *
+ * Registrar en src/Infrastructure/App.php:
+ *   $config = AppConfig::fromEnv();
+ *   DB::boot($config->db);
+ *   $slim->add(new CorsMiddleware($config->cors->origins));
+ *   // Pasar $config a los servicios que lo necesiten
+ */
+readonly class AppConfig
+{
+    public function __construct(
+        public string        $appEnv,
+        public DbConfig      $db,
+        public JwtConfig     $jwt,
+        public MailConfig    $mail,
+        public CorsConfig    $cors,
+        public CacheConfig   $cache,
+        public SessionConfig $session,
+        public string        $mediaApiKey,
+    ) {}
+
+    public static function fromEnv(): self
+    {
+        return new self(
+            appEnv:      $_ENV['APP_ENV'],
+            db:          DbConfig::fromEnv(),
+            jwt:         JwtConfig::fromEnv(),
+            mail:        MailConfig::fromEnv(),
+            cors:        CorsConfig::fromEnv(),
+            cache:       CacheConfig::fromEnv(),
+            session:     SessionConfig::fromEnv(),
+            mediaApiKey: $_ENV['API_KEY_MEDIA'] ?? '',
+        );
+    }
+
+    public function isProduction(): bool
+    {
+        return $this->appEnv === 'production';
+    }
+}
+
+// ─── Sub-configs ──────────────────────────────────────────────────────────────
+// Cada una agrupa las variables de un mismo dominio funcional.
+// Se pueden extraer a archivos separados si el proyecto crece.
+
+readonly class DbConfig
+{
+    public function __construct(
+        public string $host,
+        public string $name,
+        public string $user,
+        public string $pass,
+        public string $charset = 'utf8mb4',
+    ) {}
+
+    public static function fromEnv(): self
+    {
+        return new self(
+            host: $_ENV['DB_HOST'],
+            name: $_ENV['DB_NAME'],
+            user: $_ENV['DB_USER'],
+            pass: $_ENV['DB_PASS'],
+        );
+    }
+}
+
+readonly class JwtConfig
+{
+    public function __construct(
+        public string $secret,
+        public int    $ttlSeconds,
+    ) {}
+
+    public static function fromEnv(): self
+    {
+        return new self(
+            secret:     $_ENV['JWT_SECRET'],
+            ttlSeconds: (int) $_ENV['JWT_TTL_SECONDS'],
+        );
+    }
+}
+
+readonly class MailConfig
+{
+    public function __construct(
+        public string $host,
+        public int    $port,
+        public string $username,
+        public string $password,
+        public string $from,
+        public string $fromName,
+        public string $encryption,
+    ) {}
+
+    public static function fromEnv(): self
+    {
+        return new self(
+            host:       $_ENV['MAIL_HOST'],
+            port:       (int) $_ENV['MAIL_PORT'],
+            username:   $_ENV['MAIL_USERNAME'],
+            password:   $_ENV['MAIL_PASSWORD'],
+            from:       $_ENV['MAIL_FROM'],
+            fromName:   $_ENV['MAIL_FROM_NAME'],
+            encryption: $_ENV['MAIL_ENCRYPTION'],
+        );
+    }
+}
+
+readonly class CorsConfig
+{
+    /** @param list<string> $origins */
+    public function __construct(
+        public array $origins,
+    ) {}
+
+    public static function fromEnv(): self
+    {
+        return new self(
+            origins: array_map('trim', explode(',', $_ENV['CORS_ALLOWED_ORIGINS'])),
+        );
+    }
+}
+
+readonly class CacheConfig
+{
+    public function __construct(
+        public string $dir,
+        public int    $ttl,
+    ) {}
+
+    public static function fromEnv(): self
+    {
+        return new self(
+            dir: $_ENV['CACHE_DIR'] ?? 'cache/simplecache/',
+            ttl: (int) ($_ENV['CACHE_TTL'] ?? 3600),
+        );
+    }
+}
+
+readonly class SessionConfig
+{
+    public function __construct(
+        public int $ttl,
+    ) {}
+
+    public static function fromEnv(): self
+    {
+        return new self(
+            ttl: (int) ($_ENV['TIME_LIFE_SESSION'] ?? 1440),
+        );
+    }
+}

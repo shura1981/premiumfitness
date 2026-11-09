@@ -133,7 +133,7 @@ El body se envía **pass-through** a Addi. La API intermediaria **no transforma 
   },
   "allyUrlRedirection": {
     "logoUrl": "https://tienda.com/logo.png",
-    "callbackUrl": "https://api.tudominio.com/api/webhooks/addi",
+    "callbackUrl": "https://api.tudominio.com/confirmation_addi.php",
     "redirectionUrl": "https://tienda.com/response-addi/index.html?id_order=653449"
   },
   "geoLocation": {
@@ -244,16 +244,16 @@ Addi hace un `POST` al `callbackUrl` enviado en `allyUrlRedirection`.
 | `ABANDONED` | 10 | `Abandonada` |
 | `DECLINED` | 11 | `Cancelada` |
 
-> Ver plantilla completa en `templates/webhooks/webhook-addi.ts`
+> Ver plantilla completa en `templates/webhooks/webhook-addi.php`
 
 ---
 
 ## Cadena de Validaciones y Errores
 
 ```
-1. Middleware de autenticación → 401 si Authorization no coincide
-2. fetch falla en getAccessToken() → Error al obtener token
-3. HTTP code != 200 en token → Error: {error_description}
-4. fetch falla en getRedirectionUrl() → HTTP 500 + JSON error
-5. Header Location vacío → { url: "" }
+1. Middleware tokenHeader → 401 si Authorization no coincide con KEY_HEADER
+2. cURL falla en obtenerToken() → Exception "Error en cURL: {mensaje} (Código: {errno})"
+3. HTTP code != 200 en token → Exception "Error al obtener el token: {error_description}"
+4. cURL falla en obtenerUrlRedireccion() → HTTP 500 + JSON error
+5. CURLINFO_REDIRECT_URL vacío → { "url": "" } (no lanza excepción en impl. actual)
 ```

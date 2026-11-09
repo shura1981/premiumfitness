@@ -1,22 +1,7 @@
-# Contrato de datos: qué debe entregar el backend (Node.js / TypeScript)
+# Contrato de datos: qué debe entregar el backend
 
-La galería consume una **lista ordenada de slides** entregada por la API o el servicio backend:
+La galería es agnóstica: sólo necesita una **lista ordenada de slides**. Cualquier backend (PHP, Node, Python, .NET…) sirve si la produce.
 
-```typescript
-export interface GallerySlide {
-  src: string;      // Slider principal (~1200px)
-  bigSrc: string;   // Lightbox con zoom hasta 5x (≥ 2000px)
-  thumb: string;    // Miniaturas y srcset 480w (~480px)
-  alt: string;      // Texto alternativo descriptivo
-}
-
-export interface ProductGalleryData {
-  badge?: string;
-  slides: GallerySlide[];
-}
-```
-
-Ejemplo JSON:
 ```json
 [
   { "src": "/img/p1-big.webp", "bigSrc": "/img/p1-bigger.webp", "thumb": "/img/p1-small.webp", "alt": "Whey Protein 2 lb" }
@@ -30,30 +15,44 @@ Ejemplo JSON:
 | `bigSrc` | lightbox con zoom hasta 5× | ≥ 2000 px |
 | `alt` | texto alternativo descriptivo | — |
 
-Reglas para quien genere la lista en Node.js/TypeScript:
+Reglas para quien genere la lista:
 
-1. **Orden**: imagen principal primero (candidata a LCP).
-2. **Sin duplicados**: deduplica por `bigSrc` usando `Set` o `filter`.
-3. **Fallback**: si no hay imágenes, devuelve una slide con fallback por defecto.
-4. **Degradación de variantes**: si falta `bigSrc`, rellenar con `src` o `thumb`.
-5. **URLs válidas**: rutas absolutas (`/img/...`) o URLs HTTPS completas.
-6. **Formato recomendado**: WebP.
+1. **Orden**: imagen principal primero (será la candidata a LCP).
+2. **Sin duplicados**: deduplica por `bigSrc` si combinas colecciones.
+3. **Fallback**: si no hay imágenes, devuelve una sola slide con una imagen por defecto; la galería nunca debe quedar vacía.
+4. **Degradación de variantes**: si falta una variante, rellena con la mejor disponible (`bigSrc` ← `src` ← `thumb`) para no dejar `src` vacío.
+5. **URLs válidas**: sólo rutas absolutas del sitio (`/…`) o URLs completas; descarta el resto.
+6. **`alt` únicos y útiles** cuando hay varias imágenes (ej. "… — vista secundaria", "Tabla nutricional de …").
+7. Formato recomendado: WebP (con fallback si el público lo exige). Ver la skill `image-webp-optimizer` para generar variantes.
 
-## Bucle en Angular / HTML
+## Bucle por motor de plantillas
 
-**Angular (Component Template con `@for`)**:
-```html
-@for (slide of slides; track slide.src; let isFirst = $first) {
+Los atributos `data-*` y la estructura son idénticos; sólo cambia la sintaxis del bucle.
+
+**Twig**
+```twig
+{% for slide in slides %}
   <div class="swiper-slide pg-slide">
-    <img class="pg-main-img" [src]="slide.src" [srcset]="slide.thumb + ' 480w, ' + slide.src + ' 1200w'"
-         sizes="(min-width: 768px) 45vw, 100vw" width="900" height="900" [alt]="slide.alt" draggable="false"
-         [attr.fetchpriority]="isFirst ? 'high' : null" [attr.loading]="isFirst ? null : 'lazy'">
+    <img class="pg-main-img" src="{{ slide.src }}" srcset="{{ slide.thumb }} 480w, {{ slide.src }} 1200w"
+         sizes="(min-width: 768px) 45vw, 100vw" width="900" height="900" alt="{{ slide.alt }}" draggable="false"
+         {{ loop.first ? 'fetchpriority="high"' : 'loading="lazy"' }}>
   </div>
-}
+{% endfor %}
 ```
 
-**HTML Vanilla / EJS**:
-```html
+**Blade**
+```blade
+@foreach ($slides as $slide)
+  <div class="swiper-slide pg-slide">
+    <img class="pg-main-img" src="{{ $slide['src'] }}" srcset="{{ $slide['thumb'] }} 480w, {{ $slide['src'] }} 1200w"
+         width="900" height="900" alt="{{ $slide['alt'] }}" draggable="false"
+         {!! $loop->first ? 'fetchpriority="high"' : 'loading="lazy"' !!}>
+  </div>
+@endforeach
+```
+
+**EJS**
+```ejs
 <% slides.forEach((slide, i) => { %>
   <div class="swiper-slide pg-slide">
     <img class="pg-main-img" src="<%= slide.src %>" srcset="<%= slide.thumb %> 480w, <%= slide.src %> 1200w"
@@ -62,5 +61,7 @@ Reglas para quien genere la lista en Node.js/TypeScript:
   </div>
 <% }) %>
 ```
+
+**JSX / Vue / Svelte**: renderiza el mismo marcado con `slides.map(...)`; `fetchPriority="high"` en la primera. Inicializa Swiper tras montar y destrúyelo al desmontar (ver *SPA* en SKILL.md).
 
 Repite el mismo bucle para `.pg-thumb` (usa `thumb`) y para los slides del modal (usa `bigSrc` dentro de `.swiper-zoom-container`). Renderiza miniaturas, flechas y contador **sólo si `slides.length > 1`**.

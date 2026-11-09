@@ -1,0 +1,57 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Infrastructure;
+
+use App\Infrastructure\Database\DB;
+use App\Infrastructure\Handlers\NotFoundHandler;
+use App\Infrastructure\Http\CookieService;
+use App\Infrastructure\Http\SessionService;
+use App\Infrastructure\Logger\LoggerService;
+use App\Infrastructure\Middlewares\CorsMiddleware;
+use Slim\App as SlimApp;
+use Slim\Exception\HttpNotFoundException;
+use Slim\Factory\AppFactory;
+
+class App
+{
+    public static function create(): SlimApp
+    {
+        $config = AppConfig::fromEnv();
+
+        // Inicializar servicios estáticos UNA VEZ con la config centralizada.
+        // AppConfig es el ÚNICO punto que lee $_ENV — los servicios reciben valores tipados.
+        LoggerService::init($config->isProduction());
+        CookieService::init($config->isProduction());
+        SessionService::init($config->session->ttl);
+
+        DB::boot($config->db);
+
+        $slim = AppFactory::create();
+
+        $slim->addBodyParsingMiddleware();
+        $slim->addRoutingMiddleware();
+
+        $errorMiddleware = $slim->addErrorMiddleware(
+            displayErrorDetails: !$config->isProduction(),
+            logErrors:           true,
+            logErrorDetails:     true,
+            logger:              LoggerService::getInstance(),
+        );
+
+        // CORS — middleware más externo (LIFO): intercepta OPTIONS antes del router.
+        $slim->add(new CorsMiddleware($config->cors->origins));
+
+        $errorMiddleware->setErrorHandler(
+            HttpNotFoundException::class,
+            new NotFoundHandler($slim->getResponseFactory(), !$config->isProduction())
+        );
+
+        (require __DIR__ . '/../../../app/Routes/WebRoute.php')($slim);
+        (require __DIR__ . '/../../../app/Routes/ApiRoute.php')($slim);
+        (require __DIR__ . '/../../../app/Routes/ResourceRoute.php')($slim);
+
+        return $slim;
+    }
+}
