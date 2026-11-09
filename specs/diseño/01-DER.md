@@ -1,6 +1,6 @@
 # 01 — Diagrama entidad relación (DER)
 
-**Estado:** propuesta v0.9 lista para revisión · **Creado:** 7 de noviembre de 2026
+**Estado:** propuesta v0.10 lista para revisión · **Creado:** 7 de noviembre de 2026
 
 ## Petición original
 
@@ -33,6 +33,11 @@
 - **Puntos por referido:** los 50.000 puntos pendientes viven en `trainer_referrals`. El lote de A se crea solo al activarse, con la primera compra aprobada de un cliente de B.
 - **Estados:** se eliminan el estado `inactive` de `point_lots` y el tipo `activation` de `point_movements`.
 - **Puntos por pedido:** los puntos se calculan por pedido (`orders.reward_points`), no por línea.
+
+**Revisión v0.10, 9 de noviembre de 2026:** la comisión no convertida se paga en dinero al final de cada mes, y la conversión tiene fórmula definida (spec `specs/negocio/04-comision-pago-mensual-y-conversion.md`).
+
+- **Liquidación mensual:** nueva tabla `commission_settlements`. `commission_movements` añade `settlement_id` y el tipo `settlement_debit`.
+- **Conversión:** `commission_conversions` añade `base_points` y `bonus_points`.
 
 ## Objetivo
 
@@ -116,7 +121,7 @@ Proponer el modelo de datos del MVP comercial para revisarlo con negocio y tecno
 | S-17 | La comisión es un libro de movimientos (`commission_movements`). El saldo convertible es la suma de esos movimientos. | Derivado | PRD §10. |
 | S-18 | Cada acumulación crea un lote en `point_lots`. El diseño sigue la idea de `credit_balances` de radical (monto, vencimiento y aplicación) y añade remanente y estados. | Confirmado | PRD §7.3; regla 9. |
 | S-19 | `point_lots.expires_at` es obligatorio: todo lote nace disponible y vence a los `POINTS_EXPIRATION_MONTHS` (6) de `accrued_at`. Los 50.000 puntos pendientes no son un lote, viven en `trainer_referrals` y no caducan. Antes decía: anulable para el lote inactivo del referido. | Confirmado | D-06 resuelta el 9 nov 2026. |
-| S-20 | La conversión guarda el porcentaje aplicado (`conversion_percentage`, de `COMMISSION_CONVERSION_PERCENTAGE`). El cálculo exacto del 50% no se fija en el modelo. | Pendiente | D-04. |
+| S-20 | La conversión guarda la comisión (`commission_amount`), los puntos vigentes base (`base_points`), el porcentaje (`conversion_percentage`), el adicional (`bonus_points` = mín(50% × base, comisión)) y el total (`points_granted`). | Confirmado | D-04 resuelta el 9 nov 2026; spec `negocio/04`. |
 | S-21 | Los orígenes de un lote o movimiento son FK explícitas anulables, no un par genérico `source_type` + `source_id`. | Derivado | Decisión de diseño: integridad referencial en base de datos. |
 | S-22 | La compra propia del entrenador (`order_type = trainer_purchase`) no genera recompensas. | Confirmado | PRD §6.6; MVP §3.3. |
 | S-23 | El beneficiario del 15% es el entrenador. | Pendiente | PD-01: requerimientos dice «el cliente recibe el 15%» en un punto y «el entrenador» en otro. |
@@ -137,7 +142,7 @@ Proponer el modelo de datos del MVP comercial para revisarlo con negocio y tecno
 | S-39 | Comisión por línea: `commission_amount = tax_base × commission_percentage`; `commission_movements.amount` suma las líneas. Puntos por pedido: `orders.reward_points = round(Σ line_total de productos × porcentaje de puntos)`, al entero más cercano y sin el envío. | Confirmado | Reglas 1 y 7 (9 nov 2026). |
 | S-40 | Al registrarse B desde el enlace de A se crea `trainer_referrals` con `referral_points` = `TRAINER_REFERRAL_POINTS` (50.000), sin lote. La primera compra aprobada de un cliente de B guarda `activation_order_id` y `activated_at` y crea el lote de A (`source='trainer_referral'`) una sola vez. La compra propia de B no cuenta. | Confirmado | Regla 6; spec negocio/02. |
 | S-41 | Si se cancela o devuelve la compra que activó los 50.000 puntos y A no los ha usado, se revierte el remanente del lote con un ajuste y el referido vuelve a quedar pendiente. Si ya los usó, se mantienen. | Confirmado; reversión parcial derivada | Spec negocio/02. |
-| S-42 | No hay liquidación mensual de comisión ni tabla de saldos precalculados. Los saldos del entrenador se calculan sumando `point_lots`, `trainer_referrals` y `commission_movements` con índices que cubren cada consulta. | Confirmado (sin cierre de mes); sin tabla de saldos: Derivado | Spec `negocio/03`. |
+| S-42 | No hay tabla de saldos precalculados: los saldos se calculan sumando `point_lots`, `trainer_referrals` y `commission_movements` con índices que cubren cada consulta. La comisión no convertida se liquida al corte del último día del mes en `commission_settlements` (única por `trainer_id` + `period`); los movimientos liquidados guardan `settlement_id`. | Confirmado (pago mensual); sin tabla de saldos: Derivado | Specs `negocio/03` y `negocio/04`. |
 | S-30 | `products.discount_list` (tramos por cantidad con su `sap_code`) se conserva por la integración, aunque los descuentos de PremiumFitness (10% y 25%) dependen del rol y no de la cantidad. | Derivado | Radical. Falta confirmar si los tramos aplican. |
 
 ## Plan
@@ -177,7 +182,8 @@ Diagrama editable: [diagrama-entidad-relacion.drawio](../../docs/img/diagrama-en
 | Pedidos y catálogo | `status_orders` | Existente | Estados del pedido. |
 | Pedidos y catálogo | `payment_event_jobs` | Existente | Reintento de webhooks que llegan antes que el pedido. |
 | Recompensas y operación | `commission_movements` | Nueva | Abono de comisión del pedido (suma de líneas), débitos por conversión y ajustes. |
-| Recompensas y operación | `commission_conversions` | Nueva | Conversión del total de comisión a puntos. |
+| Recompensas y operación | `commission_conversions` | Nueva | Conversión del total de comisión a puntos: comisión, puntos base, adicional con tope y total. |
+| Recompensas y operación | `commission_settlements` | Nueva | Liquidación mensual de la comisión no convertida y registro del pago. |
 | Recompensas y operación | `point_lots` | Nueva | Lote con cantidad inicial, remanente, estado, fecha de acumulación y caducidad. |
 | Recompensas y operación | `point_movements` | Nueva | Abono, consumo FIFO, caducidad y ajuste por lote. |
 | Recompensas y operación | `adjustments` | Nueva | Cancelaciones, devoluciones y restituciones ligadas al pedido original y al agente que las registra. |
@@ -198,6 +204,7 @@ Diagrama editable: [diagrama-entidad-relacion.drawio](../../docs/img/diagrama-en
   - `orders_coupons (trainer_id, order_id)`
 - **Idempotencia:** son únicos `orders.payment_reference`, `commission_movements.source_key`, `point_lots.source_key`, `point_movements.source_key` y `commission_conversions.idempotency_key`. El dispatcher de radical ya trata como no-op un pedido aprobado.
 - **Puntos por referido una sola vez:** `trainer_referrals.referred_id`, `trainer_referrals.activation_order_id` y `point_lots.trainer_referral_id` son únicos.
+- **Liquidación única:** `commission_settlements (trainer_id, period)` es único.
 - **Conversión única:** `commission_movements.conversion_id` y `point_lots.conversion_id` son únicos. Cada conversión tiene un débito y un crédito.
 - **FIFO:** el consumo sigue `point_lots.accrued_at` con desempate por `id` (PRD §7.3). El saldo canjeable es la suma de `remaining_points` de los lotes `available` no caducados.
 - **Asignación del agente:** `orders.agent_id` solo se asigna si está vacío, y se libera solo si el pedido es del agente y no tiene `sap_order_code`.
@@ -229,4 +236,5 @@ Diagrama editable: [diagrama-entidad-relacion.drawio](../../docs/img/diagrama-en
 - [x] Unificar el DER en un solo diagrama de la base: radical sin `credit_balances` más las tablas nuevas (v0.7)
 - [x] Ajustar referidos, cupón, descuentos por producto y puntos con IVA (v0.8)
 - [x] Pasar las constantes a variables de entorno, quitar `rule_versions` y crear el lote de los 50.000 puntos solo al activarse (v0.9)
+- [x] Añadir la liquidación mensual de comisión y los campos de la conversión (v0.10)
 - [ ] Revisión y aprobación del modelo por negocio y tecnología

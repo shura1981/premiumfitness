@@ -22,7 +22,8 @@ La app de dietas conserva su alcance en el producto y se implementa después del
 | Beneficios por venta | Aprobación de compra de cliente, 5% en puntos con IVA incluido y 15% de comisión sin IVA. | RF-10 | CU-05 |
 | Puntos por referido | 50.000 puntos pendientes para A al registrar B; activación por compra aprobada de cliente de B. | RF-09, RF-20 | CU-07, CU-08 |
 | Cuenta de recompensas | Comisión convertible, puntos por estado, lotes, remanentes, historial y vencimiento. | RF-11, RF-13 | CU-09, CU-10 |
-| Conversión | Convertir el total de comisión, vista previa, confirmación y movimientos vinculados. | RF-12 | CU-11 |
+| Conversión | Convertir el total de comisión (comisión + mín(50% × puntos vigentes, comisión)), vista previa, aviso, confirmación y movimientos vinculados. | RF-12 | CU-11 |
+| Liquidación mensual | Corte del último día del mes, liquidación de la comisión no convertida y registro del pago. | RF-22 | CU-21 |
 | Canje | Productos a precio completo, consumo FIFO, sin pago mixto, IVA y entrega. | RF-14 | CU-12 |
 | Operación | Consulta/gestión mínima, ajustes conforme a política y reportes por período/entrenador. | RF-16, RF-17, RF-19 | Requerimientos y regla 10 |
 
@@ -45,7 +46,7 @@ A comparte QR de entrenadores → B se registra → A ve 50.000 inactivos → cl
 ### 3.3. Compra propia, conversión y canje
 
 - **Compra propia:** entrenador selecciona productos → 25% de descuento → paga con dinero → consulta pedido.
-- **Conversión:** consulta total de comisión disponible → revisa fórmula y puntos resultantes → confirma → débito de comisión y crédito de puntos juntos.
+- **Conversión:** consulta total de comisión sin liquidar → revisa puntos vigentes, adicional y puntos resultantes → lee el aviso de que esa comisión ya no se pagará en dinero → confirma → débito de comisión y crédito de puntos juntos.
 - **Canje:** selecciona productos a precio completo → revisa puntos requeridos → confirma con saldo vigente → consumo FIFO → registro de IVA y entrega.
 
 La conversión parcial y el pago mixto no forman parte de estos flujos. No se concede una recompensa de venta de cliente por una compra propia sin regla que lo establezca.
@@ -81,7 +82,7 @@ Adaptar la UX de comisiones y onboarding de `join.nutramerican.com`, la compra d
 | A-11 | Canjear 249.900 con lotes vigentes de 100.000 y 200.000, en ese orden | Consume 100.000 del primero y 149.900 del segundo; conserva 50.100. |
 | A-12 | Lote usado, inactivo o caducado | No suma saldo disponible; el remanente de otro lote vigente sigue utilizable. |
 | A-13 | Confirmar dos canjes que juntos exceden el saldo | Solo se confirman operaciones cubiertas; no hay sobregiro ni doble consumo. |
-| A-14 | Convertir total de comisión y repetir la solicitud | Fórmula definida y vista previa correcta; una sola conversión; ambos saldos consistentes ante fallo. |
+| A-14 | Convertir total de comisión y repetir la solicitud | 100.000 puntos y 100.000 de comisión → 250.000 puntos; 1.000.000 y 1.000 → recibe 2.000; una sola conversión; ambos saldos consistentes ante fallo. |
 | A-15 | Vencer lote al corte de seis meses definido | Su remanente deja de estar disponible; se conserva historial y no vence dos veces. |
 | A-16 | Cancelación/devolución o canje no entregable | Se aplica la política acordada con ajustes/restituciones trazables y sin duplicados. |
 | A-17 | Consultar reportes | IVA de ventas y canjes, comisiones y puntos coinciden con operaciones y movimientos de cada entrenador. |
@@ -93,7 +94,7 @@ A-05 parte de un valor ya pagado, con el descuento aplicado y sin envío; los pu
 ## 6. Condiciones previas al piloto
 
 - Definir orden de cálculo, cargos elegibles y redondeo; cargar catálogo con IVA y precios correctos.
-- Resolver fórmula del incentivo del 50% para convertir comisiones.
+- Redactar los términos y condiciones del pago mensual de la comisión.
 - Definir política de cookie, referencia existente y continuidad del descuento del cliente.
 - Seleccionar/verificar pagos y SMS; definir entrega, devoluciones, restituciones y responsables de operación.
 - Preparar entornos, permisos, copias y restauración; conciliar un conjunto de compras y canjes de prueba.
@@ -108,6 +109,6 @@ Estas dependencias corresponden a §14 del PRD. La revisión de repositorios y l
 
 ## 8. Cierre de la entrega
 
-El MVP completo requiere aprobar A-01 a A-19, resolver los parámetros que afectan esas pruebas y operar compras/canjes con reportes conciliados. Si se lanza sin conversión por falta de fórmula, se registra como piloto parcial con esa función pendiente.
+El MVP completo requiere aprobar A-01 a A-19, resolver los parámetros que afectan esas pruebas y operar compras/canjes con reportes conciliados.
 
 Las fases 1–7 construyen y validan esta entrega. La fase 8 implementa dietas con sus propios criterios de aceptación. Medir activación de entrenadores, conversión de referidos a compra, ventas atribuidas, uso/vencimiento de puntos e incidencias; las ventanas y métricas están en el PRD.

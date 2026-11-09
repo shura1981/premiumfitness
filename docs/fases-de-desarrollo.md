@@ -155,12 +155,13 @@ Elegir motor de base de datos, migraciones, índices y restricciones. Diseñar t
 - Activar una sola vez los 50.000 puntos de A con la primera compra aprobada de un cliente de B; B recibe sus recompensas por esa compra.
 - Crear lotes por acumulación con seis meses de vigencia y procesos de vencimiento.
 - Mostrar acumulado de comisiones, puntos inactivos, disponibles, usados y caducados; adaptar la UI de `join.nutramerican.com`.
-- Implementar conversión del total de comisión con vista previa y débito/crédito indivisibles, después de precisar la fórmula del incentivo del 50%.
+- Implementar conversión del total de comisión (comisión + mín(50% × puntos vigentes, comisión)) con vista previa, aviso y débito/crédito indivisibles.
+- Implementar el corte mensual de la comisión (cron) y el registro del pago en el admin.
 - Registrar ajustes sin borrar movimientos originales, conforme a la política de devoluciones acordada.
 
 **Entregables:** cuenta de comisiones y puntos, activación de los puntos por referido, historial, vencimientos y conversión.
 
-**Aceptación:** no hay recompensas sin aprobación ni duplicados por reintentos; cada saldo se reconstruye desde movimientos. La conversión consume el total una sola vez. Si falta su fórmula, queda pendiente y no se declara completada esa función.
+**Aceptación:** no hay recompensas sin aprobación ni duplicados por reintentos; cada saldo se reconstruye desde movimientos. La conversión consume el total una sola vez. Cada mes se liquida una sola vez por entrenador.
 
 ## Fase 6. Implementar canjes, operación y reportes
 

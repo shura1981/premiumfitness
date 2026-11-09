@@ -2,13 +2,13 @@
 
 ## Diagrama de flujo
 
-El diagrama resume las 11 reglas de este documento: cálculo y vencimiento de puntos, canje por FIFO, compras del entrenador, 50.000 puntos por referido y acceso a dietas. Las referencias «Regla» corresponden a los numerales del listado. El importe de dietas se señala como pendiente de aclarar porque el texto menciona «50,000 mil puntos» y también 49.800 puntos por cuatro Bipro.
+El diagrama resume las reglas 1 a 11 de este documento: cálculo y vencimiento de puntos, canje por FIFO, compras del entrenador, 50.000 puntos por referido y acceso a dietas. Las referencias «Regla» corresponden a los numerales del listado. El importe de dietas se señala como pendiente de aclarar porque el texto menciona «50,000 mil puntos» y también 49.800 puntos por cuatro Bipro.
 
 ![Diagrama de flujo de las reglas de negocio de PremiumFitness](img/reglas-de-negocio.png)
 
 [Abrir imagen en tamaño completo](img/reglas-de-negocio.png) · [Versión vectorial editable (SVG)](img/reglas-de-negocio.svg)
 
-> **Diagrama desactualizado (9 nov 2026):** todavía muestra los puntos calculados sin IVA y no incluye las reglas 12 a 15. Prevalece el texto.
+> **Diagrama desactualizado (9 nov 2026):** todavía muestra los puntos calculados sin IVA y no incluye las reglas 12 a 18. Prevalece el texto.
 
 ## Detalle de las reglas
 
@@ -54,3 +54,13 @@ El entrenador A rifiere al entrenador B (entrenador A obtiene 50 mil pero en est
 14. Cuando el cliente está asociado a un entrenador, todo el catálogo se muestra con el descuento aplicado: un badge con el porcentaje, el precio con descuento y el precio real tachado.
 
 15. Los porcentajes no son fijos. El 10% del cliente, el 25% del entrenador, el 5% en puntos y el 15% de comisión son valores por defecto configurables, igual que los 50.000 puntos por referido, los 6 meses de vencimiento y el 50% de la conversión. Todas estas constantes se definen en variables de entorno, y cada pedido guarda el valor que se le aplicó. Cada producto puede tener una estrategia propia que cambie el descuento con cupón y la comisión. Ejemplo: Nutra Balance tiene un 5% adicional (el cliente recibe 15% de descuento) y la comisión del entrenador baja al 10%.
+
+16. La comisión es dinero que la empresa le paga al entrenador **al final de cada mes**; los términos y condiciones definen cómo. Mientras no se haya pagado, el entrenador puede convertirla a puntos. Para canjear productos con la comisión, primero tiene que convertirla. No hay canje mixto: un canje se paga solo con puntos, nunca con dinero ni con comisión.
+
+17. La conversión es siempre por el total de la comisión. El entrenador recibe la comisión en puntos (1 peso = 1 punto) más el 50% de sus puntos vigentes, sin que ese 50% adicional supere la comisión convertida:
+
+    **puntos recibidos = comisión + mín(50% × puntos vigentes, comisión)**, redondeado al entero más cercano.
+
+    Ejemplo: con 100.000 puntos vigentes y 100.000 de comisión, recibe 100.000 + 50.000 = 150.000 y queda con **250.000 puntos**. El tope evita que el 50% se multiplique con conversiones pequeñas y repetidas: con 1.000.000 de puntos y 1.000 de comisión, recibe 2.000. Los puntos convertidos forman un lote que vence a los 6 meses.
+
+18. El último día de cada mes (hora de Colombia) se hace el corte: la comisión no convertida se liquida para pagarse y el saldo queda en cero. Una devolución posterior al corte se descuenta del mes siguiente.

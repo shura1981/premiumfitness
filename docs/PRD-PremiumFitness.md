@@ -76,7 +76,7 @@ El entrenador no podrá consultar pagos privados, credenciales o saldos de otros
 6. Aprobación verificable y registro separado de comisiones y puntos por compras de clientes.
 7. Referido A → B y activación de los 50.000 puntos de A.
 8. Saldos e historial por lote, vigencia de seis meses, consumo FIFO y remanentes.
-9. Conversión del total de comisión a puntos, con fórmula del incentivo precisada antes de habilitarla.
+9. Conversión del total de comisión a puntos (comisión + 50% de los puntos vigentes, con tope en la comisión) y liquidación mensual en dinero de la comisión no convertida.
 10. Canje de productos a precio completo y sin pagos mixtos, con registro de IVA.
 11. Acceso operativo mínimo, ajustes trazables y reportes de ventas/IVA, comisiones y puntos por entrenador.
 
@@ -135,13 +135,13 @@ Se usa aprobación por continuidad con el primer flujo de compra. La activación
 
 ### 6.5. Consulta y conversión — CU-09, CU-10 y CU-11
 
-1. El entrenador consulta comisión disponible, puntos e historial con sus orígenes y vencimientos.
+1. El entrenador consulta su comisión sin liquidar, sus puntos e historial con sus orígenes y vencimientos.
 2. Solicita convertir el **total de comisión disponible**, sin entrada de importe parcial.
-3. Revisa comisión a consumir, fórmula vigente, puntos resultantes y saldo posterior.
+3. Revisa la comisión a consumir, sus puntos vigentes, el adicional (mín(50% × puntos vigentes, comisión)), los puntos resultantes y el saldo posterior. Un aviso le indica que esa comisión ya no se le pagará en dinero.
 4. Confirma; el sistema consume la comisión y acredita un lote en una transacción indivisible.
 5. Consulta el comprobante y su vencimiento.
 
-Si el saldo cambia antes de confirmar, se actualiza la vista previa. No se habilita un resultado numérico hasta precisar la base del incentivo del 50%; una misma comisión nunca se convierte dos veces.
+Si el saldo cambia antes de confirmar, se actualiza la vista previa. Una misma comisión nunca se convierte dos veces. Ejemplo: 100.000 puntos vigentes y 100.000 de comisión → recibe 150.000 y queda con 250.000. Lo no convertido se liquida al corte del último día del mes y se paga en dinero (CU-21); no hay canje mixto.
 
 ### 6.6. Compra propia y canje — CU-12 y CU-13
 
@@ -178,7 +178,7 @@ La columna de fuente remite a los numerales de [reglas-de-negocio.md](reglas-de-
 | Referido A → B | 50.000 inactivos para A; activación con compra de cliente de B. | Regla 6. |
 | Consumo | FIFO, estados usado/caducado y remanentes de lotes parcialmente consumidos. | Regla 9. |
 | IVA de canjes | Discriminar y persistir IVA de productos redimidos. | Regla 10. |
-| Conversión | Total de comisión a puntos con incentivo del 50% cuya base falta precisar. | Requerimientos; CU-11. |
+| Conversión | Total de comisión a puntos: comisión + mín(50% × puntos vigentes, comisión). | Requerimientos; decisión del 9 nov 2026; CU-11. |
 | Dietas | Mes inicial gratis; acceso por meta o puntos, evaluación diaria de la condición mensual. | Requerimientos; reglas 8 y 11. |
 | Reportes | IVA de ventas, comisiones y puntos acumulados/redimidos por entrenador. | Requerimientos. |
 
@@ -239,7 +239,7 @@ Las fuentes no fijan la política completa de devoluciones. Se conserva esta pro
 | RF-09 | MVP | Registro de referido | Registrar B desde A crea relación y 50.000 puntos pendientes para A, sin bono de bienvenida para B. |
 | RF-10 | MVP | Recompensas | Compra aprobada de cliente genera 5% en puntos (con IVA incluido) y 15% de comisión (sin IVA) una sola vez, con origen trazable. |
 | RF-11 | MVP | Saldos e historial | El entrenador ve siempre sus puntos por compras de clientes (acumulado histórico y vigentes), sus puntos por entrenadores referidos (vigentes, pendientes y detalle por B) y su comisión convertible; muestra remanentes y vencimientos. Las consultas se resuelven con índices que las cubren (spec `negocio/03`). |
-| RF-12 | MVP | Conversión total | Con fórmula resuelta, consume todo el saldo de comisión confirmado y acredita puntos una sola vez; si falla, no deja saldos a medias. |
+| RF-12 | MVP | Conversión total | Consume todo el saldo de comisión y acredita comisión + mín(50% × puntos vigentes, comisión) una sola vez; si falla, no deja saldos a medias. |
 | RF-13 | MVP | Caducidad | Cada lote vence a seis meses según el corte definido; no queda canjeable ni vuelve a descontarse. |
 | RF-14 | MVP | Canje | Precio completo, sin pago mixto, FIFO y remanentes; concurrencia no provoca sobregiro; IVA persistido. |
 | RF-15 | Posterior | Dietas | Mes gratis, meta o canje, validación diaria y desactivación limitada a dietas; sin cobro repetido del mismo período. |
@@ -249,7 +249,7 @@ Las fuentes no fijan la política completa de devoluciones. Se conserva esta pro
 | RF-19 | MVP | Reportes | Por período y entrenador: ventas/IVA, IVA de canjes, comisiones y puntos emitidos, redimidos, vencidos y disponibles conciliados. |
 | RF-20 | MVP | Activar puntos por referido | Primera compra aprobada de un cliente de B activa una sola vez los 50.000 puntos de A, sin monto mínimo. La compra propia de B no cuenta. B recibe sus recompensas normales. |
 | RF-21 | Mejora | Aviso de vencimiento | Avisos por lote y canal sin duplicados. Las fechas visibles sí forman parte del MVP. |
-| RF-22 | Fuera | Liquidación bancaria | Requiere un alcance específico; la consulta de comisión no promete retiro bancario. |
+| RF-22 | MVP | Liquidación mensual | Al corte del último día del mes se liquida la comisión no convertida y el admin registra el pago, que se hace por fuera de la app. La transferencia bancaria automática queda fuera. |
 | RF-23 | MVP | Compra entrenador | 25% en compra con dinero sobre todo el portafolio; no se aplica en canjes ni se mezcla dinero/puntos. |
 
 Se conservan los identificadores del PRD anterior para facilitar revisión: RF-09 pasa de bienvenida a registro del referido; RF-15 corresponde a dietas posterior; RF-20 entra al MVP; RF-23 explicita la compra propia.
@@ -287,7 +287,7 @@ Se conservan los identificadores del PRD anterior para facilitar revisión: RF-0
 | Movimiento de comisión | Pedido origen, base, porcentaje, importe, saldo convertible, conversión y ajuste relacionado. |
 | Lote de puntos | Origen, cantidad inicial, remanente, acumulación, activación, caducidad y estado. |
 | Movimiento y consumo | Abono/débito/ajuste, operación, lote afectado y cantidad; permite reconstruir el saldo. |
-| Conversión | Comisión consumida, fórmula/versión, puntos generados y lote destino. |
+| Conversión | Comisión consumida, puntos vigentes base, porcentaje, adicional, puntos generados y lote destino. |
 | Canje y sus líneas | Productos a precio completo, IVA, puntos, lotes consumidos y estado de entrega/restitución. |
 | Auditoría y reglas | Actor, fecha, motivo, parámetros y versión aplicados. |
 | Suscripción de dietas — posterior | Entrenador, período, mes gratis, meta, canje que cubre acceso y evaluación diaria. |
@@ -297,7 +297,7 @@ Se conservan los identificadores del PRD anterior para facilitar revisión: RF-0
 - **Cuenta — propuesta:** pendiente de verificación, activa o suspendida; no confundirla con la disponibilidad de dietas.
 - **Pago:** pendiente, aprobado, rechazado o cancelado; devoluciones separadas según la política acordada.
 - **Pedido — propuesta:** creado, pendiente de pago, aprobado, en preparación, enviado y entregado; cancelaciones/devoluciones conservan historial.
-- **Comisión:** disponible tras compra aprobada, consumida por conversión o ajustada; la liquidación bancaria queda fuera.
+- **Comisión:** disponible tras compra aprobada; se consume por conversión, por ajuste o por la liquidación mensual, que se paga en dinero.
 - **Lote:** disponible, usado o caducado. Un lote parcial conserva remanente; el estado no sustituye las cantidades.
 - **Canje — propuesta:** solicitado, confirmado, en entrega, entregado o cancelado con restitución trazable.
 - **Dietas — posterior:** prueba gratuita, acceso por meta, acceso por puntos o desactivado.
@@ -360,18 +360,18 @@ Estas decisiones completan las reglas; no dejan en duda los porcentajes, seis me
 | D-01 | Moneda técnica, zona horaria y corte de períodos. | Negocio y tecnología | Arquitectura y cálculo temporal. |
 | D-02 | Catálogo, inventario, envío, entrega y cancelación de canjes. | Operación | Antes de checkout/canje real. |
 | D-03 | Puntos resueltos el 9 nov 2026: 5% de lo pagado por los productos (con descuento e IVA, sin envío), por pedido y redondeado al entero más cercano. Pendientes de la comisión: base antes o después del descuento, envío, promociones y redondeo. | Negocio y finanzas | Antes de activar recompensas reales. Los puntos incluyen IVA; la comisión lo excluye. |
-| D-04 | Fórmula del 50%: si se calcula sobre comisión o puntos acumulados y qué cantidad final acredita. | Negocio y finanzas | Bloquea conversión, no el desarrollo de los otros módulos. |
+| D-04 | Resuelta el 9 nov 2026: puntos recibidos = comisión + mín(50% × puntos vigentes, comisión). | Negocio y finanzas | — |
 | D-05 | Registro, verificación, coexistencia de roles y tratamiento de autorreferidos/cuentas duplicadas. | Producto y tecnología | Acceso y referidos. |
 | D-06 | Resuelta el 9 nov 2026: los 50.000 puntos pendientes no caducan; una vez activados, vencen a los seis meses. | Negocio | — |
 | D-07 | Corte exacto de seis meses y política de devolución con beneficios consumidos, incluyendo puntos restituidos (los 50.000 puntos de A ya tienen regla). | Negocio y finanzas | Antes del piloto. |
-| D-08 | Resuelta el 9 nov 2026: no hay liquidación en dinero ni cierre de mes; la comisión solo se usa convirtiéndola a puntos. | Negocio | — |
+| D-08 | Resuelta el 9 nov 2026: la comisión no convertida se paga en dinero al final de cada mes. Pendiente en términos y condiciones: medio, plazo, mínimo y retenciones. | Negocio y legal | Antes del piloto. |
 | D-09 | Meta mensual de dietas, rango/costo de puntos, inicio del mes gratis, renovación y reactivación. El texto cita 50.000 y 49.800 puntos. | Negocio y producto | Fase posterior de dietas. |
 | D-10 | Proveedor de pagos/SMS, verificación y conciliación disponibles en repositorios de referencia. | Tecnología y operación | Revisión e integración. |
 | D-11 | Duración y sustitución de cookie, varios QR, cliente existente, cambio de referente, ausencia de referencia y continuidad del 10%. | Negocio y producto | Antes de cerrar atribución/checkout. |
 | D-12 | Base de datos, distribución PWA, infraestructura y tamaño/concurrencia del piloto. | Tecnología y producto | Después de revisar repositorios; Angular y Express ya están definidos. |
 | D-13 | Condiciones del programa, conservación de datos y permisos operativos/nutricionales. | Negocio y operación | Antes de uso real de cada módulo. |
 
-La conversión puede permanecer deshabilitada en un piloto parcial, identificado como tal; el MVP completo requiere resolver D-04. Las decisiones de dietas no bloquean el MVP comercial.
+Las decisiones de dietas no bloquean el MVP comercial.
 
 ## 15. Riesgos y mitigaciones de producto
 
@@ -395,7 +395,7 @@ Las [fases de desarrollo](fases-de-desarrollo.md) contienen tareas, repositorios
 | 2. Arquitectura | Datos, módulos Express, áreas Angular, contratos e integraciones. | Fase 1. |
 | 3. Acceso y referidos | Registro, recuperación, ambos QR, cookie y relación A–B. | Fase 2. |
 | 4. Compras | Catálogo, descuentos, pagos, IVA y seguimiento de pedidos. | Fase 3. |
-| 5. Recompensas | Comisiones, puntos, puntos por referido, vencimientos y conversión. | Fase 4; fórmula para conversión. |
+| 5. Recompensas | Comisiones, puntos, puntos por referido, vencimientos y conversión. | Fase 4. |
 | 6. Canjes y reportes | FIFO, remanentes, entrega, IVA, operación y conciliación. | Fase 5. |
 | 7. Piloto | Validación, despliegue controlado y operación preparada. | Fases 3–6. |
 | 8. Dietas | App adaptada y backend SaaS con acceso condicionado. | MVP comercial y parámetros de dietas. |

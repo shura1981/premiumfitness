@@ -47,7 +47,7 @@ El alcance confirmado comprende:
 4. Compras de clientes con un descuento del 10%.
 5. Reconocimiento al entrenador del 5% en puntos (con IVA incluido) y del 15% de comisión sin IVA cuando una compra es aprobada. Los porcentajes son configurables por producto.
 6. 50.000 puntos por referir a otro entrenador, que se activan con la primera compra aprobada de un cliente del referido.
-7. Conversión del total de la comisión a puntos, con fórmula pendiente.
+7. Conversión del total de la comisión a puntos (comisión + 50% de los puntos vigentes, con tope en la comisión) o pago en dinero de la comisión no convertida al final de cada mes.
 8. Canje de puntos por productos exclusivamente a través de la app.
 9. Descuento del 25% para entrenadores en todo el portafolio.
 10. Acceso a una app de dietas bajo una modalidad de suscripción condicionada por una regla de negocio pendiente.
@@ -114,7 +114,7 @@ No se incluyen como actores un operador de bodega ni un soporte, porque ni los r
 | RN-08 | La app de dietas opera en modalidad de suscripción y se desactiva si el entrenador incumple una regla de negocio. | Confirmado. Regla, evaluación y alcance de la desactivación pendientes. | Beneficios para entrenadores, punto 1. |
 | RN-09 | Los puntos se canjean por productos exclusivamente en la app; no se entregan en efectivo. | Confirmado. | Beneficios, punto 2, y último párrafo. |
 | RN-10 | El entrenador tiene un descuento para todo el portafolio, del 25% por defecto y configurable. | Confirmado. Acumulación con otros beneficios pendiente. | Beneficios para entrenadores, punto 3. |
-| RN-11 | El entrenador puede convertir el valor del total de la comisión a puntos. | Confirmado. El incentivo del 50% y su base no quedan definidos de manera consistente. | Nota sobre conversión de comisiones. |
+| RN-11 | La comisión se paga en dinero al final de cada mes. Antes del corte, el entrenador puede convertir su total a puntos: recibe la comisión más el 50% de sus puntos vigentes, con un adicional que no supera la comisión convertida. No hay canje mixto. | Confirmado por producto (9 nov 2026). Medio de pago: términos y condiciones. | Nota sobre conversión de comisiones. |
 | RN-12 | Un peso equivale a un punto. | Confirmado. No se especifica tratamiento de fracciones. | Último párrafo. |
 | RN-13 | Hay otros beneficios por definir. | Pendiente. No habilita casos de uso concretos. | Beneficios para entrenadores, punto 4. |
 | RN-14 | Cada pedido pagado lo procesa un agente del call center, que queda asignado al pedido. | Confirmado por producto. | Confirmación del 7 nov 2026; radical. |
@@ -133,9 +133,9 @@ No se incluyen como actores un operador de bodega ni un soporte, porque ni los r
 - **Ejemplo de puntos:** una Bipro de 249.900 con 10% de descuento se paga 224.910; `224.910 × 0,05 = 11.245,5` → **11.246 puntos**. **Diferencia con requerimientos.md:** su ejemplo asigna 12.500 puntos sobre el precio completo; prevalece la definición de producto del 9 nov 2026 (los puntos se ganan sobre lo que el cliente pagó).
 - **Comisión:** por cada línea, `comisión = base sin IVA × porcentaje de comisión del producto` (15% por defecto; por ejemplo, 10% en Nutra Balance). No se debe confundir «quitar el IVA» con restar directamente una tasa al precio final. Los requisitos no definen las tasas ni el desglose tributario del pedido.
 - **Descuentos:** el 10% del cliente y el 25% del entrenador son valores por defecto. Cada producto puede tener su propio porcentaje (RN-22). Quedan pendientes la interacción con otras promociones, el envío y el orden de aplicación de descuentos e impuestos.
-- **Conversión:** no se establece una fórmula definitiva. La nota menciona convertir comisiones, pero calcula el 50% sobre puntos acumulados. El ejemplo de 100.000 puntos y 50.000 puntos no aclara si estos últimos se adicionan ni qué sucede con la comisión.
+- **Conversión (confirmada el 9 nov 2026):** puntos recibidos = comisión + mín(50% × puntos vigentes, comisión). Con 100.000 puntos y 100.000 de comisión queda con 250.000 puntos. El ejemplo del original (100.000 → 50.000) corresponde al 50% sobre los puntos vigentes; el tope es decisión de producto.
 
-La restricción de no entregar efectivo se refiere expresamente al canje de puntos. No permite concluir cómo se pagan o liquidan las comisiones monetarias.
+La restricción de no entregar efectivo se refiere al canje de puntos. La comisión sí se paga en dinero al final de cada mes (confirmado el 9 nov 2026); los términos y condiciones definen el medio y el plazo.
 
 ## 5. Catálogo de casos de uso
 
@@ -150,8 +150,8 @@ La restricción de no entregar efectivo se refiere expresamente al canje de punt
 | CU-07 | Registrar entrenador referido | Entrenador B | Derivado del flujo confirmado de referidos. |
 | CU-08 | Activar los 50.000 puntos por entrenador referido | Entrenador A beneficiario; primera compra aprobada de un cliente de B como disparador | Confirmado por producto (9 nov 2026). |
 | CU-09 | Consultar puntos y movimientos | Entrenador | Derivado para permitir el uso informado de puntos. |
-| CU-10 | Consultar comisiones | Entrenador | Derivado para permitir una conversión informada. |
-| CU-11 | Convertir el total de la comisión a puntos | Entrenador | Confirmado; fórmula pendiente. |
+| CU-10 | Consultar comisiones | Entrenador | Confirmado por producto (9 nov 2026). |
+| CU-11 | Convertir el total de la comisión a puntos | Entrenador | Confirmado por producto (9 nov 2026). |
 | CU-12 | Canjear puntos por productos | Entrenador | Confirmado; reglas de canje incompletas. |
 | CU-13 | Comprar como entrenador con descuento | Entrenador comprador | Confirmado; acumulación pendiente. |
 | CU-14 | Acceder a la app de dietas | Entrenador | Confirmado; condiciones de habilitación pendientes. |
@@ -161,6 +161,7 @@ La restricción de no entregar efectivo se refiere expresamente al canje de punt
 | CU-18 | Registrar el envío del pedido | Agente del call center | Confirmado por producto. |
 | CU-19 | Consultar el seguimiento del pedido | Cliente o entrenador comprador | Confirmado por producto. |
 | CU-20 | Asociar el cupón de un entrenador | Cliente sin entrenador | Confirmado por producto. |
+| CU-21 | Liquidar la comisión del mes | Cron y usuario del admin | Confirmado por producto; medio de pago pendiente (términos y condiciones). |
 
 ## 6. Especificación de casos de uso
 
@@ -397,7 +398,7 @@ La restricción de no entregar efectivo se refiere expresamente al canje de punt
 
 ### CU-10. Consultar comisiones
 
-- **Objetivo:** conocer el saldo de comisión que se puede convertir a puntos.
+- **Objetivo:** conocer la comisión del mes que puede convertir a puntos o que se le pagará al final del mes.
 - **Actor:** ACT-01.
 - **Clasificación:** Confirmado por producto (9 nov 2026).
 - **Disparador:** el entrenador abre su dashboard o la consulta de comisiones.
@@ -405,41 +406,52 @@ La restricción de no entregar efectivo se refiere expresamente al canje de punt
 
 **Flujo principal:**
 
-1. El sistema muestra el saldo de comisión convertible: abonos por ventas aprobadas menos conversiones y ajustes.
-2. Permite relacionar cada abono con el pedido y las líneas que lo originaron, con el porcentaje de comisión que aplicó a cada producto.
-3. Muestra las conversiones ya realizadas.
+1. El sistema muestra el saldo de comisión sin liquidar: abonos por ventas aprobadas, menos conversiones, más o menos ajustes.
+2. Indica la fecha del próximo corte: el último día del mes.
+3. Permite relacionar cada abono con el pedido y las líneas que lo originaron, con el porcentaje de comisión que aplicó a cada producto.
+4. Muestra las conversiones y las liquidaciones mensuales anteriores, con su estado (cerrada o pagada).
 
 **Alternativas y errores:** sin comisiones, muestra un saldo de cero.
 
-**Resultado y aceptación:** el entrenador conoce el saldo que usaría en CU-11. La comisión no se liquida en dinero ni tiene cierre de mes: solo se usa convirtiéndola a puntos.
+**Resultado y aceptación:** el entrenador sabe cuánto puede convertir hoy (CU-11) y cuánto recibirá en dinero si no convierte (CU-21).
 
 ### CU-11. Convertir el total de la comisión a puntos
 
-- **Objetivo:** transformar el total de la comisión del entrenador en puntos.
+- **Objetivo:** transformar la comisión en puntos para canjear productos.
 - **Actor:** ACT-01.
-- **Disparador:** el entrenador solicita la conversión.
-- **Precondiciones:** comisión convertible disponible y fórmula de conversión definida.
-- **Reglas:** RN-09, RN-11 y RN-12.
+- **Disparador:** el entrenador solicita la conversión desde la app de entrenadores.
+- **Precondiciones:** saldo de comisión mayor que cero y conversión no bloqueada por el corte mensual.
+- **Reglas:** RN-09, RN-11, RN-12 y reglas 16 y 17 de `reglas-de-negocio.md`.
+- **Clasificación:** Confirmado por producto (9 nov 2026).
 
-**Flujo principal condicionado a aclaración:**
+**Flujo principal:**
 
-1. El entrenador solicita convertir el total de su comisión.
-2. El sistema determina qué se entiende por «total de la comisión» disponible.
-3. Calcula los puntos conforme a la fórmula de conversión y al incentivo que se aprueben.
-4. Como comportamiento derivado, presenta la comisión que se consumirá, los puntos que se obtendrán y el resultado sobre ambos saldos.
-5. El entrenador confirma la operación; esta confirmación es una propuesta de interacción.
-6. El sistema registra la conversión, consume el valor de comisión correspondiente y acredita los puntos. El tratamiento de saldos es derivado necesario para que una misma comisión no se utilice dos veces.
+1. El entrenador abre la conversión.
+2. El sistema calcula:
+   - `C`, el saldo total de comisión;
+   - `P`, sus puntos vigentes de todos los orígenes, sin los 50.000 por referido pendientes;
+   - el adicional: `mín(50% × P, C)`;
+   - los puntos que recibirá: `C + adicional`, redondeado al entero más cercano.
+3. Muestra la comisión que se convierte, los puntos vigentes, el adicional, los puntos que recibirá, el saldo de puntos resultante y el vencimiento del nuevo lote (6 meses).
+4. Muestra el aviso: «La comisión que conviertas a puntos no se te pagará en dinero al final del mes. Esta operación no se puede deshacer.»
+5. El entrenador confirma con un botón; no hay campo de importe.
+6. En una sola transacción, el sistema:
+   - registra la conversión con `C`, `P`, el porcentaje, el adicional y el total;
+   - debita la comisión;
+   - crea el lote de puntos.
+
+**Ejemplo:** con 100.000 puntos vigentes y 100.000 de comisión, recibe 100.000 + 50.000 = 150.000 y queda con 250.000 puntos.
 
 **Alternativas y errores:**
 
-- **Fórmula sin definir:** el caso permanece especificado de forma condicional; no se inventa un resultado numérico.
-- **Conversión parcial:** no está solicitada; el texto se refiere al total.
-- **Saldo cambiado o solicitud repetida:** se propone recalcular antes de confirmar y evitar duplicidad.
-- **Fallo durante la operación:** se propone conservar consistencia entre comisión consumida y puntos acreditados.
+- **Saldo cambiado antes de confirmar:** el servidor recalcula y pide confirmar de nuevo.
+- **Solicitud repetida:** no convierte dos veces.
+- **Corte mensual en curso:** la conversión queda bloqueada unos minutos con un mensaje.
+- **Conversión parcial:** no existe.
 
-**Resultado:** comisión convertida y puntos disponibles para canje, según la regla que se confirme.
+**Resultado:** comisión convertida y lote de puntos disponible para canjear.
 
-**Criterio de aceptación condicionado:** una comisión no puede convertirse dos veces; el total de puntos coincide con la fórmula aprobada y se informa antes de confirmar. El ejemplo del 50% no basta para fijar esa fórmula.
+**Criterio de aceptación:** los ejemplos de la regla 17 dan exactamente los puntos indicados, y una comisión no se convierte dos veces.
 
 ### CU-12. Canjear puntos por productos
 
@@ -667,6 +679,31 @@ La restricción de no entregar efectivo se refiere expresamente al canje de punt
 
 **Criterio de aceptación:** con un cupón válido, el cliente queda asociado y ve los descuentos. Con un cupón inválido no cambia nada.
 
+### CU-21. Liquidar la comisión del mes
+
+- **Objetivo:** dejar calculado lo que la empresa debe pagar a cada entrenador por la comisión que no convirtió.
+- **Actores:** proceso programado (cron) para el corte, y usuario del admin para registrar el pago.
+- **Disparador:** fin del último día del mes, hora de Colombia.
+- **Reglas:** regla 18 de `reglas-de-negocio.md`.
+- **Clasificación:** Confirmado por producto (9 nov 2026); medio y plazo de pago pendientes de los términos y condiciones.
+
+**Flujo principal:**
+
+1. El día 1 a las 00:05 el cron toma cada entrenador con movimientos de comisión sin liquidar.
+2. Suma esos movimientos y crea la liquidación del mes con las ventas, lo convertido, los ajustes y el total a pagar.
+3. Marca los movimientos como liquidados. Si el total es positivo, registra el débito que deja el saldo en cero.
+4. La empresa paga por fuera de la app. Un usuario del admin registra la fecha y la referencia del pago.
+
+**Alternativas y errores:**
+
+- **Total negativo** (por devoluciones): no se paga nada y la diferencia pasa al mes siguiente.
+- **El cron corre dos veces:** un entrenador no tiene dos liquidaciones del mismo mes.
+- **Devolución posterior al corte:** se descuenta en la liquidación siguiente.
+
+**Resultado:** liquidación del mes cerrada y, después, pagada.
+
+**Criterio de aceptación:** la suma de las liquidaciones más lo convertido coincide con la comisión generada menos los ajustes.
+
 ## 7. Recorridos completos y dependencias
 
 ### 7.1. Compra de cliente referido
@@ -677,7 +714,7 @@ La restricción de no entregar efectivo se refiere expresamente al canje de punt
 4. El cliente ve el catálogo con descuento y compra: CU-04.
 5. Al aprobarse la compra, el entrenador recibe los puntos (5% con IVA incluido) y la comisión (15% sin IVA, o el porcentaje del producto): CU-05.
 6. Un agente procesa y envía el pedido (CU-16 a CU-18), y el cliente lo sigue en CU-19.
-7. El entrenador puede canjear sus puntos: CU-12. También puede convertir el total de su comisión: CU-11, sujeto a la fórmula pendiente.
+7. El entrenador puede canjear sus puntos: CU-12. Puede convertir el total de su comisión a puntos antes del corte: CU-11. Lo que no convierta se le paga en dinero al final del mes: CU-21.
 
 ### 7.2. Referido de entrenador
 
@@ -717,14 +754,14 @@ Las recompensas de CU-05 dependen de la aprobación del pago (paso 1), no del en
 | PD-04 | Base de comisión | Se exige retirar el IVA, sin detallar descuentos, tasas, envío o pedidos con tratamientos tributarios diferentes. | Definir la base sin IVA por compra o por producto. | CU-05. |
 | PD-05 | Puntos por referido | **Resuelta (9 nov 2026):** son 50.000 puntos, definidos en la variable de entorno `TRAINER_REFERRAL_POINTS`. | — | CU-08. |
 | PD-06 | Compra que activa el referido | **Resuelta (9 nov 2026):** la primera compra aprobada de cualquier cliente de B, una sola vez y sin monto mínimo; la compra propia de B no cuenta. Si se cancela o devuelve y A no ha usado los puntos, vuelven a quedar pendientes. | — | CU-07, CU-08. |
-| PD-07 | Conversión de comisión | El texto mezcla el total de comisión con un 50% de los puntos acumulados. | Definir saldo de entrada, fórmula, base del incentivo, puntos de salida y tratamiento de la comisión. | CU-10, CU-11. |
+| PD-07 | Conversión de comisión | **Resuelta (9 nov 2026):** total de la comisión; puntos recibidos = comisión + mín(50% × puntos vigentes, comisión). | — | CU-10, CU-11. |
 | PD-08 | Permanencia en dietas | Se menciona una regla de negocio sin describirla. | Definir condición, periodo de evaluación, activación inicial, desactivación y reactivación. | CU-14, CU-15. |
 | PD-09 | Suscripción de dietas | No se define si hay pago o si depende de actividad comercial. | Definir modalidad y funciones de la herramienta. | CU-14, CU-15. |
 | PD-10 | Enlace y asociación | Resuelto en parte el 9 nov 2026: la asociación se guarda en la cuenta y no se cambia por el cliente. Falta definir cuánto tiempo guarda la app el id del enlace antes del registro. | Definir el almacenamiento temporal del id. | CU-02, CU-03. |
 | PD-11 | Continuidad del descuento | Resuelto el 9 nov 2026: el descuento aplica a todo el catálogo mientras el cliente esté asociado. | Ninguna. | CU-04. |
 | PD-12 | Acumulación y valoración | No se indica si descuentos, promociones y puntos se combinan ni cuál es el precio de canje. | Definir compatibilidad, base del descuento y valor de productos en puntos. | CU-04, CU-12, CU-13. |
 | PD-13 | Aprobación y reversión | No se define quién informa la aprobación ni qué ocurre con cancelaciones o devoluciones. | Definir origen del estado, transición válida y efectos sobre puntos y comisión. Los 50.000 puntos por referido ya tienen regla (CU-08). | CU-04, CU-05, CU-08, CU-12. |
-| PD-14 | Liquidación de comisión | **Resuelta (9 nov 2026):** no hay pago en dinero ni cierre de mes. La comisión solo se usa convirtiéndola a puntos (CU-11), y los puntos se canjean por productos (CU-12). | — | CU-10, CU-11. |
+| PD-14 | Liquidación de comisión | **Resuelta (9 nov 2026):** la comisión no convertida se paga en dinero al final de cada mes (CU-21). Pendiente en términos y condiciones: medio, plazo, mínimo y retenciones. | Términos y condiciones. | CU-10, CU-11, CU-21. |
 | PD-15 | Mecánica del canje | Sin reglas de pago mixto, inventario, reserva, entrega o cancelación. | Definir qué hace efectivo el canje y cuándo se consumen o restituyen puntos. | CU-12. |
 | PD-16 | Registro y acceso | No hay campos, credenciales, verificación ni coexistencia de roles. | Definir datos mínimos, identificación y permisos. | CU-01, CU-03, CU-07 y consultas. |
 | PD-17 | Otros beneficios | Se enumeran como «por definir». | Describir cada beneficio antes de crear sus casos de uso. | Sin caso específico. |
@@ -764,7 +801,7 @@ Las recompensas de CU-05 dependen de la aprobación del pago (paso 1), no del en
 | App de dietas en suscripción con desactivación por regla. | ACT-01. | CU-14, CU-15. | RN-08. |
 | Puntos canjeables por productos, solo en app y sin efectivo. | ACT-01. | CU-12. | RN-09. |
 | 25% de descuento para todo el portafolio. | ACT-01. | CU-13. | RN-10. |
-| Convertir total de comisión a puntos con incentivo por aclarar. | ACT-01. | CU-11. | RN-11, RN-12. |
+| Convertir total de comisión a puntos (comisión + 50% de los vigentes, con tope en la comisión) o recibirla en dinero al final del mes. | ACT-01. | CU-11, CU-21. | RN-11, RN-12. |
 | Un peso equivale a un punto. | ACT-01. | CU-05, CU-11, CU-12. | RN-12. |
 | Otros beneficios por definir. | ACT-01. | Sin caso hasta definir alcance. | RN-13. |
 | Confirmado por producto: el call center procesa cada pedido y lo registra en SAP. | ACT-03. | CU-16, CU-17. | RN-14, RN-15, RN-16, RN-17. |

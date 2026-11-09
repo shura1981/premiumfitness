@@ -427,15 +427,17 @@ Y3 = 270 + dy
 db.table("cm", "commission_movements", "N", CMX, Y3, [
     r("PK", "id", "bigint(20) (AI)"), r("FK", "order_id", "bigint(20) NULL"), r("FK", "trainer_id", "bigint(20)"),
     r("FK UQ", "conversion_id", "bigint(20) NULL"), r("FK", "adjustment_id", "bigint(20) NULL"),
-    r("", "type", "enum('sale_credit','conversion_debit','adjustment')"),
+    r("FK", "settlement_id", "bigint(20) NULL · liquidación del mes"),
+    r("", "type", "enum('sale_credit','conversion_debit','adjustment','settlement_debit')"),
     r("", "tax_base", "decimal(12,2) NULL"),
     r("", "amount", "decimal(12,2) · Σ líneas · + abono / − débito"),
     r("UQ", "source_key", "varchar(64)"), r("", "created_at", "timestamp")])
 CCX = db.R("cm") + 140
 db.table("cc", "commission_conversions", "N", CCX, Y3 + 40, [
     r("PK", "id", "bigint(20) (AI)"), r("FK", "trainer_id", "bigint(20)"),
-    r("", "commission_amount", "decimal(12,2)"), r("", "conversion_percentage", "decimal(5,2) · 50% (env)"),
-    r("", "points_granted", "int(11)"), r("UQ", "idempotency_key", "varchar(64)"), r("", "created_at", "timestamp")])
+    r("", "commission_amount", "decimal(12,2) · C"), r("", "base_points", "int(11) · P vigentes"),
+    r("", "conversion_percentage", "decimal(5,2) · 50% (env)"),
+    r("", "bonus_points", "int(11) · mín(50% × P, C)"), r("", "points_granted", "int(11) · C + adicional"), r("UQ", "idempotency_key", "varchar(64)"), r("", "created_at", "timestamp")])
 PLX = db.R("cc") + 150
 db.table("pl", "point_lots", "N", PLX, Y3, [
     r("PK", "id", "bigint(20) (AI)"), r("FK", "order_id", "bigint(20) NULL"), r("FK", "trainer_id", "bigint(20)"),
@@ -464,6 +466,15 @@ db.table("al", "audit_logs", "N", db.R("emp") + 100, db.B("adj") + 60, [
     r("PK", "id", "bigint(20) (AI)"), r("FK", "agent_id", "int(11) NULL · agente"),
     r("FK", "user_id", "bigint(20) NULL · cliente o entrenador"), r("", "action", "varchar(60)"),
     r("", "entity / entity_id", "varchar(60) / bigint(20)"), r("", "data", "json"), r("", "created_at", "timestamp")])
+db.table("cs", "commission_settlements", "N", db.R("al") + 100, db.B("adj") + 60, [
+    r("PK", "id", "bigint(20) (AI)"), r("FK", "trainer_id", "bigint(20)"),
+    r("UQ", "trainer_id + period", "char(7) · '2026-11'"),
+    r("", "commission_amount", "decimal(12,2) · ventas del mes"),
+    r("", "conversions_amount", "decimal(12,2) · convertido a puntos"),
+    r("", "adjustments_amount", "decimal(12,2)"), r("", "total_amount", "decimal(12,2) · a pagar"),
+    r("", "status", "enum('closed','paid')"), r("", "closed_at", "timestamp"),
+    r("", "paid_at", "timestamp NULL"), r("", "payment_reference", "varchar(100) NULL"),
+    r("FK", "agent_id", "int(11) NULL · quién registró el pago")])
 
 wt = db.t["tr"]["w"]
 txr = lambda x: ((x - db.L("tr")) / wt, 1)  # noqa: E731
@@ -504,6 +515,10 @@ db.rel("emp.id_usuario", "adj.agent_id", ONE, MANY0, "R", "L",
        [(db.L("adj") - 50, ry("emp", "id_usuario")), (db.L("adj") - 50, ry("adj", "agent_id"))], label="agente")
 db.rel("emp.id_usuario", "al.agent_id", ZONE, MANY0, "R", "L",
        [(db.L("al") - 40, ry("emp", "id_usuario")), (db.L("al") - 40, ry("al", "agent_id"))])
+xcs = db.L("cs") + 60
+db.rel("cs", "cm.settlement_id", ZONE, MANY0, ((xcs - db.L("cs")) / db.t["cs"]["w"], 0), "R",
+       [(xcs, YB - 30), (db.R("cm") + 60, YB - 30),
+        (db.R("cm") + 60, ry("cm", "settlement_id"))], label="liquidación mensual")
 # enlaces largos entre bloques
 db.rel("emp.id_usuario", "ord.agent_id", ZONE, MANY0, "L", "L",
        [(20, ry("emp", "id_usuario")), (20, 88), (ZC - 15, 88), (ZC - 15, ry("ord", "agent_id"))], label="agente")
@@ -526,6 +541,7 @@ db.note(NX, Y0 + 350, 620, 300,
         "• Externa: tb_empleados vive en la intranet; no se migra, se consulta por JOIN (orders.agent_id = id_usuario).<br><br>"
         "<b>Sin línea</b><br>"
         "• audit_logs.user_id → users.<br>"
+        "• commission_settlements.trainer_id → trainers; commission_settlements.agent_id → tb_empleados.<br>"
         "• orders_items.sap_code es una copia del código de sap_products, sin FK.<br>"
         "• orders_items guarda el descuento y la comisión vigentes de cada producto al momento de la compra: "
         "valor por defecto (variable de entorno) o estrategia del producto (product_discount_rules).<br>"
@@ -545,7 +561,8 @@ db.note(NX, Y0 + 680, 620, 330,
         "• FIFO por point_lots.accrued_at; saldo canjeable = Σ remaining_points disponibles y vigentes.<br>"
         "• Referido A → B: los 50.000 puntos quedan pendientes en trainer_referrals (no caducan); la primera compra "
         "aprobada de un cliente de B crea el lote de A una sola vez.<br>"
-        "• Saldo de comisión = Σ commission_movements.amount.")
+        "• Saldo de comisión = Σ commission_movements.amount sin liquidar. Se convierte a puntos en cualquier momento "
+        "(C + mín(50% × P vigentes, C)); lo no convertido se liquida en dinero al cierre de mes (commission_settlements).")
 
 pages = [db]
 

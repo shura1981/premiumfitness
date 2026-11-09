@@ -22,7 +22,7 @@ Que el entrenador vea en todo momento, y con una respuesta inmediata:
 
 ## Fuera de alcance
 
-- Cualquier cierre o liquidación mensual de comisión. No existe.
+- La liquidación mensual de la comisión (spec `negocio/04`).
 - El diseño visual del dashboard.
 - La fórmula de la conversión (D-04).
 
@@ -30,21 +30,20 @@ Que el entrenador vea en todo momento, y con una respuesta inmediata:
 
 1. El entrenador ve sus puntos de clientes en dos cifras: el total acumulado histórico y los vigentes (disponibles y no vencidos).
 2. El entrenador ve sus puntos de referidos en tres cifras: los vigentes, los pendientes y el detalle por cada entrenador B (pendiente, activo con su remanente, usado o vencido).
-3. El entrenador ve su saldo de comisión convertible.
+3. El entrenador ve su saldo de comisión sin liquidar, que puede convertir o que se le pagará al final del mes.
 4. Cada cifra se obtiene con una consulta que usa un índice que la cubre, sin recorrer las tablas completas.
 5. Los puntos vigentes son correctos aunque el proceso nocturno de vencimiento no haya corrido todavía.
-6. No hay tabla ni proceso de liquidación mensual de comisión.
 
 ## Supuestos y preguntas abiertas
 
 | ID | Supuesto | Clase |
 | --- | --- | --- |
-| S-01 | La comisión se usa solo convirtiéndola a puntos (CU-11), y los puntos se canjean por productos (CU-12). No hay pago en dinero ni cierre de mes. | Confirmado (9 nov 2026); coincide con `requerimientos.md` («solo puede redimir los puntos por productos») |
+| S-01 | La comisión se convierte a puntos (CU-11) o se paga en dinero al final del mes (CU-21); los puntos se canjean por productos (CU-12) y no hay canje mixto. **Corregido el 9 nov 2026:** antes decía que no había pago en dinero ni cierre de mes. | Confirmado (9 nov 2026); ver spec `negocio/04` |
 | S-02 | «Vigente» significa `status = 'available'` y `expires_at > NOW()`. Se calcula al consultar, así que no depende de que ya haya corrido el proceso de vencimiento. | Derivado |
 | S-03 | No se crea una tabla de saldos precalculados. Las cifras se obtienen sumando los lotes con índices que cubren la consulta. | Derivado: ver Plan |
 | S-04 | Los puntos por referido pendientes suman `trainer_referrals.referral_points` donde `activated_at IS NULL`. No son lotes y no suman al saldo canjeable. | Confirmado (spec `negocio/02`) |
 | S-05 | El total histórico de puntos de clientes suma `initial_points` de los lotes con `source = 'client_sale'`, incluidos los ya usados y los vencidos. No descuenta los lotes revertidos por devolución, que se ven en sus movimientos de ajuste. | Derivado |
-| S-06 | El saldo de comisión es la suma de `commission_movements.amount`: abonos por venta menos débitos por conversión y ajustes. | Confirmado (S-17 del DER) |
+| S-06 | El saldo de comisión es la suma de `commission_movements.amount` sin liquidar: abonos por venta menos conversiones, más o menos ajustes. El débito de la liquidación mensual lo deja en cero. | Confirmado (S-17 del DER; spec `negocio/04`) |
 
 ## Plan
 
