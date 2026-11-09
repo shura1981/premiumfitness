@@ -100,7 +100,8 @@ Las columnas de cada índice siguen el orden de los filtros: primero las igualda
 | --- | --- | --- |
 | `point_lots` | `ix_point_lots_balance (trainer_id, status, expires_at, source, remaining_points)` | Puntos vigentes por origen. |
 | `point_lots` | `ix_point_lots_history (trainer_id, source, initial_points)` | Total histórico por origen. |
-| `point_lots` | `ix_point_lots_fifo (trainer_id, status, accrued_at, id)` | Consumo FIFO al canjear y al convertir. |
+| `point_lots` | `ix_point_lots_fifo (trainer_id, status, accrued_at, id)` | Consumo FIFO al canjear. |
+| `point_lots` | `ix_point_lots_expiration (status, expires_at)` | Proceso nocturno que marca los lotes vencidos: lee solo los disponibles cuya fecha ya pasó. |
 | `trainer_referrals` | `ix_trainer_referrals_pending (referrer_id, activated_at, referral_points)` | Pendientes y detalle por B. |
 | `commission_movements` | `ix_commission_movements_balance (trainer_id, amount)` | Saldo de comisión. |
 | `orders_coupons` | `ix_orders_coupons_trainer (trainer_id, order_id)` | Ventas atribuidas al entrenador. |

@@ -161,7 +161,7 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 | CU-18 | Registrar el envío del pedido | Agente del call center | Confirmado por producto. |
 | CU-19 | Consultar el seguimiento del pedido | Cliente o entrenador comprador | Confirmado por producto. |
 | CU-20 | Asociar el cupón de un entrenador | Cliente sin entrenador | Confirmado por producto. |
-| CU-21 | Liquidar la comisión del mes | Cron y usuario del admin | Confirmado por producto; medio de pago pendiente (términos y condiciones). |
+| CU-21 | Liquidar la comisión del mes | Cron del hosting; financiero recibe el reporte | Confirmado por producto; medio de pago en términos y condiciones. |
 
 ## 6. Especificación de casos de uso
 
@@ -682,10 +682,10 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 ### CU-21. Liquidar la comisión del mes
 
 - **Objetivo:** cerrar el mes, dejar calculado lo que la empresa debe pagar a cada entrenador por la comisión que no convirtió, y entregar el reporte mensual.
-- **Actores:** cron del hosting para el cierre y usuario del admin para registrar el pago.
+- **Actores:** cron del hosting; las encargadas de financiero reciben el reporte.
 - **Disparador:** el día 1 a la 01:00 (hora de Colombia), el cron del hosting hace una sola petición de cierre del mes anterior, con `year` y `month` explícitos. No se usa un programador dentro de la aplicación.
 - **Reglas:** regla 18 de `reglas-de-negocio.md`; spec `specs/negocio/05-reportes-y-conciliacion-mensual.md`.
-- **Clasificación:** Confirmado por producto (9 nov 2026). El proceso se toma del sistema actual (api-comisiones), simplificado. Medio de pago y destinatarios pendientes.
+- **Clasificación:** Confirmado por producto (9 nov 2026). El proceso se toma del sistema actual (api-comisiones), simplificado. Medio y plazo de pago: términos y condiciones.
 
 **Flujo principal:**
 
@@ -696,8 +696,8 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
    - marca los movimientos como liquidados;
    - registra el débito que deja el saldo en cero.
 3. Genera el Excel del mes fuera de la carpeta pública con estas hojas: resumen por entrenador, análisis de ventas, detalle de pedidos, productos, puntos, canjes y cuadre.
-4. Envía al administrador un correo con el resumen y un enlace que exige iniciar sesión.
-5. La empresa paga por fuera de la app. El agente registra en el admin la fecha y la referencia del pago de cada liquidación.
+4. Envía a las encargadas de financiero (lista en la variable de entorno `COMMISSION_REPORT_RECIPIENTS`) un correo con el resumen y un enlace que exige iniciar sesión.
+5. Financiero paga lo que dice el Excel. La app no registra el pago: los comprobantes de consignación son la evidencia.
 
 **Alternativas y errores:**
 
@@ -706,7 +706,7 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 - **Devolución o corrección posterior al cierre:** entra como ajuste en el mes siguiente. Un mes cerrado no cambia.
 - **Fallo del correo:** el cierre queda hecho y el correo se reenvía con `force`.
 
-**Resultado:** período cerrado, liquidaciones por entrenador, reporte disponible y, después, pagos registrados.
+**Resultado:** período cerrado, liquidaciones por entrenador y Excel enviado a financiero. Ese Excel es lo que se paga.
 
 **Criterio de aceptación:**
 

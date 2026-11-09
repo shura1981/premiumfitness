@@ -474,15 +474,13 @@ db.table("cs", "commission_settlements", "N", db.R("al") + 100, db.B("adj") + 60
     r("", "commission_amount", "decimal(12,2) · ventas del mes"),
     r("", "conversions_amount", "decimal(12,2) · convertido a puntos"),
     r("", "adjustments_amount", "decimal(12,2)"), r("", "total_amount", "decimal(12,2) · a pagar"),
-    r("", "status", "enum('closed','paid')"), r("", "closed_at", "timestamp"),
-    r("", "paid_at", "timestamp NULL"), r("", "payment_reference", "varchar(100) NULL"),
-    r("FK", "agent_id", "int(11) NULL · quién registró el pago")])
+    r("", "closed_at", "timestamp")])
 db.table("cper", "commission_periods", "N", db.R("cs") + 100, db.B("adj") + 60, [
     r("PK", "id", "bigint(20) (AI)"), r("UQ", "period", "char(7) · '2026-11'"),
     r("", "period_start / period_end", "date"), r("", "closed_at", "timestamp"),
     r("", "trainers_count / orders_count", "int(11)"), r("", "total_amount", "decimal(12,2)"),
     r("", "file_name", "varchar(150) NULL · Excel privado"),
-    r("", "report_sent_at", "timestamp NULL"), r("", "report_recipients", "varchar(255) NULL")])
+    r("", "report_sent_at", "timestamp NULL"), r("", "report_recipients", "varchar(500) NULL · copia del env")])
 
 wt = db.t["tr"]["w"]
 txr = lambda x: ((x - db.L("tr")) / wt, 1)  # noqa: E731
@@ -551,7 +549,7 @@ db.note(NX, Y0 + 350, 620, 300,
         "• Externa: tb_empleados vive en la intranet; no se migra, se consulta por JOIN (orders.agent_id = id_usuario).<br><br>"
         "<b>Sin línea</b><br>"
         "• audit_logs.user_id → users.<br>"
-        "• commission_settlements.trainer_id → trainers; commission_settlements.agent_id → tb_empleados.<br>"
+        "• commission_settlements.trainer_id → trainers.<br>"
         "• orders_items.sap_code es una copia del código de sap_products, sin FK.<br>"
         "• orders_items guarda el descuento y la comisión vigentes de cada producto al momento de la compra: "
         "valor por defecto (variable de entorno) o estrategia del producto (product_discount_rules).<br>"

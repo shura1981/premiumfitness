@@ -23,7 +23,7 @@ La app de dietas conserva su alcance en el producto y se implementa después del
 | Puntos por referido | 50.000 puntos pendientes para A al registrar B; activación por compra aprobada de cliente de B. | RF-09, RF-20 | CU-07, CU-08 |
 | Cuenta de recompensas | Comisión convertible, puntos por estado, lotes, remanentes, historial y vencimiento. | RF-11, RF-13 | CU-09, CU-10 |
 | Conversión | Convertir el total de comisión (comisión + mín(50% × puntos vigentes, comisión)), vista previa, aviso, confirmación y movimientos vinculados. | RF-12 | CU-11 |
-| Liquidación mensual | Corte del último día del mes, liquidación de la comisión no convertida y registro del pago. | RF-22 | CU-21 |
+| Liquidación mensual | Corte del último día del mes, liquidación de la comisión no convertida y Excel enviado a financiero. | RF-22 | CU-21 |
 | Canje | Productos a precio completo, consumo FIFO, sin pago mixto, IVA y entrega. | RF-14 | CU-12 |
 | Operación | Consulta/gestión mínima, ajustes conforme a política y reportes por período/entrenador. | RF-16, RF-17, RF-19 | Requerimientos y regla 10 |
 

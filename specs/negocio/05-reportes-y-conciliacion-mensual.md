@@ -40,7 +40,7 @@ Reutilizar lo que funciona del sistema actual de comisiones (proceso mensual, co
 | Promociones y bonos fijos en el código (15%, 20%, 30%, CreaStack con fechas) | Variables de entorno más `product_discount_rules` con vigencia | Regla 15 y spec `negocio/02` |
 | `force: true` recalcula y sobrescribe un mes cerrado | Un mes cerrado **no cambia**. `force` solo regenera el Excel y reenvía el correo. Las correcciones entran como ajustes en el mes siguiente | Lo pagado debe coincidir siempre con lo liquidado |
 | Una comisión negativa se suma en silencio y reduce el total del cupón | La comisión de una línea nunca es negativa. Las devoluciones son ajustes explícitos (`adjustments`) | Trampa documentada en el CLAUDE.md del repo |
-| No registra si se pagó: solo cierra la conciliación | Cada liquidación por entrenador pasa por `closed` → `paid`, con fecha, referencia y agente | Hay que poder demostrar qué se pagó |
+| Cierra la conciliación y el Excel es lo que se paga | **Igual:** el Excel del cierre es lo que se paga. La app no registra el pago; los comprobantes de consignación son la evidencia, por fuera del sistema | Decisión de producto (9 nov 2026) |
 | Excel en `public/` con nombre predecible (`report-coupns-7-2026.xlsx`), descargable **sin autenticación** (`reportDownloadController`: «TODO: Implement token validation») | Archivo fuera de la carpeta pública y descarga solo desde el admin autenticado | El Excel trae nombres de clientes, ciudades y comisiones |
 | `tb_cupones_ventas` se llena con un script | La atribución se guarda al comprar (`orders_coupons.trainer_id`) | No hay que reconstruirla |
 | Secreto estático compartido entre el login y el cron | Un secreto exclusivo para el cierre, en una variable de entorno | Si se rota uno, no rompe el otro |
@@ -48,7 +48,7 @@ Reutilizar lo que funciona del sistema actual de comisiones (proceso mensual, co
 ## Alcance
 
 - Tabla de período (`commission_periods`) y ajuste de `commission_settlements`.
-- Proceso de cierre (CU-21): disparo, idempotencia, reporte, correo y registro del pago.
+- Proceso de cierre (CU-21): disparo, idempotencia, reporte y correo a financiero.
 - Contenido del Excel mensual y cuadres de conciliación.
 
 ## Fuera de alcance
@@ -73,7 +73,7 @@ Reutilizar lo que funciona del sistema actual de comisiones (proceso mensual, co
 | S-01 | Base de la comisión: lo pagado por el producto con el descuento, sin IVA y sin envío. Es la misma que usa hoy api-comisiones (`(pagado − flete) / 1.19`), pero con el IVA de cada producto. Cierra la parte de comisión de D-03. | Confirmado por el sistema en producción |
 | S-02 | La comisión se guarda por línea con 2 decimales. El total a pagar de cada liquidación se redondea al peso más cercano. | Derivado (api-comisiones redondea a entero por pedido) |
 | S-03 | El cierre corre el día 1 a la 01:00, hora de Colombia, sobre el mes anterior. api-comisiones lo corre el día 4 porque recalcula desde las visitas. Aquí no hace falta esperar: el mes se corta por `approved_at` y las cifras ya están guardadas. | Derivado |
-| S-04 | Destinatarios del correo mensual y quién registra el pago en el admin. | Pendiente |
+| S-04 | El correo va a las encargadas de financiero, definidas como lista en la variable de entorno `COMMISSION_REPORT_RECIPIENTS`. El pago no se registra en la app: el Excel del cierre es lo que se paga y los comprobantes de consignación son la evidencia. | Confirmado (9 nov 2026) |
 
 ## Plan
 
@@ -88,7 +88,7 @@ Reutilizar lo que funciona del sistema actual de comisiones (proceso mensual, co
 - **`commission_settlements`:**
   - cambia `period` por `period_id` (FK), con clave única (`period_id`, `trainer_id`);
   - añade `orders_count`;
-  - mantiene `status` (`closed` o `paid`), `paid_at`, `payment_reference` y `agent_id`.
+  - sin estado de pago: la liquidación cerrada es lo que se paga.
 
 ### Proceso de cierre (CU-21)
 
@@ -100,20 +100,27 @@ Reutilizar lo que funciona del sistema actual de comisiones (proceso mensual, co
    - asigna `settlement_id` a los movimientos;
    - registra el débito que deja el saldo en cero.
 4. Genera el Excel fuera de la carpeta pública y guarda `file_name`.
-5. Envía el correo con el resumen y un enlace que exige iniciar sesión en el admin.
-6. El agente registra el pago de cada liquidación.
+5. Envía a `COMMISSION_REPORT_RECIPIENTS` (financiero) el correo con el resumen y un enlace que exige iniciar sesión en el admin, y guarda en el período a quién se envió.
 
 ### Excel mensual
 
 | Hoja | Una fila por | Columnas |
 | --- | --- | --- |
-| Resumen por entrenador | entrenador | Cupón, pedidos, ventas pagadas (con IVA), base sin IVA, IVA, comisión generada, ajustes, convertido a puntos, total a pagar, estado del pago |
+| Resumen por entrenador | entrenador | Nombre, documento, cupón, pedidos, ventas pagadas (con IVA), base sin IVA, IVA, comisión generada, ajustes, convertido a puntos, total a pagar |
 | Análisis de ventas | entrenador y ciudad | Pedidos, base sin IVA, comisión |
 | Detalle de pedidos | pedido aprobado del mes | Pedido, fecha de aprobación, cliente, ciudad, forma de pago, precio full, descuento, pagado, envío, base sin IVA, IVA, comisión, puntos, cupón y entrenador |
 | Productos | entrenador y producto | Cantidad, base sin IVA, porcentaje de comisión aplicado (estrategia del producto) y comisión |
 | Puntos | entrenador | Saldo inicial, emitidos por clientes, por referidos y por conversiones, canjeados, vencidos, ajustes, saldo final y pendientes por referido |
 | Canjes | canje del mes | Pedido, entrenador, producto, puntos, base e IVA del canje (regla 10) |
 | Cuadre | período | Los dos cuadres de los criterios 3 y 4, con su diferencia, que debe ser cero |
+
+### Índices del reporte mensual
+
+El cierre lee un solo mes. Además de los índices del spec `negocio/03`, usa:
+
+- `orders (status_id, approved_at)`, para los pedidos aprobados del mes;
+- `point_movements (created_at)`, para los puntos emitidos, canjeados y vencidos del mes;
+- `commission_movements (settlement_id)`, para los movimientos aún sin liquidar.
 
 ### Vistas del entrenador
 
@@ -128,5 +135,5 @@ Reutilizar lo que funciona del sistema actual de comisiones (proceso mensual, co
 - [x] Añadir `commission_periods` y ajustar `commission_settlements` en `scripts/der/generar_der.py`, y regenerar el DER
 - [x] Actualizar CU-21 en `docs/casos-de-uso-y-actores.md`, y RF-19 y D-03 en el PRD
 - [x] Añadir `COMMISSION_CLOSE_TOKEN` a las variables de entorno de `.agents/rules/codebase-standards.md`
-- [ ] Definir los destinatarios del correo mensual y quién registra el pago (S-04)
+- [x] Definir los destinatarios del correo mensual y si se registra el pago (S-04)
 - [ ] Diseñar el Excel con la skill `xlsx-report-generator` de api-comisiones como referencia (fase de codificación)

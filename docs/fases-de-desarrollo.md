@@ -156,7 +156,7 @@ Elegir motor de base de datos, migraciones, índices y restricciones. Diseñar t
 - Crear lotes por acumulación con seis meses de vigencia y procesos de vencimiento.
 - Mostrar acumulado de comisiones, puntos inactivos, disponibles, usados y caducados; adaptar la UI de `join.nutramerican.com`.
 - Implementar conversión del total de comisión (comisión + mín(50% × puntos vigentes, comisión)) con vista previa, aviso y débito/crédito indivisibles.
-- Implementar el corte mensual de la comisión (cron) y el registro del pago en el admin.
+- Implementar el corte mensual de la comisión (cron del hosting), el Excel y el correo a financiero.
 - Registrar ajustes sin borrar movimientos originales, conforme a la política de devoluciones acordada.
 
 **Entregables:** cuenta de comisiones y puntos, activación de los puntos por referido, historial, vencimientos y conversión.

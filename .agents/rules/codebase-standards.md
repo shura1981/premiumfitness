@@ -121,6 +121,7 @@ COMMISSION_CONVERSION_PERCENTAGE=50
 
 # Cierre mensual de comisión (lo dispara el cron del hosting; nunca un programador dentro de la app)
 COMMISSION_CLOSE_TOKEN=secreto-exclusivo-del-cierre-minimo-32-caracteres
+COMMISSION_REPORT_RECIPIENTS=financiero1@premiumfitness.co,financiero2@premiumfitness.co
 REPORTS_STORAGE_PATH=/ruta/privada/fuera/de/public
 ```
 

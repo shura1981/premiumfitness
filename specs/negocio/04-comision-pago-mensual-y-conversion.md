@@ -23,7 +23,7 @@ Definir qué hace el entrenador con su comisión, cómo se convierte a puntos y 
 
 ## Fuera de alcance
 
-- La transferencia bancaria. La empresa paga por fuera de la app; la app calcula la liquidación y registra el pago.
+- La transferencia bancaria y su registro. La empresa paga por fuera de la app lo que dice el Excel del cierre; los comprobantes de consignación son la evidencia.
 - La redacción de los términos y condiciones.
 
 ## Reglas
@@ -88,7 +88,7 @@ Definir qué hace el entrenador con su comisión, cómo se convierte a puntos y 
 | S-02 | Fórmula `C + mín(50% × P, C)` con `P` = puntos vigentes. | Confirmado (9 nov 2026) |
 | S-03 | `P` incluye los puntos vigentes de todos los orígenes (clientes, referidos y conversiones anteriores), pero no los 50.000 pendientes. | Derivado de «lo que tenga actualmente vigente en puntos» |
 | S-04 | Corte el último día del mes, hora de Colombia. El cron del hosting lo dispara el día 1 a la 01:00 con una sola petición (spec `negocio/05`). | Derivado (D-01) |
-| S-05 | La empresa paga por fuera de la app. Un usuario del admin registra la fecha y la referencia del pago. | Derivado |
+| S-05 | La empresa paga por fuera de la app lo que dice el Excel del cierre. La app no registra el pago; los comprobantes de consignación son la evidencia. | Confirmado (9 nov 2026) |
 | S-06 | Medio y plazo de pago, mínimo para pagar y retenciones o impuestos sobre la comisión. | Pendiente: términos y condiciones |
 | S-07 | Ajuste negativo y saldo negativo trasladado al mes siguiente. | Derivado |
 
@@ -101,8 +101,7 @@ Definir qué hace el entrenador con su comisión, cómo se convierte a puntos y 
 - `commission_conversions` añade `base_points` (`P`) y `bonus_points` (adicional con tope). Ya tenía `commission_amount`, `conversion_percentage` y `points_granted`.
 - Nueva tabla `commission_settlements`, una fila por entrenador y mes, con clave única (`period_id`, `trainer_id`); el período vive en `commission_periods` (spec `negocio/05`):
   - `commission_amount`, `conversions_amount`, `adjustments_amount` y `total_amount`;
-  - `status` (`closed` o `paid`);
-  - `closed_at`, `paid_at`, `payment_reference` y `agent_id`.
+  - `closed_at`. Sin estado de pago (S-05).
 - `commission_movements` añade `settlement_id` (FK, NULL) y el tipo `settlement_debit`.
 
 **Conversión.** Ocurre en una transacción con la fila del entrenador bloqueada:

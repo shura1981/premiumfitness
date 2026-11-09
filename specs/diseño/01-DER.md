@@ -186,7 +186,7 @@ Diagrama editable: [diagrama-entidad-relacion.drawio](../../docs/img/diagrama-en
 | Pedidos y catálogo | `payment_event_jobs` | Existente | Reintento de webhooks que llegan antes que el pedido. |
 | Recompensas y operación | `commission_movements` | Nueva | Abono de comisión del pedido (suma de líneas), débitos por conversión y ajustes. |
 | Recompensas y operación | `commission_conversions` | Nueva | Conversión del total de comisión a puntos: comisión, puntos base, adicional con tope y total. |
-| Recompensas y operación | `commission_settlements` | Nueva | Liquidación mensual de la comisión no convertida y registro del pago. |
+| Recompensas y operación | `commission_settlements` | Nueva | Liquidación mensual por entrenador de la comisión no convertida: lo que se paga. |
 | Recompensas y operación | `commission_periods` | Nueva | Cierre del mes: totales, archivo del reporte y envío del correo. |
 | Recompensas y operación | `point_lots` | Nueva | Lote con cantidad inicial, remanente, estado, fecha de acumulación y caducidad. |
 | Recompensas y operación | `point_movements` | Nueva | Abono, consumo FIFO, caducidad y ajuste por lote. |
@@ -203,6 +203,7 @@ Diagrama editable: [diagrama-entidad-relacion.drawio](../../docs/img/diagrama-en
   - `point_lots (trainer_id, status, expires_at, source, remaining_points)`
   - `point_lots (trainer_id, source, initial_points)`
   - `point_lots (trainer_id, status, accrued_at, id)`
+  - `point_lots (status, expires_at)`
   - `trainer_referrals (referrer_id, activated_at, referral_points)`
   - `commission_movements (trainer_id, amount)`
   - `orders_coupons (trainer_id, order_id)`
