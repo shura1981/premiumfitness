@@ -44,7 +44,38 @@ Enviar notificaciones push a la app web (PWA Angular para clientes y entrenadore
    - Si FCM responde `UNREGISTERED` o `INVALID_ARGUMENT` para un token, se borra el dispositivo.
 5. **Destino:** cada notificación indica la app destino (`web` o `diets`), y solo se envía a los dispositivos de esa app.
 6. **Contenido:** título y texto cortos, sin datos sensibles (no montos de otros usuarios ni datos de clientes). El campo `data` lleva la ruta a abrir en la app (`route`) y el id del recurso.
-7. **Web push en iPhone:** solo funciona con la PWA instalada en la pantalla de inicio (iOS 16.4 o posterior). La app debe pedir el permiso después de una acción del usuario, nunca al abrir.
+7. **Web push en iPhone:** tiene restricciones propias. Ver la sección «iPhone y Safari».
+
+## iPhone y Safari
+
+En iPhone y iPad las notificaciones web tienen más restricciones que en Android. Todos los navegadores de iOS usan el motor de Safari, así que estas restricciones aplican también a Chrome en iPhone.
+
+### Restricciones
+
+| Restricción | Consecuencia para PremiumFitness |
+| --- | --- |
+| Solo funcionan desde **iOS 16.4** y **solo con la PWA agregada a la pantalla de inicio**. Una pestaña de Safari no puede suscribirse. Desde iOS 26, cualquier sitio agregado a la pantalla de inicio con «Abrir como app web» (activado por defecto) cuenta como PWA. | Antes de pedir el permiso, el usuario debe instalar la app. |
+| iOS **no muestra un aviso de instalación**: no existe `beforeinstallprompt`. | La app debe enseñar cómo instalarla: Compartir → «Agregar a pantalla de inicio». |
+| El permiso **solo se puede pedir tras un toque del usuario** (por ejemplo, un botón «Activar notificaciones»). Si lo rechaza, la web no puede volver a pedirlo. | Pedir el permiso en un momento con sentido, nunca al abrir. Si lo rechazó, explicar cómo activarlo en Ajustes → Notificaciones → PremiumFitness. |
+| **Safari y la app instalada no comparten almacenamiento** (cookies ni `localStorage`). | La sesión y el id del enlace del entrenador guardados en Safari no pasan a la app instalada: hay que iniciar sesión otra vez dentro de ella. |
+| Cada push **tiene que mostrar una notificación visible**. Si el service worker recibe pushes y no muestra nada, Safari puede retirar la suscripción. | No enviar pushes silenciosos (solo datos) a la web. Todo push lleva título y texto. |
+| La suscripción pertenece a la app instalada. Si el usuario la borra de la pantalla de inicio o cambia de teléfono, el token deja de servir. | Registrar el token en cada inicio de la app y borrar los que FCM marque como inválidos (regla 4). |
+| Las notificaciones pueden llegar con retraso o agrupadas por los modos de concentración y el resumen programado de iOS. | No usar push para nada urgente ni que dependa de la hora exacta, como los códigos SMS. |
+
+### Recomendaciones
+
+1. **Orden en iPhone:** primero registrarse y asociarse al entrenador **en Safari** (el enlace `/r/c/<id>` o `/r/t/<id>` funciona ahí). Después instalar la app y, dentro de ella, iniciar sesión y activar las notificaciones. Así el vínculo con el entrenador queda guardado en el backend y no se pierde por el almacenamiento separado.
+2. **Guía de instalación:** si la app detecta iOS y que no está instalada (`navigator.standalone !== true` y no está en `display-mode: standalone`), muestra un aviso con los pasos de instalación en lugar del botón de activar notificaciones.
+3. **Manifest:** `display: "standalone"`, `name` y `short_name` «PremiumFitness», `start_url` dentro del alcance de la app, e iconos con `apple-touch-icon` de 180 × 180 px. Sin `display: standalone`, iOS anterior al 26 no la trata como app.
+4. **Service worker de FCM:** `firebase-messaging-sw.js` en la raíz del alcance de la app, servido por HTTPS. En su evento `push` llama siempre a `showNotification`.
+5. **Payload:** usar el bloque `webpush` del mensaje de FCM HTTP v1, con `notification` (título y texto) y `fcm_options.link` hacia la ruta de la app. Así la notificación se ve aunque el service worker no alcance a procesarla.
+6. **Badge:** se puede usar la Badging API (`navigator.setAppBadge`), disponible en la app instalada, para mostrar pendientes en el icono.
+7. **Pruebas:** en un iPhone real, con iOS 16.4 o posterior, con la app instalada. El simulador y una pestaña de Safari no sirven para probar push.
+8. **Plan B:** las notificaciones son un complemento. El estado de los pedidos, los puntos y el acceso a dietas siempre se ven al abrir la app. Para avisos críticos en iPhone, la app de dietas (Flutter, nativa) usa APNs a través de FCM, sin estas restricciones.
+
+### Pendiente de verificar
+
+- iOS 18.4 añadió **Declarative Web Push**, que muestra la notificación desde un JSON sin ejecutar el service worker. No está confirmado que FCM HTTP v1 envíe ese formato. Mientras tanto se usa el flujo clásico con service worker (recomendaciones 4 y 5), que funciona desde iOS 16.4.
 
 ## Eventos que notifican
 
@@ -69,6 +100,7 @@ La lista es **Derivada** y requiere validación de producto.
 3. Un token que FCM marca como no registrado se borra y no se reintenta.
 4. Ninguna petición HTTP del usuario espera a Firebase.
 5. El código no usa `fcm/send` ni la server key legacy.
+6. En un iPhone con iOS 16.4 o posterior y la app instalada, el usuario activa las notificaciones con un botón y recibe el push de una compra aprobada. En Safari sin instalar, la app muestra la guía de instalación en lugar del botón.
 
 ## Supuestos y preguntas abiertas
 
@@ -79,6 +111,7 @@ La lista es **Derivada** y requiere validación de producto.
 | S-03 | `users.token_push_notification` de radical se conserva sin usar: los tokens viven en `push_devices`, porque un usuario puede tener varios dispositivos y apps. | Derivado |
 | S-04 | La lista de eventos de la tabla. | Derivado: requiere validación |
 | S-05 | El cron de envío corre cada minuto. Si el hosting no lo permite, la latencia de la notificación será la del intervalo mínimo del cron. | Derivado |
+| S-06 | Restricciones de iPhone y Safari según la documentación disponible en noviembre de 2026: push desde iOS 16.4 solo con la PWA instalada; desde iOS 26 cualquier sitio abierto como app web; Declarative Web Push desde iOS 18.4. | Derivado: verificar en un iPhone real y en las notas de WebKit |
 
 ## Plan
 
@@ -100,5 +133,7 @@ La lista es **Derivada** y requiere validación de producto.
 - [x] Definir el envío con FCM HTTP v1, la outbox y los dispositivos
 - [x] Añadir `push_devices` y `push_notifications` al DER
 - [x] Añadir las variables de entorno a `.agents/rules/codebase-standards.md`
+- [x] Documentar las restricciones y recomendaciones para iPhone y Safari
+- [ ] Probar el flujo de instalación y push en un iPhone real (S-06)
 - [ ] Validar la lista de eventos con producto (S-04)
 - [ ] Crear el proyecto de Firebase y la cuenta de servicio (S-02)
