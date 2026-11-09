@@ -101,11 +101,11 @@ def r(key, name, typ="", mark=""):
     return (key, name, typ, mark)
 
 
-def rad(table, notes=None, fk=(), mods=None, extra=(), drop=()):
+def rad(table, notes=None, fk=(), mods=None, extra=(), drop=(), uq=()):
     """Filas de una tabla de radical, exactamente como en su esquema.
     notes: comentario por columna · fk: columnas FK sin constraint en radical ·
     mods: {columna: tipo nuevo} (se marca «~») · extra: filas nuevas (se marcan «+») ·
-    drop: columnas que PremiumFitness no conserva."""
+    drop: columnas que PremiumFitness no conserva · uq: columnas que pasan a ser únicas (se marca «~»)."""
     tb = SCHEMA[table]
     notes, mods = notes or {}, mods or {}
     rows = []
@@ -118,12 +118,12 @@ def rad(table, notes=None, fk=(), mods=None, extra=(), drop=()):
             key.append("PK")
         if n in tb["fk"] or n in fk:
             key.append("FK")
-        if [n] in tb["uq"]:
+        if [n] in tb["uq"] or n in uq:
             key.append("UQ")
         typ = mods.get(n, c["type"] + (" (AI)" if tb["ai"] == n else "") + (" NULL" if c["null"] else ""))
         if n in notes:
             typ += " · " + notes[n]
-        rows.append(r(" ".join(key), n, typ, "~" if n in mods else ""))
+        rows.append(r(" ".join(key), n, typ, "~" if n in mods or n in uq else ""))
     return rows + [r(k, n, t, "+") for k, n, t in extra]
 
 
@@ -270,17 +270,28 @@ def row_label(key, name, typ, mark, stub):
 # =====================================================================
 db = Page("Base de datos", "db")
 db.header("PremiumFitness — Diagrama entidad relación de la base de datos",
-          "v0.8 · 9 nov 2026 · base: esquema real de backend-radical-nutrition (dump + migraciones) sin credit_balances, "
-          "más las tablas nuevas de referidos, comisiones, puntos y operación · spec: specs/diseño/01-DER.md")
+          "v0.12 · 9 nov 2026 · base: esquema real de backend-radical-nutrition (dump + migraciones) sin credit_balances, "
+          "más las tablas nuevas de autenticación, referidos, comisiones, puntos, liquidación y operación · spec: specs/diseño/01-DER.md")
 Y0 = 170
 ry = db.ry
 
 # --- A. Identidad y direcciones (radical) -----------------------------
 db.table("dt", "document_types", "E", 40, Y0, rad("document_types"))
-db.table("vc", "verification_codes", "E", 40, db.B("dt") + 40, rad("verification_codes"))
-db.table("prt", "password_reset_tokens", "E", 40, db.B("vc") + 40, rad("password_reset_tokens"))
-UX = max(db.R("vc"), db.R("prt"), db.R("dt")) + 90
-db.table("users", "users", "A", UX, Y0, rad("users", extra=[
+db.table("vc", "verification_codes", "A", 40, db.B("dt") + 40, rad("verification_codes",
+         mods={"code": "char(64) · hash del código de 6 dígitos"},
+         extra=[("", "purpose", "enum('phone_verification','password_reset')"),
+                ("", "destination", "varchar(20) · celular"), ("", "attempts", "tinyint(4) · máx. 5")]))
+db.table("prt", "password_reset_tokens", "E", 40, db.B("vc") + 40,
+         rad("password_reset_tokens", notes={"token": "hash; se emite al verificar el código SMS"}))
+db.table("rt", "refresh_tokens", "N", 40, db.B("prt") + 40, [
+    r("PK", "id", "bigint(20) (AI)"), r("FK", "user_id", "bigint(20) NULL · cliente o entrenador"),
+    r("FK", "agent_id", "int(11) NULL · agente del admin"),
+    r("", "app", "enum('client','trainer','admin')"), r("", "family_id", "char(36) · sesión"),
+    r("UQ", "token_hash", "char(64)"), r("", "expires_at", "timestamp · 30 días (admin 12 h)"),
+    r("", "revoked_at", "timestamp NULL"), r("FK", "replaced_by_id", "bigint(20) NULL · rotación"),
+    r("", "ip / user_agent", "varchar(45) / varchar(255)"), r("", "created_at", "timestamp")])
+UX = max(db.R("vc"), db.R("prt"), db.R("dt"), db.R("rt")) + 90
+db.table("users", "users", "A", UX, Y0, rad("users", uq=("num_cell",), notes={"num_cell": "login"}, extra=[
     ("", "phone_verified_at", "timestamp NULL"),
     ("", "role", "enum('client','trainer')"),
     ("", "status", "enum('pending','active','suspended')")]))
@@ -298,6 +309,7 @@ db.table("cw", "city_warehouses", "E", CX, db.B("loc") + 50, rad("city_warehouse
 xb = UX - 40
 db.rel("users.id", "vc.user_id", ONE, MANY0, "L", "R", [(xb, ry("users", "id")), (xb, ry("vc", "user_id"))])
 db.rel("users.id", "prt.user_id", ONE, MANY0, "L", "R", [(xb, ry("users", "id")), (xb, ry("prt", "user_id"))])
+db.rel("users.id", "rt.user_id", ZONE, MANY0, "L", "R", [(xb, ry("users", "id")), (xb, ry("rt", "user_id"))])
 db.rel("dt.id", "users.document_type_id", ONE, MANY0, "R", "L",
        [(xb + 20, ry("dt", "id")), (xb + 20, ry("users", "document_type_id"))])
 db.rel("users.id", "aum.user_id", ONE, MANY0, "R", "L")
@@ -550,6 +562,7 @@ db.note(NX, Y0 + 350, 620, 300,
         "<b>Sin línea</b><br>"
         "• audit_logs.user_id → users.<br>"
         "• commission_settlements.trainer_id → trainers.<br>"
+        "• refresh_tokens.agent_id → tb_empleados; refresh_tokens.replaced_by_id → refresh_tokens.<br>"
         "• orders_items.sap_code es una copia del código de sap_products, sin FK.<br>"
         "• orders_items guarda el descuento y la comisión vigentes de cada producto al momento de la compra: "
         "valor por defecto (variable de entorno) o estrategia del producto (product_discount_rules).<br>"

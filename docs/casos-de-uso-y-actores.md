@@ -126,6 +126,7 @@ No se incluyen como actores un operador de bodega ni un soporte, porque ni los r
 | RN-20 | Cada entrenador tiene un cupón con nombre único. Un cliente sin entrenador puede asociarse escribiendo ese cupón. Un cliente ya asociado no ve el campo del cupón y no cambia de entrenador por sí mismo. | Confirmado por producto. | Confirmación del 9 nov 2026. |
 | RN-21 | Un cliente sin entrenador puede comprar a precio completo; su compra no genera descuento ni recompensas. | Confirmado por producto. | Confirmación del 9 nov 2026. |
 | RN-22 | Los porcentajes no están fijos en el código. Descuento del cliente, descuento del entrenador, puntos y comisión tienen valores por defecto (10%, 25%, 5% y 15%) que, como los 50.000 puntos por referido, los 6 meses de vencimiento y el 50% de conversión, se definen en variables de entorno. Cada producto puede tener una estrategia propia; por ejemplo, Nutra Balance da un 5% más de descuento (15%) y su comisión baja al 10%. | Confirmado por producto. Falta definir quién administra las estrategias y si pueden tener vigencia. | Confirmación del 9 nov 2026. |
+| RN-23 | Una cuenta es cliente o entrenador, nunca ambas, y su celular es único. Se registra en la app de su rol verificando el celular por SMS, inicia sesión con celular y contraseña, y recupera la contraseña por SMS. La sesión dura 30 días. | Confirmado por producto (9 nov 2026). | Spec `specs/seguridad/01-autenticacion-y-sesiones.md`. |
 
 ### 4.1. Interpretación de importes y porcentajes
 

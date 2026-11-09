@@ -30,7 +30,9 @@ When generating code for this repository:
    - MySQL pool de conexiones (`mysql2/promise`).
    - Consultas siempre parametrizadas contra inyecciones SQL.
 4. **Authentication & Security**:
-   - "The Shielded Architecture": Access Token (JWT en memoria, TTL 15m) + Refresh Token (`httpOnly`, `Secure`, `SameSite=Strict` cookie, TTL 7d con rotación y revocación).
+   - "The Shielded Architecture": Access Token (JWT en memoria, TTL 15m, con `role` y `app`) + Refresh Token (`httpOnly`, `Secure`, `SameSite=Strict` cookie, TTL 30d con rotación, detección de reutilización y revocación en `refresh_tokens`).
+   - Una cookie por app (`pf_rt_client`, `pf_rt_trainer`, `pf_rt_admin`) limitada a la ruta de auth de su app. Login con celular y contraseña; el SMS solo verifica el celular y recupera la contraseña. Admin: `tb_empleados`, sesión de 12 h.
+   - Ningún endpoint emite tokens sin contraseña o sin un código verificado. Spec: `specs/seguridad/01-autenticacion-y-sesiones.md`.
 5. **Testing**:
    - Vitest / Jest con TypeScript.
    - Supertest para E2E sobre Express.
@@ -108,6 +110,13 @@ DB_PASS=secret
 DB_NAME=premiumfitness
 JWT_SECRET=super-secure-secret-minimum-32-chars
 JWT_REFRESH_SECRET=super-secure-refresh-secret-minimum-32-chars
+JWT_ACCESS_TTL_MINUTES=15
+JWT_REFRESH_TTL_DAYS=30
+ADMIN_SESSION_TTL_HOURS=12
+OTP_LENGTH=6
+OTP_TTL_MINUTES=5
+OTP_MAX_ATTEMPTS=5
+OTP_MAX_SENDS_PER_DAY=10
 CORS_ALLOWED_ORIGINS=http://localhost:4200
 
 # Constantes de negocio (docs/reglas-de-negocio.md, reglas 1, 2, 6, 15 y nota de conversión)

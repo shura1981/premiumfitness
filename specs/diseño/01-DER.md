@@ -1,6 +1,6 @@
 # 01 — Diagrama entidad relación (DER)
 
-**Estado:** propuesta v0.11 lista para revisión · **Creado:** 7 de noviembre de 2026
+**Estado:** propuesta v0.12 lista para revisión · **Creado:** 7 de noviembre de 2026
 
 ## Petición original
 
@@ -40,6 +40,13 @@
 - **Conversión:** `commission_conversions` añade `base_points` y `bonus_points`.
 
 **Revisión v0.11, 9 de noviembre de 2026:** se toma de api-comisiones la cabecera del período (spec `specs/negocio/05-reportes-y-conciliacion-mensual.md`). Nueva tabla `commission_periods`; `commission_settlements` pasa a referenciarla (`period_id`) y añade `orders_count`.
+
+**Revisión v0.12, 9 de noviembre de 2026:** autenticación (spec `specs/seguridad/01-autenticacion-y-sesiones.md`).
+
+- **Login:** `users.num_cell` pasa a ser único, porque es el usuario del login.
+- **Códigos SMS:** `verification_codes` guarda el hash del código y añade `purpose`, `destination` y `attempts`.
+- **Sesiones:** nueva tabla `refresh_tokens`, con rotación por familia y una sesión por app.
+- **Pagos:** `commission_settlements` ya no registra el pago; el Excel del cierre es lo que se paga.
 
 ## Objetivo
 
@@ -108,8 +115,8 @@ Proponer el modelo de datos del MVP comercial para revisarlo con negocio y tecno
 | S-02 | Los nombres de tablas y columnas están en inglés y `snake_case`, como en radical. | Derivado | Esquema de radical. Coincide con las carpetas de `codebase-standards.md`. |
 | S-03 | El nombre del usuario es un solo campo, `full_name`. No hay nombres y apellidos separados. | Confirmado | Radical `users.full_name`; join `fullName`. |
 | S-04 | `users` conserva todas las columnas de radical y añade al final `phone_verified_at`, `role` y `status`. | Derivado | Radical, más la verificación SMS del MVP. |
-| S-05 | Cada usuario tiene un solo rol: `client` o `trainer`. Los operadores no son usuarios del portal: son agentes de la intranet (S-31). | Derivado | D-05: falta decidir si un usuario puede tener varios roles. |
-| S-06 | `num_cell` no es único en radical. Si el login o la recuperación por SMS usan el teléfono, debe pasar a ser único. | Pendiente | Revisión de `sms-account-verification` y de radical. |
+| S-05 | Cada usuario tiene un solo rol: `client` o `trainer`. Los operadores no son usuarios del portal: son agentes de la intranet (S-31). | Confirmado (9 nov 2026) | Spec `seguridad/01`. |
+| S-06 | `users.num_cell` pasa a ser único: es el usuario del login. | Confirmado (9 nov 2026) | Spec `seguridad/01`. |
 | S-07 | Las direcciones se reutilizan tal cual: `addresses`, `address_user_map` (con `is_main`), `cities` (código DANE) y `localities`. | Confirmado | Radical. Permite el reporte por ciudad de join. |
 | S-08 | `trainers` es un subtipo 1:0..1 de `users`. Así, las FK de referidos y recompensas solo pueden apuntar a entrenadores. | Derivado | Decisión de diseño. |
 | S-09 | Cada entrenador tiene un cupón único (`trainers.coupon_code`). Sus dos enlaces (app de clientes y app de entrenadores) llevan su id en base64, y el QR muestra el mismo enlace. | Confirmado | Reglas 12 y 13; confirmación del 9 nov 2026. |
@@ -146,6 +153,7 @@ Proponer el modelo de datos del MVP comercial para revisarlo con negocio y tecno
 | S-41 | Si se cancela o devuelve la compra que activó los 50.000 puntos y A no los ha usado, se revierte el remanente del lote con un ajuste y el referido vuelve a quedar pendiente. Si ya los usó, se mantienen. | Confirmado; reversión parcial derivada | Spec negocio/02. |
 | S-42 | No hay tabla de saldos precalculados: los saldos se calculan sumando `point_lots`, `trainer_referrals` y `commission_movements` con índices que cubren cada consulta. La comisión no convertida se liquida al corte del último día del mes en `commission_settlements` (única por `trainer_id` + `period`); los movimientos liquidados guardan `settlement_id`. | Confirmado (pago mensual); sin tabla de saldos: Derivado | Specs `negocio/03` y `negocio/04`. |
 | S-43 | Un período cerrado no se recalcula: `force` solo regenera el Excel y el correo. Las correcciones posteriores entran como ajustes del mes siguiente. El Excel se guarda fuera de la carpeta pública. | Derivado | Spec `negocio/05`: en api-comisiones `force` sobrescribe meses cerrados y el Excel se descarga sin autenticación. |
+| S-44 | `refresh_tokens` guarda solo el hash del token. Cada renovación crea una fila nueva y enlaza la anterior (`replaced_by_id`); reutilizar una fila ya reemplazada revoca toda la `family_id`. | Confirmado | Spec `seguridad/01`; skill `jwt-security`. |
 | S-30 | `products.discount_list` (tramos por cantidad con su `sap_code`) se conserva por la integración, aunque los descuentos de PremiumFitness (10% y 25%) dependen del rol y no de la cantidad. | Derivado | Radical. Falta confirmar si los tramos aplican. |
 
 ## Plan
@@ -168,7 +176,8 @@ Diagrama editable: [diagrama-entidad-relacion.drawio](../../docs/img/diagrama-en
 | --- | --- | --- | --- |
 | Identidad y referidos | `users` | Adaptada | Identidad con `full_name`, documento, celular, email y contraseña. Añade verificación del teléfono, rol y estado. |
 | Identidad y referidos | `document_types` | Existente | Tipos de documento. |
-| Identidad y referidos | `verification_codes` | Existente | Códigos de verificación por email o SMS. |
+| Identidad y referidos | `verification_codes` | Adaptada | Códigos SMS de 6 dígitos (hash), propósito, destino e intentos. |
+| Identidad y referidos | `refresh_tokens` | Nueva | Sesiones de 30 días por app (admin, 12 h) con rotación y revocación. |
 | Identidad y referidos | `password_reset_tokens` | Existente | Recuperación de contraseña. |
 | Identidad y referidos | `addresses`, `address_user_map` | Existente | Direcciones del usuario, con la principal marcada. |
 | Identidad y referidos | `cities`, `localities`, `address_locality_map` | Existente | Ciudad con código DANE y localidad opcional. |
@@ -243,4 +252,5 @@ Diagrama editable: [diagrama-entidad-relacion.drawio](../../docs/img/diagrama-en
 - [x] Pasar las constantes a variables de entorno, quitar `rule_versions` y crear el lote de los 50.000 puntos solo al activarse (v0.9)
 - [x] Añadir la liquidación mensual de comisión y los campos de la conversión (v0.10)
 - [x] Añadir `commission_periods` a partir de api-comisiones (v0.11)
+- [x] Añadir `refresh_tokens`, ajustar `verification_codes` y hacer único `users.num_cell` (v0.12)
 - [ ] Revisión y aprobación del modelo por negocio y tecnología

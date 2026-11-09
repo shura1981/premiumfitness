@@ -228,7 +228,7 @@ Las fuentes no fijan la política completa de devoluciones. Se conserva esta pro
 
 | ID | Entrega | Requisito | Criterio de aceptación |
 | --- | --- | --- | --- |
-| RF-01 | MVP | Registro y acceso | Entrenador/cliente se registran, verifican contacto, recuperan acceso y solo consultan recursos autorizados. |
+| RF-01 | MVP | Registro y acceso | Registro con verificación del celular por SMS; login con celular y contraseña en la app de su rol; sesión de 30 días con refresh token rotativo; recuperación por SMS; solo consultan recursos autorizados (spec `seguridad/01`). |
 | RF-02 | MVP | Perfil | El usuario consulta/modifica datos permitidos; conserva identidad e historial. |
 | RF-03 | MVP | Dos QR | El QR de clientes y el de entrenadores identifican al referente y abren destinos distintos. |
 | RF-04 | MVP | Atribución | Se guarda cookie del entrenador en el recorrido cliente y se conserva atribución del pedido; reintentos no duplican relaciones. |
@@ -361,7 +361,7 @@ Estas decisiones completan las reglas; no dejan en duda los porcentajes, seis me
 | D-02 | Catálogo, inventario, envío, entrega y cancelación de canjes. | Operación | Antes de checkout/canje real. |
 | D-03 | Resuelta el 9 nov 2026. **Puntos:** 5% de lo pagado por los productos (con descuento e IVA, sin envío), por pedido y redondeado al entero más cercano. **Comisión:** porcentaje vigente del producto sobre lo pagado con descuento, sin IVA y sin envío, por línea con 2 decimales; el total liquidado se redondea al peso. Es la misma base que usa hoy api-comisiones. | Negocio y finanzas | — |
 | D-04 | Resuelta el 9 nov 2026: puntos recibidos = comisión + mín(50% × puntos vigentes, comisión). | Negocio y finanzas | — |
-| D-05 | Registro, verificación, coexistencia de roles y tratamiento de autorreferidos/cuentas duplicadas. | Producto y tecnología | Acceso y referidos. |
+| D-05 | Parcialmente resuelta el 9 nov 2026: un rol por cuenta, `num_cell` único, login con celular y contraseña. Pendiente: autorreferidos y cuentas duplicadas. | Producto y tecnología | Acceso y referidos. |
 | D-06 | Resuelta el 9 nov 2026: los 50.000 puntos pendientes no caducan; una vez activados, vencen a los seis meses. | Negocio | — |
 | D-07 | Corte exacto de seis meses y política de devolución con beneficios consumidos, incluyendo puntos restituidos (los 50.000 puntos de A ya tienen regla). | Negocio y finanzas | Antes del piloto. |
 | D-08 | Resuelta el 9 nov 2026: la comisión no convertida se paga en dinero al final de cada mes. Pendiente en términos y condiciones: medio, plazo, mínimo y retenciones. | Negocio y legal | Antes del piloto. |
