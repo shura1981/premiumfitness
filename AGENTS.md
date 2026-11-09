@@ -1,6 +1,6 @@
 # PremiumFitness
 
-Aplicación de referidos, compras, comisiones y puntos para los entrenadores y clientes de PremiumFitness. El backend es un **fork de `backend-radical-nutrition`** (PHP 8.5, Slim 4, MariaDB, Pest y PHPStan), desplegado en el mismo hosting. Los frontends son apps Angular separadas para clientes, entrenadores y admin, cada una en su subdominio.
+Aplicación de referidos, compras, comisiones y puntos para los entrenadores y clientes de PremiumFitness. El backend es un **fork de `backend-radical-nutrition`** (PHP 8.5, Slim 4, MariaDB, Pest y PHPStan), desplegado en el mismo hosting. Hay tres apps: la **web** (PWA Angular para clientes y entrenadores, con un área por rol), el **admin** (Angular: call center, SAP, envíos y reportes) y **dietas** (Flutter, externa).
 
 **Estado actual:** documentación y diseño. Todavía no hay código de aplicación.
 

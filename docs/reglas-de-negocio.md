@@ -48,7 +48,7 @@ El entrenador A rifiere al entrenador B (entrenador A obtiene 50 mil pero en est
     - Sin meta ni mes gratis, el entrenador puede canjear 50.000 puntos (`DIET_ACCESS_POINTS_COST`) por el mes en curso. El canje es por FIFO y se hace una sola vez por mes.
     - La app de dietas (Flutter) consulta el estado al abrir y al menos una vez al día (regla 8). Sin meta, sin mes gratis y sin canje, se desactiva solo dietas.
 
-12. El QR es una forma de presentar el enlace del entrenador: un enlace con su id codificado en base64. El entrenador puede compartirlo por redes sociales, WhatsApp o en QR. El enlace de clientes lleva a la app de clientes, y el enlace para otros entrenadores lleva a la app de entrenadores. Son apps distintas, cada una en su subdominio. El entrenador B solo queda referido por A si se registra desde el enlace (o el QR) de A; no hay un cupón para entrenadores.
+12. El QR es una forma de presentar el enlace del entrenador: un enlace con su id codificado en base64. El entrenador puede compartirlo por redes sociales, WhatsApp o en QR. Clientes y entrenadores usan la misma app web, con un área para cada rol. El enlace de clientes (`/r/c/<id>`) registra o asocia a un cliente, y el enlace para otros entrenadores (`/r/t/<id>`) registra a un entrenador. *(Cambio del 9 nov 2026: antes eran dos apps en subdominios distintos.)* El entrenador B solo queda referido por A si se registra desde el enlace (o el QR) de A; no hay un cupón para entrenadores.
 
 13. Cada entrenador tiene un cupón con un nombre único. El cliente queda asociado a un entrenador de dos formas:
     - Entra por el enlace del entrenador. El enlace lo lleva al login; si ya está registrado pasa al dashboard, y si no, se registra. El id del entrenador queda guardado.

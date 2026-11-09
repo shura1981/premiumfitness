@@ -39,7 +39,7 @@ Dejar la documentación y las reglas de los agentes alineadas con la decisión d
 | ID | Supuesto | Clase |
 | --- | --- | --- |
 | S-01 | El backend es PHP 8.5 + Slim 4 + MariaDB, como radical, desplegado en el mismo hosting (cPanel con LiteSpeed y Apache). | Confirmado (9 nov 2026) |
-| S-02 | Las apps de clientes, de entrenadores y el admin siguen siendo Angular. Cada una vive en su propio subdominio. | Confirmado |
+| S-02 | El frontend son tres apps: web (PWA Angular para clientes y entrenadores), admin (Angular) y dietas (Flutter). Antes decía apps separadas para clientes y entrenadores; lo cambió el spec `arquitectura/02`. | Confirmado |
 | S-03 | Los crons usan `CronJobTokenMiddleware` y `CRON_JOB_TOKEN` de radical (header `X-Cron-Job-Token`, comparación con `hash_equals`). Reemplaza al `COMMISSION_CLOSE_TOKEN` propuesto en el spec `negocio/05`. | Derivado |
 | S-04 | El rate limiting usa `RateLimitMiddleware` de radical (Symfony RateLimiter con almacenamiento en disco). El disco es compartido por todos los procesos de LiteSpeed, así que los límites no se duplican. Hay que añadir límites por celular, además de por IP. | Derivado |
 | S-05 | Al hacer el fork, hay que desactivar el endpoint `login-with-credential` y el autologin por QR de radical, porque entregan tokens sin contraseña (spec `seguridad/01`). | Derivado |

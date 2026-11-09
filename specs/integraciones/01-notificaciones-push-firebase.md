@@ -8,7 +8,7 @@
 
 ## Objetivo
 
-Enviar notificaciones push a las apps de clientes y de entrenadores (Angular PWA) y a la app de dietas (Flutter) cuando ocurre un evento de negocio. El envío no debe frenar la operación que lo origina ni duplicarse en el hosting compartido.
+Enviar notificaciones push a la app web (PWA Angular para clientes y entrenadores) y a la app de dietas (Flutter) cuando ocurre un evento de negocio. El envío no debe frenar la operación que lo origina ni duplicarse en el hosting compartido.
 
 ## Contexto encontrado
 
@@ -39,10 +39,10 @@ Enviar notificaciones push a las apps de clientes y de entrenadores (Angular PWA
    - Si falla, reintenta hasta `PUSH_MAX_ATTEMPTS` veces con espera creciente.
    - `source_key`, que es único, evita duplicar una notificación por el mismo evento.
 4. **Dispositivos:**
-   - Cada app registra su token después del login (`POST /api/{app}/push-devices`) y lo borra al cerrar sesión.
+   - Cada app registra su token después del login (`POST /api/push-devices` en la web, `POST /api/diets/push-devices` en dietas) y lo borra al cerrar sesión.
    - Un usuario puede tener varios dispositivos y apps.
    - Si FCM responde `UNREGISTERED` o `INVALID_ARGUMENT` para un token, se borra el dispositivo.
-5. **Destino:** cada notificación indica la app destino (`client`, `trainer` o `diets`), y solo se envía a los dispositivos de esa app.
+5. **Destino:** cada notificación indica la app destino (`web` o `diets`), y solo se envía a los dispositivos de esa app.
 6. **Contenido:** título y texto cortos, sin datos sensibles (no montos de otros usuarios ni datos de clientes). El campo `data` lleva la ruta a abrir en la app (`route`) y el id del recurso.
 7. **Web push en iPhone:** solo funciona con la PWA instalada en la pantalla de inicio (iOS 16.4 o posterior). La app debe pedir el permiso después de una acción del usuario, nunca al abrir.
 
@@ -75,7 +75,7 @@ La lista es **Derivada** y requiere validación de producto.
 | ID | Supuesto | Clase |
 | --- | --- | --- |
 | S-01 | No hay un servidor de push aparte: el backend PHP envía con FCM HTTP v1 desde un cron. | Derivado |
-| S-02 | Un solo proyecto de Firebase para las tres apps (clientes, entrenadores y dietas). | Pendiente |
+| S-02 | Un solo proyecto de Firebase, con una app web (clientes y entrenadores) y las apps Android e iOS de dietas. El admin no recibe push. | Pendiente: proyecto dedicado «PremiumFitness» o reutilizar `elitenutritiongroup-9385a` |
 | S-03 | `users.token_push_notification` de radical se conserva sin usar: los tokens viven en `push_devices`, porque un usuario puede tener varios dispositivos y apps. | Derivado |
 | S-04 | La lista de eventos de la tabla. | Derivado: requiere validación |
 | S-05 | El cron de envío corre cada minuto. Si el hosting no lo permite, la latencia de la notificación será la del intervalo mínimo del cron. | Derivado |
@@ -83,7 +83,7 @@ La lista es **Derivada** y requiere validación de producto.
 ## Plan
 
 - **Modelo de datos:**
-  - `push_devices`: `id`, `user_id`, `app`, `platform` (`web`, `android` o `ios`), `token` (único), `created_at` y `last_seen_at`.
+  - `push_devices`: `id`, `user_id`, `app` (`web` o `diets`), `platform` (`web`, `android` o `ios`), `token` (único), `created_at` y `last_seen_at`.
   - `push_notifications`: `id`, `user_id`, `app`, `type`, `title`, `body`, `data` (JSON), `status` (`pending`, `sent` o `failed`), `attempts`, `last_error`, `source_key` (único), `created_at`, `sent_at`.
   - Índice `(status, created_at)` para el cron.
 - **Código:**

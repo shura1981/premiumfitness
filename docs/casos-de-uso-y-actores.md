@@ -23,7 +23,7 @@ El 9 de noviembre de 2026 se confirmó además:
 
 - El QR es una forma de presentar el enlace del entrenador, que lleva su id en base64 y se puede compartir por cualquier medio.
 - Cada entrenador tiene un cupón. Un cliente que se registró sin enlace puede escribirlo después.
-- Clientes y entrenadores usan apps distintas, cada una en su subdominio.
+- Clientes y entrenadores usan la misma app web (PWA), con un área por rol. El admin y la app de dietas son apps aparte (spec `arquitectura/02`; antes eran dos apps en subdominios distintos).
 - Los porcentajes de descuento, puntos y comisión son configurables, con excepciones por producto.
 - Los puntos se calculan con IVA incluido; solo la comisión discrimina el IVA.
 
@@ -80,7 +80,7 @@ Estas denominaciones distinguen participantes de una operación. **No son roles 
 | --- | --- | --- |
 | Entrenador referente de clientes | Comparte su enlace para clientes o recibe clientes por su cupón, y es el destinatario de los beneficios de las compras atribuidas. | Un entrenador comparte su enlace por WhatsApp con un cliente que luego compra. |
 | Entrenador A o referente de entrenadores | Comparte el enlace para entrenadores y recibe 50.000 puntos cuando un cliente de B compra por primera vez. | A invita a B. |
-| Entrenador B o referido | Recibe el enlace para entrenadores y se registra en la app de entrenadores. | B se registra a partir del enlace de A. |
+| Entrenador B o referido | Recibe el enlace para entrenadores y se registra como entrenador en la app web. | B se registra a partir del enlace de A. |
 | Entrenador comprador | Utiliza el descuento del 25% o canjea puntos por productos. | Un entrenador compra un producto del portafolio. |
 
 Una misma persona puede participar en varias de estas situaciones. No se define si una misma cuenta puede ser simultáneamente cliente y entrenador.
@@ -90,7 +90,7 @@ Una misma persona puede participar en varias de estas situaciones. No se define 
 | Participante o sistema | Relación con los casos de uso | Tratamiento |
 | --- | --- | --- |
 | Persona aún no registrada | Inicia el registro de cliente o entrenador. | Estado previo de ACT-01 o ACT-02; no se asume un tercer rol de negocio. |
-| App de clientes que conserva el id del enlace | Mantiene el identificador del entrenador entre la apertura del enlace y el registro o login (cookie o almacenamiento del navegador). | Mecanismo técnico confirmado; no es un actor de negocio. Su soporte en una app nativa está pendiente. |
+| App web que conserva el id del enlace | Mantiene el identificador del entrenador entre la apertura del enlace y el registro o login (cookie o almacenamiento del navegador). | Mecanismo técnico confirmado; no es un actor de negocio. Su soporte en una app nativa está pendiente. |
 | Origen del estado de compra «Aprobada» | Proporciona el evento que habilita las recompensas por venta. | La condición existe, pero los requisitos no indican quién la informa. Derivado de radical: la pasarela de pagos confirma el pago por webhook y el pedido pasa a «Aprobada». El proveedor sigue pendiente (D-10). |
 | Pasarela de pagos | Cobra el pedido e informa el resultado del pago. | Derivado de radical. No es un actor de negocio. |
 | SAP Business One | Recibe el pedido que registra el agente y devuelve el código del pedido SAP. Define los artículos y las bodegas. | Sistema externo, confirmado por producto. |
@@ -104,8 +104,8 @@ No se incluyen como actores un operador de bodega ni un soporte, porque ni los r
 
 | ID | Regla | Estado y precisión | Referencia en requisitos |
 | --- | --- | --- | --- |
-| RN-01 | El entrenador se registra y comparte dos enlaces: uno para clientes, que abre la app de clientes, y otro para entrenadores, que abre la app de entrenadores. Cada enlace lleva el id del entrenador en base64. El QR es una forma de presentar el enlace; también se comparte por redes sociales o WhatsApp. | Confirmado; enlaces y apps separadas confirmados por producto el 9 nov 2026. | Inicio del archivo y lista de tipos de QR. |
-| RN-02 | Al abrir el enlace, la app de clientes guarda el id del entrenador y lleva al login. Al registrarse o iniciar sesión, el cliente sin entrenador queda asociado a ese entrenador. | Confirmado; el login como destino y la asociación al iniciar sesión los confirmó producto el 9 nov 2026. | «El cliente escanea, se registra…». |
+| RN-01 | El entrenador se registra y comparte dos enlaces de la app web: uno para clientes (`/r/c/<id>`) y otro para entrenadores (`/r/t/<id>`). Cada enlace lleva el id del entrenador en base64. El QR es una forma de presentar el enlace; también se comparte por redes sociales o WhatsApp. | Confirmado por producto el 9 nov 2026. El mismo día se cambió de dos apps a una sola app web con áreas por rol. | Inicio del archivo y lista de tipos de QR. |
+| RN-02 | Al abrir el enlace de clientes, la app web guarda el id del entrenador y lleva al login. Al registrarse o iniciar sesión, el cliente sin entrenador queda asociado a ese entrenador. | Confirmado; el login como destino y la asociación al iniciar sesión los confirmó producto el 9 nov 2026. | «El cliente escanea, se registra…». |
 | RN-03 | El cliente asociado a un entrenador ve todo el catálogo con descuento: badge con el porcentaje, precio con descuento y precio real tachado. El descuento por defecto es del 10%. | Confirmado; el catálogo con descuento lo confirmó producto el 9 nov 2026. Aplica a todas sus compras mientras esté asociado. | «El cliente compra…». |
 | RN-04 | Las recompensas al entrenador por una venta se reconocen cuando la compra está aprobada. | Confirmado. Los demás estados no se definen. | «Cuando la compra sea Aprobada…». |
 | RN-05 | El entrenador recibe en puntos el 5% de lo que pagó el cliente por los productos (con descuento y con IVA, sin envío), calculado sobre el total del pedido y redondeado al entero más cercano. | Confirmado; base, redondeo y envío definidos por producto el 9 nov 2026. | Párrafo de aprobación y beneficio 1. |
@@ -198,7 +198,7 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 
 **Flujo principal:**
 
-1. El entrenador abre en su app el enlace para clientes. El enlace apunta a la app de clientes y lleva su id en base64.
+1. El entrenador abre en su área el enlace para clientes. El enlace apunta a la ruta `/r/c/<id>` de la app web y lleva su id en base64.
 2. Lo comparte como prefiera: copia el enlace, lo envía por WhatsApp, lo publica en redes sociales o muestra el QR que lo contiene.
 3. El cliente abre el enlace y continúa en CU-03.
 
@@ -206,7 +206,7 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 
 **Resultado:** invitación compartida. Compartir el enlace no genera por sí mismo puntos ni comisión.
 
-**Criterio de aceptación:** el enlace para clientes abre la app de clientes e identifica al entrenador; no se confunde con el enlace para entrenadores. El QR muestra el mismo enlace.
+**Criterio de aceptación:** el enlace para clientes abre la app web en el registro o login de clientes e identifica al entrenador; no se confunde con el enlace para entrenadores. El QR muestra el mismo enlace.
 
 ### CU-03. Registrar cliente y asociarlo al entrenador del enlace
 
@@ -218,7 +218,7 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 
 **Flujo principal:**
 
-1. El cliente abre el enlace. La app de clientes guarda el id del entrenador y muestra el login.
+1. El cliente abre el enlace. La app web guarda el id del entrenador y muestra el login.
 2. Si el cliente no tiene cuenta, se registra. Si ya la tiene, inicia sesión; el guard lo deja pasar y lo lleva al dashboard.
 3. El sistema asocia al cliente con el entrenador del enlace. La asociación queda guardada en la base de datos, no solo en el navegador.
 4. Desde ese momento, el catálogo muestra el descuento en todos los productos y el campo del cupón no aparece.
@@ -304,7 +304,7 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 
 **Flujo principal:**
 
-1. A abre en su app el enlace para entrenadores. El enlace apunta a la app de entrenadores (otro subdominio) y lleva el id de A en base64.
+1. A abre en su área el enlace para entrenadores. El enlace apunta a la ruta `/r/t/<id>` de la app web y lleva el id de A en base64.
 2. A lo comparte por WhatsApp, redes sociales o QR.
 3. B lo abre y continúa en CU-07.
 
@@ -312,7 +312,7 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 
 **Resultado:** invitación a B compartida. Compartir el enlace no basta para activar los 50.000 puntos.
 
-**Criterio de aceptación:** el enlace para entrenadores abre la app de entrenadores e identifica a A; no se confunde con el enlace para clientes.
+**Criterio de aceptación:** el enlace para entrenadores abre el registro de entrenadores de la app web e identifica a A; no se confunde con el enlace para clientes.
 
 ### CU-07. Registrar entrenador referido
 
@@ -325,7 +325,7 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 
 **Flujo principal:**
 
-1. B abre el enlace compartido por A en la app de entrenadores.
+1. B abre el enlace compartido por A (`/r/t/<id>`) en la app web.
 2. El sistema identifica a A como referente.
 3. B completa CU-01.
 4. Se guarda la relación A → B con 50.000 puntos pendientes para A. El valor se toma de la variable de entorno `TRAINER_REFERRAL_POINTS` y queda fijado en el referido.
@@ -420,7 +420,7 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 
 - **Objetivo:** transformar la comisión en puntos para canjear productos.
 - **Actor:** ACT-01.
-- **Disparador:** el entrenador solicita la conversión desde la app de entrenadores.
+- **Disparador:** el entrenador solicita la conversión desde su área en la app web.
 - **Precondiciones:** saldo de comisión mayor que cero y conversión no bloqueada por el corte mensual.
 - **Reglas:** RN-09, RN-11, RN-12 y reglas 16 y 17 de `reglas-de-negocio.md`.
 - **Clasificación:** Confirmado por producto (9 nov 2026).
@@ -652,7 +652,7 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 
 - **Objetivo:** que un cliente registrado sin enlace obtenga el descuento y quede asociado a un entrenador.
 - **Actor:** ACT-02.
-- **Disparador:** el cliente escribe el nombre del cupón en la app de clientes.
+- **Disparador:** el cliente escribe el nombre del cupón en la app web.
 - **Precondición:** cliente autenticado y sin entrenador asociado. El campo del cupón solo se muestra en ese caso.
 - **Reglas:** RN-03, RN-20 y RN-21.
 

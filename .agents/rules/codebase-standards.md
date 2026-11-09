@@ -39,7 +39,7 @@ When generating code for this repository:
 
 4. **Base de datos y frontend**:
    - MariaDB 11.8, `utf8mb4_unicode_ci`.
-   - Apps Angular separadas, cada una en su subdominio: clientes, entrenadores y admin.
+   - Tres apps (spec `arquitectura/02`): la **web** (PWA Angular para clientes y entrenadores, con un área por rol cargada aparte), el **admin** (Angular: call center, SAP, envíos y reportes) y **dietas** (Flutter, externa).
 
 ## Feature Slices
 
@@ -112,9 +112,9 @@ Cada feature vive en `src/Features/<FeatureName>/`: Controller, Model, Repositor
 Spec: `specs/seguridad/01-autenticacion-y-sesiones.md`.
 
 - Login con celular (`users.num_cell`, único) y contraseña. Un rol por cuenta: `client` o `trainer`.
-- Access token JWT de 15 min, solo en memoria del frontend, con `sub`, `role` y `app`. Una API rechaza los tokens de otra app.
+- Access token JWT de 15 min, solo en memoria del frontend, con `sub`, `role` y `app` (`web`, `admin` o `diets`). Una API rechaza los tokens de otra app, y los endpoints del entrenador exigen `role = trainer`.
 - Refresh token de 30 días en cookie `httpOnly`, `Secure`, `SameSite=Strict`, rotado en cada uso y guardado como hash en `refresh_tokens`. Reutilizar uno ya rotado revoca toda la familia.
-- Una cookie por app (`pf_rt_client`, `pf_rt_trainer`, `pf_rt_admin`), limitada a la ruta de auth de su app. La app de dietas (Flutter, app `diets`) no usa cookie: guarda el refresh token en `flutter_secure_storage` y lo envía en el cuerpo.
+- Una cookie por app web (`pf_rt_web` en `/api/auth`, `pf_rt_admin` en `/api/admin/auth`). La app de dietas (Flutter, app `diets`) no usa cookie: guarda el refresh token en `flutter_secure_storage` y lo envía en el cuerpo.
 - Admin: login con `tb_empleados` (externa, **no se toca**: solo lectura), sesión de 12 horas.
 
 ## Verification Code Flow
@@ -129,7 +129,7 @@ Basado en `VerificationCodeService` de radical, ajustado al spec de autenticaci�
 
 En PremiumFitness el «QR» es un enlace con el id del entrenador en base64 (regla 12). No se usa el autologin por QR de radical.
 
-1. El enlace de clientes abre la app de clientes en el login, y el de entrenadores abre la app de entrenadores.
+1. Los dos enlaces abren la app web: `/r/c/<id>` registra o asocia a un cliente y `/r/t/<id>` registra a un entrenador B referido por A.
 2. La app guarda el id hasta el registro o el login, y el backend crea el vínculo (`client_referrals` o `trainer_referrals`).
 3. Un id inválido o de un entrenador inactivo no asocia a nadie.
 
@@ -187,9 +187,9 @@ Los middlewares se añaden en orden LIFO (el último en añadirse es el primero 
 
 ```php
 // Proteger ruta con JWT + rate limit + validación
-$app->post('/api/trainer/auth/login', [$authController, 'login'])
+$app->post('/api/auth/login', [$authController, 'login'])
     ->add(new ValidationMiddleware(new LoginValidator(), $app->getResponseFactory()))
-    ->add(new RateLimitMiddleware($app->getResponseFactory(), id: 'trainer-login', limit: 5, interval: '1 minute'));
+    ->add(new RateLimitMiddleware($app->getResponseFactory(), id: 'web-login', limit: 5, interval: '1 minute'));
 ```
 
 ## Private Files
@@ -203,7 +203,7 @@ Todas las variables se validan en `load/bootstrap.php` al arranque. Nunca accede
 ```
 APP_ENV=development|production
 DB_HOST, DB_NAME, DB_USER, DB_PASS
-CORS_ALLOWED_ORIGINS=https://clientes.dominio.com,https://entrenadores.dominio.com,https://admin.dominio.com
+CORS_ALLOWED_ORIGINS=https://app.dominio.com,https://admin.dominio.com
 MAIL_HOST, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD
 MAIL_FROM, MAIL_FROM_NAME, MAIL_ENCRYPTION=tls|ssl
 SAP_API_URL, SAP_API_KEY
@@ -271,7 +271,7 @@ REPORTS_STORAGE_PATH=/ruta/privada/fuera/de/public
 
 ### JavaScript/HTML/CSS Guidelines
 - Frontend code of this repo goes into `assets/js`, `assets/css` and `views/`.
-- Las apps Angular (clientes, entrenadores y admin) se sirven cada una en su subdominio. Si se compilan dentro de este repo, como hace radical con `SpaController` y `dist/`, o si viven en repos propios, se decide al crear el fork.
+- Las apps Angular (web y admin) se sirven cada una en su subdominio. Si se compilan dentro de este repo, como hace radical con `SpaController` y `dist/`, o si viven en repos propios, se decide al crear el fork.
 
 ## General Best Practices
 

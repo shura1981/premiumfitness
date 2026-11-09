@@ -9,16 +9,18 @@
 > Decisiones (9 nov 2026):
 > - Login con celular y contraseña. El SMS solo verifica el celular al registrarse y sirve para recuperar la contraseña.
 > - Un rol por cuenta: cliente o entrenador, nunca ambos.
+>
+> Cambio del 9 nov 2026 (spec `arquitectura/02`): clientes y entrenadores comparten una sola app web, con un área por rol.
 > - La sesión dura 30 días.
 
 ## Objetivo
 
-Definir cómo se registran, inician sesión, mantienen la sesión y recuperan el acceso los clientes, los entrenadores y los agentes del admin. La autenticación debe ser segura en un hosting compartido y con dos apps en subdominios distintos.
+Definir cómo se registran, inician sesión, mantienen la sesión y recuperan el acceso los clientes, los entrenadores y los agentes del admin. La autenticación debe ser segura en un hosting compartido, con tres apps: la web (clientes y entrenadores), el admin y la de dietas (spec `arquitectura/02`).
 
 ## Alcance
 
 - Registro con verificación del celular por SMS.
-- Login con celular y contraseña en la app de clientes y en la de entrenadores.
+- Login con celular y contraseña en la app web (clientes y entrenadores) y en la app de dietas.
 - Sesión con access token en memoria y refresh token rotativo en cookie.
 - Recuperación de la contraseña por SMS.
 - Logout, revocación y cuenta suspendida.
@@ -36,15 +38,15 @@ Definir cómo se registran, inician sesión, mantienen la sesión y recuperan el
 1. **Un rol por cuenta:**
    - el celular (`users.num_cell`) es único;
    - una cuenta es `client` o `trainer`, nunca ambas;
-   - el entrenador compra en su propia app con su descuento.
+   - el entrenador compra en la misma app web con su descuento; la app muestra el área de su rol.
 2. **Registro:**
    - se crea la cuenta con `status='pending'` y se envía un código SMS;
    - al verificarlo se guarda `phone_verified_at` y la cuenta pasa a `active`;
-   - la app de clientes solo registra clientes y la de entrenadores solo registra entrenadores;
+   - quien llega por el enlace `/r/t/<id>` o elige «soy entrenador» se registra como `trainer`; cualquier otro registro es `client`;
    - el enlace de referido (id del entrenador en base64) se procesa al terminar el registro o el login (reglas 12 y 13).
 3. **Login:**
    - con celular y contraseña;
-   - la app de clientes solo acepta cuentas `client` y la de entrenadores solo cuentas `trainer`. Si no coincide, el mensaje indica cuál es la app correcta;
+   - la app web acepta los dos roles y muestra el área de cada uno; la app de dietas solo acepta cuentas `trainer`; el admin solo acepta agentes de `tb_empleados`;
    - una cuenta `pending` recibe la opción de verificar el celular;
    - una cuenta `suspended` no entra.
 4. **Contraseña:**
@@ -59,13 +61,12 @@ Definir cómo se registran, inician sesión, mantienen la sesión y recuperan el
 
    | App | Cookie | Ruta |
    | --- | --- | --- |
-   | Clientes | `pf_rt_client` | `/api/client/auth` |
-   | Entrenadores | `pf_rt_trainer` | `/api/trainer/auth` |
+   | Web (clientes y entrenadores) | `pf_rt_web` | `/api/auth` |
    | Admin | `pf_rt_admin` | `/api/admin/auth` |
 
    La app de dietas (Flutter, app `diets`) es nativa: no usa cookie, guarda el refresh token en `flutter_secure_storage` y lo envía en el cuerpo de `/api/diets/auth/refresh` (spec `integraciones/02`).
 
-   Las apps están en subdominios del mismo dominio, así que `SameSite=Strict` funciona. CORS solo acepta los orígenes de `CORS_ALLOWED_ORIGINS`, con credenciales.
+   La app web y el admin están en subdominios del mismo dominio, así que `SameSite=Strict` funciona. CORS solo acepta los orígenes de `CORS_ALLOWED_ORIGINS`, con credenciales.
 7. **Recuperación:** se pide un código SMS para recuperar la contraseña. Al verificarlo se emite un token de un solo uso de 10 minutos (`password_reset_tokens`) para fijar la nueva contraseña. Al cambiarla se revocan todas las sesiones.
 8. **Códigos SMS:**
    - 6 dígitos, válidos 5 minutos;
@@ -99,7 +100,7 @@ Definir cómo se registran, inician sesión, mantienen la sesión y recuperan el
 
 ## Criterios de aceptación
 
-1. **Login y app correcta:** un cliente entra a la app de clientes con celular y contraseña. Su token es rechazado por la API de entrenadores, y viceversa.
+1. **Login y app correcta:** un cliente y un entrenador entran a la app web con celular y contraseña y ven el área de su rol. Un token `web` de cliente recibe 403 en los endpoints de entrenador, y un token `web` no sirve en `/api/admin/*` ni en `/api/diets/*`.
 2. **Registro duplicado:** no se puede registrar dos cuentas con el mismo celular.
 3. **Cuenta sin verificar:** una cuenta `pending` no accede al dashboard hasta verificar el celular.
 4. **Recarga de la app:** al recargar se recupera la sesión con el refresh token sin pedir login. Después de 30 días sin uso se pide login.
@@ -127,12 +128,12 @@ Definir cómo se registran, inician sesión, mantienen la sesión y recuperan el
   - `verification_codes` cambia `code` a `char(64)` (el hash) y añade `purpose` (`phone_verification` o `password_reset`), `destination` y `attempts`.
   - `password_reset_tokens` guarda el token de un solo uso que sale de verificar el código (como hash).
   - **Nueva tabla `refresh_tokens`:**
-    - `user_id` o `agent_id`, y `app` (`client`, `trainer` o `admin`);
+    - `user_id` o `agent_id`, y `app` (`web`, `admin` o `diets`);
     - `family_id` y `token_hash`, que es único;
     - `expires_at`, `revoked_at` y `replaced_by_id`;
     - `ip`, `user_agent` y `created_at`.
 - **Código:** se parte de `Auth` de radical y de las plantillas PHP de las skills `jwt-security` y `sms-account-verification`. El rate limiting usa `RateLimitMiddleware`, con límites por IP y por celular.
-- **Rutas:** se agrupan por app (`/api/client/auth/*`, `/api/trainer/auth/*` y `/api/admin/auth/*`) para limitar la cookie a su ruta.
+- **Rutas:** se agrupan por app (`/api/auth/*` para la web, `/api/admin/auth/*` y `/api/diets/auth/*`) para limitar la cookie a su ruta. Los endpoints del entrenador exigen `role = trainer`.
 - **Limpieza:** un proceso nocturno, disparado por el cron del hosting, borra los refresh tokens vencidos hace más de 30 días y los códigos usados o vencidos.
 
 ## Checklist

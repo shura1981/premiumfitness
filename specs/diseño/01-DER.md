@@ -52,6 +52,7 @@
 
 - **Push:** nuevas tablas `push_devices` y `push_notifications` (outbox).
 - **Dietas:** nueva tabla `diet_access_periods`, columna `trainers.diet_first_access_at`, columna `point_movements.diet_access_period_id`, y `refresh_tokens.app` añade `diets`.
+- **Una sola app web** (spec `arquitectura/02`): los enums `app` pasan a `web`, `admin` y `diets` en `refresh_tokens`, y a `web` y `diets` en `push_devices` y `push_notifications`.
 
 ## Objetivo
 
@@ -124,7 +125,7 @@ Proponer el modelo de datos del MVP comercial para revisarlo con negocio y tecno
 | S-06 | `users.num_cell` pasa a ser único: es el usuario del login. | Confirmado (9 nov 2026) | Spec `seguridad/01`. |
 | S-07 | Las direcciones se reutilizan tal cual: `addresses`, `address_user_map` (con `is_main`), `cities` (código DANE) y `localities`. | Confirmado | Radical. Permite el reporte por ciudad de join. |
 | S-08 | `trainers` es un subtipo 1:0..1 de `users`. Así, las FK de referidos y recompensas solo pueden apuntar a entrenadores. | Derivado | Decisión de diseño. |
-| S-09 | Cada entrenador tiene un cupón único (`trainers.coupon_code`). Sus dos enlaces (app de clientes y app de entrenadores) llevan su id en base64, y el QR muestra el mismo enlace. | Confirmado | Reglas 12 y 13; confirmación del 9 nov 2026. |
+| S-09 | Cada entrenador tiene un cupón único (`trainers.coupon_code`). Sus dos enlaces de la app web (`/r/c/<id>` para clientes y `/r/t/<id>` para entrenadores; spec `arquitectura/02`) llevan su id en base64, y el QR muestra el mismo enlace. | Confirmado | Reglas 12 y 13; confirmación del 9 nov 2026. |
 | S-10 | El navegador solo guarda el id del enlace hasta el registro o login. El vínculo persistente vive en `client_referrals`, y cada pedido guarda el cupón y el entrenador en `orders_coupons`. | Confirmado | Regla 13. |
 | S-11 | Un cliente tiene un solo entrenador (`client_referrals.client_id` único) y no lo cambia por sí mismo. `source` indica si llegó por enlace o por cupón. | Confirmado | Regla 13; RN-20. |
 | S-12 | Un entrenador B tiene como máximo un referente A (`trainer_referrals.referred_id` único). | Derivado | PRD §6.4. |

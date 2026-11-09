@@ -286,17 +286,17 @@ db.table("prt", "password_reset_tokens", "E", 40, db.B("vc") + 40,
 db.table("rt", "refresh_tokens", "N", 40, db.B("prt") + 40, [
     r("PK", "id", "bigint(20) (AI)"), r("FK", "user_id", "bigint(20) NULL · cliente o entrenador"),
     r("FK", "agent_id", "int(11) NULL · agente del admin"),
-    r("", "app", "enum('client','trainer','admin','diets')"), r("", "family_id", "char(36) · sesión"),
+    r("", "app", "enum('web','admin','diets')"), r("", "family_id", "char(36) · sesión"),
     r("UQ", "token_hash", "char(64)"), r("", "expires_at", "timestamp · 30 días (admin 12 h)"),
     r("", "revoked_at", "timestamp NULL"), r("FK", "replaced_by_id", "bigint(20) NULL · rotación"),
     r("", "ip / user_agent", "varchar(45) / varchar(255)"), r("", "created_at", "timestamp")])
 db.table("pd", "push_devices", "N", 40, db.B("rt") + 40, [
     r("PK", "id", "bigint(20) (AI)"), r("FK", "user_id", "bigint(20)"),
-    r("", "app", "enum('client','trainer','diets')"), r("", "platform", "enum('web','android','ios')"),
+    r("", "app", "enum('web','diets')"), r("", "platform", "enum('web','android','ios')"),
     r("UQ", "token", "varchar(255) · token FCM"), r("", "created_at / last_seen_at", "timestamp")])
 db.table("pn", "push_notifications", "N", 40, db.B("pd") + 40, [
     r("PK", "id", "bigint(20) (AI)"), r("FK", "user_id", "bigint(20)"),
-    r("", "app", "enum('client','trainer','diets')"), r("", "type", "varchar(50)"),
+    r("", "app", "enum('web','diets')"), r("", "type", "varchar(50)"),
     r("", "title / body", "varchar(100) / varchar(255)"), r("", "data", "json · route e id"),
     r("", "status", "enum('pending','sent','failed') · outbox"), r("", "attempts", "tinyint(4)"),
     r("", "last_error", "varchar(255) NULL"), r("UQ", "source_key", "varchar(64)"),

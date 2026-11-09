@@ -54,7 +54,7 @@ La app de dietas funciona **solo en local**: guarda todo en SQLite, no tiene cli
 ## Autenticación de la app de dietas
 
 - **Login:** con el celular y la contraseña del entrenador (spec `seguridad/01`). Solo cuentas `trainer`.
-- **Tokens:** la app es una cuarta app de tokens, `diets`. El access token dura 15 minutos y el refresh token 30 días, con rotación.
+- **Tokens:** es la tercera app, `diets` (las otras son `web` y `admin`; spec `arquitectura/02`). El access token dura 15 minutos y el refresh token 30 días, con rotación.
 - **Dónde se guarda el refresh token:** al ser una app nativa, no usa cookie. Lo guarda en el almacenamiento seguro del dispositivo (`flutter_secure_storage`) y lo envía en el cuerpo de `/api/diets/auth/refresh`.
 
 ## Endpoints
@@ -100,7 +100,7 @@ Valores de `reason`:
 3. **Canje:** sin meta y sin mes gratis, canjear 50.000 puntos le da acceso hasta fin de mes. Un segundo canje del mismo mes no descuenta otra vez.
 4. **Saldo insuficiente:** sin meta, sin mes gratis y sin saldo suficiente, `has_access = false` y `redeem.available = false`.
 5. **Cambio de las variables:** cambiar `DIET_ACCESS_POINTS_GOAL` no altera los accesos ya concedidos.
-6. **App de entrenadores:** un token de la app de entrenadores no sirve en `/api/diets/*`, y al revés.
+6. **App web:** un token `web` no sirve en `/api/diets/*`, y al revés.
 
 ## Supuestos y preguntas abiertas
 

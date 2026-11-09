@@ -267,7 +267,7 @@ Se conservan los identificadores del PRD anterior para facilitar revisión: RF-0
 | Operación | Catálogo, pedidos, pagos, canjes, movimientos y reportes | Búsqueda por operación, período y entrenador; auditoría. |
 | Dietas — posterior | Acceso, estado de suscripción y recuperación | Mes gratis, meta, puntos necesarios, vigencia y motivo de desactivación. |
 
-**Stack definido (9 nov 2026):** backend como fork de backend-radical-nutrition (PHP 8.5, Slim 4, MariaDB 11.8), desplegado en el mismo hosting; frontends Angular para clientes, entrenadores y admin, cada uno en su subdominio. Antes decía Node.js con Express. Spec: `specs/arquitectura/01-stack-php-fork-de-radical.md`.
+**Stack definido (9 nov 2026):** backend como fork de backend-radical-nutrition (PHP 8.5, Slim 4, MariaDB 11.8), desplegado en el mismo hosting; tres apps: web (PWA Angular para clientes y entrenadores, con un área por rol), admin (Angular) y dietas (Flutter, externa); spec `arquitectura/02`. Antes decía Node.js con Express. Spec: `specs/arquitectura/01-stack-php-fork-de-radical.md`.
 
 **Referencias:** backend-radical-nutrition para datos, SMS, pagos, administración y envíos; join.nutramerican.com para onboarding, comisiones e instalación PWA por dispositivo; gifts.nutramerican.com para catálogo y compra. Las rutas y tareas completas permanecen en [fases de desarrollo](fases-de-desarrollo.md).
 

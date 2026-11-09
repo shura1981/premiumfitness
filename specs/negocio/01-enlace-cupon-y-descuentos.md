@@ -49,7 +49,7 @@ Alinear las reglas de negocio, los casos de uso y el modelo de datos con el func
 
 | ID | Supuesto | Clase |
 | --- | --- | --- |
-| S-01 | El QR y el enlace son lo mismo: el QR codifica el enlace con el id del entrenador en base64. Hay un enlace para la app de clientes y otro para la app de entrenadores. | Confirmado |
+| S-01 | El QR y el enlace son lo mismo: el QR codifica el enlace con el id del entrenador en base64. Hay un enlace para clientes y otro para entrenadores. **Cambio del 9 nov 2026:** antes decía que cada enlace abría una app distinta; ahora ambos abren la misma app web (`/r/c/<id>` y `/r/t/<id>`), spec `arquitectura/02`. | Confirmado |
 | S-02 | Cada entrenador tiene un cupón con nombre único, que el cliente puede escribir si se registró sin enlace. | Confirmado |
 | S-03 | Un cliente asociado a un entrenador no ve el campo del cupón y no puede cambiar de entrenador por sí mismo. | Confirmado |
 | S-04 | El cliente sin cupón compra a precio completo y no genera recompensas. | Confirmado |
