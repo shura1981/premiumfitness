@@ -106,6 +106,7 @@ Creado el 9 nov 2026 con la cuenta de la consola de Nutramerican, en el plan Spa
 | API de FCM heredada | Inhabilitada |
 | App web `premiumfitness-web` (`appId`) | `1:743385984575:web:5313b81ffce001e5a6928a` |
 | Clave pública VAPID (certificado push web) | `BMpxiOlbihgKfwDyZc3nubRiP-LTf2q0AYUT9bQONGJBeTpjf7dlvcaO99SHwQzoN7T7aiHsfxraDWDfCqW604M` |
+| Cuenta de servicio del backend | `premiumfitness-fcm-sender@premiumfitness-12ca6.iam.gserviceaccount.com`, con **solo** el rol «Administrador de la API de Firebase Cloud Messaging» |
 
 **Dónde va cada dato:**
 - La configuración web completa (incluida la `apiKey`) y la clave VAPID van en el `environment` de la app Angular. Son públicas por diseño, pero la `apiKey` se restringe por dominio en Google Cloud.
@@ -155,6 +156,7 @@ Creado el 9 nov 2026 con la cuenta de la consola de Nutramerican, en el plan Spa
 - [ ] Probar el flujo de instalación y push en un iPhone real (S-06)
 - [ ] Validar la lista de eventos con producto (S-04)
 - [x] Crear el proyecto de Firebase PremiumFitness, la app web y el certificado VAPID (S-02)
-- [ ] Crear la cuenta de servicio con solo el rol de envío de FCM y dejar su clave en el servidor
+- [x] Crear la cuenta de servicio `premiumfitness-fcm-sender` con solo el rol de FCM
+- [ ] Generar la clave JSON de la cuenta de servicio y dejarla en el servidor (`FIREBASE_CREDENTIALS_PATH`)
 - [ ] Restringir la `apiKey` web por dominio
 - [ ] Registrar las apps Android e iOS de dietas y subir la clave APNs (.p8) de Apple
