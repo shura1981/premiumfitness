@@ -49,7 +49,9 @@ PremiumFitness tiene **tres apps**:
 
 ## Estructura de la app web
 
-Angular con componentes standalone y rutas de carga diferida (`loadChildren`), sin `NgModule`.
+Angular 22 (estable al 9 nov 2026) con el builder `@angular/build:application`: esbuild para compilar y Vite como servidor de desarrollo, sin configuración de Vite propia. Componentes standalone y rutas de carga diferida (`loadChildren`), sin `NgModule`.
+
+**Sesión entre subdominios:** la app (`app.`) llama al backend (`api.`) con `withCredentials`. El refresh token va en una cookie del dominio `api.`, con `SameSite=Strict`, que funciona porque ambos subdominios pertenecen al mismo sitio. CORS permite el origen `app.` con credenciales.
 
 ```
 src/app/
@@ -89,7 +91,7 @@ src/app/
 | S-01 | Tres apps: web (clientes y entrenadores), admin y dietas. | Confirmado (9 nov 2026) |
 | S-02 | Rutas `/r/c/<id>` y `/r/t/<id>` para los enlaces. | Derivado |
 | S-03 | Los casos de cuenta ya registrada de la regla 6. | Derivado |
-| S-04 | Subdominios: uno para la app web y otro para el admin. | Derivado: los nombres se definen al desplegar |
+| S-04 | Backend y frontends en subdominios separados: `api.` (backend PHP), `app.` (web) y `admin.` (admin). Las apps Angular se despliegan como estáticos en su subdominio; el backend no las sirve. | Confirmado (9 nov 2026); los nombres exactos se definen al desplegar |
 
 ## Checklist
 

@@ -40,6 +40,8 @@ When generating code for this repository:
 4. **Base de datos y frontend**:
    - MariaDB 11.8, `utf8mb4_unicode_ci`.
    - Tres apps (spec `arquitectura/02`): la **web** (PWA Angular para clientes y entrenadores, con un área por rol cargada aparte), el **admin** (Angular: call center, SAP, envíos y reportes) y **dietas** (Flutter, externa).
+   - Angular **22** (estable al 9 nov 2026: 22.2.x) con el builder `@angular/build:application`: esbuild para compilar y Vite como servidor de desarrollo (`ng serve`). No se usa el builder de Webpack (`@angular-devkit/build-angular`), que está obsoleto, ni un `vite.config` propio.
+   - **Subdominios separados:** backend (`api.`), app web (`app.`) y admin (`admin.`). El backend no sirve las apps Angular.
 
 ## Feature Slices
 
@@ -271,7 +273,7 @@ REPORTS_STORAGE_PATH=storage/private/reports
 
 ### JavaScript/HTML/CSS Guidelines
 - Frontend code of this repo goes into `assets/js`, `assets/css` and `views/`.
-- Las apps Angular (web y admin) se sirven cada una en su subdominio. Si se compilan dentro de este repo, como hace radical con `SpaController` y `dist/`, o si viven en repos propios, se decide al crear el fork.
+- Las apps Angular (web y admin) **no** se sirven desde el backend: no se usan `SpaController` ni las reglas de `dist/` y `dist-admin/` de radical. Cada app se compila con `ng build` y se despliega como archivos estáticos en el document root de su subdominio, con un `.htaccess` que redirige a `index.html` las rutas que no son archivos.
 
 ## General Best Practices
 
