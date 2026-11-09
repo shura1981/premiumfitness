@@ -372,42 +372,46 @@ La restricción de no entregar efectivo se refiere expresamente al canje de punt
 
 ### CU-09. Consultar puntos y movimientos
 
-- **Objetivo:** conocer los puntos utilizables y comprender su origen antes de un canje.
+- **Objetivo:** que el entrenador vea en todo momento los puntos ganados por sus clientes y por los entrenadores que refirió.
 - **Actor:** ACT-01.
-- **Clasificación:** derivado de la acumulación y el canje; no hay una pantalla de consulta exigida expresamente.
-- **Disparador:** el entrenador solicita consultar sus puntos.
-- **Precondición:** entrenador identificado mediante el mecanismo de acceso que se defina.
+- **Clasificación:** Confirmado por producto (9 nov 2026).
+- **Disparador:** el entrenador abre su dashboard o la consulta de puntos.
+- **Precondición:** entrenador con sesión iniciada.
 - **Reglas relacionadas:** RN-05, RN-07, RN-09, RN-11 y RN-12.
 
-**Flujo propuesto:**
+**Flujo principal:**
 
-1. El entrenador abre la consulta de puntos.
-2. El sistema presenta los puntos disponibles.
-3. Permite identificar abonos por compras, puntos por referido activados y conversiones, además de consumos por canje, si existen.
-4. Muestra aparte los 50.000 puntos por referido pendientes, que no suman al saldo utilizable.
+1. El entrenador abre su dashboard.
+2. **Puntos por compras de sus clientes:** el sistema muestra el total acumulado histórico y los puntos vigentes (disponibles y no vencidos).
+3. **Puntos por los entrenadores que refirió con su enlace:** muestra los puntos vigentes, los pendientes y el detalle por cada entrenador B (pendiente, activo con su remanente, usado o vencido).
+4. Muestra el saldo canjeable total, la suma de los puntos vigentes de todos los orígenes, y los lotes que vencen pronto.
+5. Permite ver los movimientos: abonos por compras, puntos por referido activados, conversiones, canjes, vencimientos y ajustes.
 
-**Alternativas y errores:** sin movimientos, se propone mostrar saldo y ausencia de movimientos de forma explícita. La información de otros entrenadores no debe quedar accesible; este control de acceso es derivado.
+**Alternativas y errores:** sin movimientos, muestra cero y la ausencia de movimientos de forma explícita. Un entrenador no puede ver los datos de otro.
 
-**Resultado y aceptación propuestos:** el entrenador puede distinguir lo que puede canjear de lo que aún no está activado. Cada lote vence a los 6 meses de su acumulación (regla 2 de `reglas-de-negocio.md`).
+**Resultado y aceptación:**
+
+- Las cifras responden de inmediato porque se calculan con índices que cubren la consulta (spec `specs/negocio/03-saldos-del-entrenador.md`).
+- Un lote vencido deja de contar como vigente en cuanto pasa su fecha, aunque el proceso de vencimiento no haya corrido.
+- Cada lote vence a los 6 meses de su acumulación.
 
 ### CU-10. Consultar comisiones
 
-- **Objetivo:** conocer el valor reconocido de comisiones antes de solicitar su conversión.
+- **Objetivo:** conocer el saldo de comisión que se puede convertir a puntos.
 - **Actor:** ACT-01.
-- **Clasificación:** derivado de RN-06 y RN-11.
-- **Disparador:** el entrenador consulta sus comisiones.
-- **Precondición:** entrenador identificado.
+- **Clasificación:** Confirmado por producto (9 nov 2026).
+- **Disparador:** el entrenador abre su dashboard o la consulta de comisiones.
+- **Precondición:** entrenador con sesión iniciada.
 
-**Flujo propuesto:**
+**Flujo principal:**
 
-1. El entrenador abre la consulta de comisiones.
-2. El sistema muestra el total que puede convertirse según la definición de disponibilidad que se acuerde.
-3. Permite relacionar las comisiones con las compras aprobadas que las originaron.
-4. Permite identificar conversiones ya realizadas para evitar confundir valores históricos con el saldo convertible.
+1. El sistema muestra el saldo de comisión convertible: abonos por ventas aprobadas menos conversiones y ajustes.
+2. Permite relacionar cada abono con el pedido y las líneas que lo originaron, con el porcentaje de comisión que aplicó a cada producto.
+3. Muestra las conversiones ya realizadas.
 
-**Alternativas y errores:** sin comisiones, se propone informar un total de cero. Las comisiones anuladas, retenidas o pagadas no tienen un tratamiento definido.
+**Alternativas y errores:** sin comisiones, muestra un saldo de cero.
 
-**Resultado y aceptación propuestos:** el entrenador distingue su comisión monetaria de sus puntos y conoce qué total se utilizaría en CU-11. La consulta no ejecuta una conversión ni un retiro.
+**Resultado y aceptación:** el entrenador conoce el saldo que usaría en CU-11. La comisión no se liquida en dinero ni tiene cierre de mes: solo se usa convirtiéndola a puntos.
 
 ### CU-11. Convertir el total de la comisión a puntos
 
@@ -720,7 +724,7 @@ Las recompensas de CU-05 dependen de la aprobación del pago (paso 1), no del en
 | PD-11 | Continuidad del descuento | Resuelto el 9 nov 2026: el descuento aplica a todo el catálogo mientras el cliente esté asociado. | Ninguna. | CU-04. |
 | PD-12 | Acumulación y valoración | No se indica si descuentos, promociones y puntos se combinan ni cuál es el precio de canje. | Definir compatibilidad, base del descuento y valor de productos en puntos. | CU-04, CU-12, CU-13. |
 | PD-13 | Aprobación y reversión | No se define quién informa la aprobación ni qué ocurre con cancelaciones o devoluciones. | Definir origen del estado, transición válida y efectos sobre puntos y comisión. Los 50.000 puntos por referido ya tienen regla (CU-08). | CU-04, CU-05, CU-08, CU-12. |
-| PD-14 | Liquidación de comisión | Solo se define su generación y conversión a puntos. | Definir si existe pago monetario, procedimiento, disponibilidad y restricciones. No confundirlo con el canje de puntos. | CU-10, CU-11. |
+| PD-14 | Liquidación de comisión | **Resuelta (9 nov 2026):** no hay pago en dinero ni cierre de mes. La comisión solo se usa convirtiéndola a puntos (CU-11), y los puntos se canjean por productos (CU-12). | — | CU-10, CU-11. |
 | PD-15 | Mecánica del canje | Sin reglas de pago mixto, inventario, reserva, entrega o cancelación. | Definir qué hace efectivo el canje y cuándo se consumen o restituyen puntos. | CU-12. |
 | PD-16 | Registro y acceso | No hay campos, credenciales, verificación ni coexistencia de roles. | Definir datos mínimos, identificación y permisos. | CU-01, CU-03, CU-07 y consultas. |
 | PD-17 | Otros beneficios | Se enumeran como «por definir». | Describir cada beneficio antes de crear sus casos de uso. | Sin caso específico. |

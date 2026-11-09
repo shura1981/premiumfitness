@@ -137,6 +137,7 @@ Proponer el modelo de datos del MVP comercial para revisarlo con negocio y tecno
 | S-39 | Comisión por línea: `commission_amount = tax_base × commission_percentage`; `commission_movements.amount` suma las líneas. Puntos por pedido: `orders.reward_points = round(Σ line_total de productos × porcentaje de puntos)`, al entero más cercano y sin el envío. | Confirmado | Reglas 1 y 7 (9 nov 2026). |
 | S-40 | Al registrarse B desde el enlace de A se crea `trainer_referrals` con `referral_points` = `TRAINER_REFERRAL_POINTS` (50.000), sin lote. La primera compra aprobada de un cliente de B guarda `activation_order_id` y `activated_at` y crea el lote de A (`source='trainer_referral'`) una sola vez. La compra propia de B no cuenta. | Confirmado | Regla 6; spec negocio/02. |
 | S-41 | Si se cancela o devuelve la compra que activó los 50.000 puntos y A no los ha usado, se revierte el remanente del lote con un ajuste y el referido vuelve a quedar pendiente. Si ya los usó, se mantienen. | Confirmado; reversión parcial derivada | Spec negocio/02. |
+| S-42 | No hay liquidación mensual de comisión ni tabla de saldos precalculados. Los saldos del entrenador se calculan sumando `point_lots`, `trainer_referrals` y `commission_movements` con índices que cubren cada consulta. | Confirmado (sin cierre de mes); sin tabla de saldos: Derivado | Spec `negocio/03`. |
 | S-30 | `products.discount_list` (tramos por cantidad con su `sap_code`) se conserva por la integración, aunque los descuentos de PremiumFitness (10% y 25%) dependen del rol y no de la cantidad. | Derivado | Radical. Falta confirmar si los tramos aplican. |
 
 ## Plan
@@ -188,6 +189,13 @@ Diagrama editable: [diagrama-entidad-relacion.drawio](../../docs/img/diagrama-en
 
 ### Controles de integridad
 
+- **Índices de consulta de saldos** (spec `negocio/03`):
+  - `point_lots (trainer_id, status, expires_at, source, remaining_points)`
+  - `point_lots (trainer_id, source, initial_points)`
+  - `point_lots (trainer_id, status, accrued_at, id)`
+  - `trainer_referrals (referrer_id, activated_at, referral_points)`
+  - `commission_movements (trainer_id, amount)`
+  - `orders_coupons (trainer_id, order_id)`
 - **Idempotencia:** son únicos `orders.payment_reference`, `commission_movements.source_key`, `point_lots.source_key`, `point_movements.source_key` y `commission_conversions.idempotency_key`. El dispatcher de radical ya trata como no-op un pedido aprobado.
 - **Puntos por referido una sola vez:** `trainer_referrals.referred_id`, `trainer_referrals.activation_order_id` y `point_lots.trainer_referral_id` son únicos.
 - **Conversión única:** `commission_movements.conversion_id` y `point_lots.conversion_id` son únicos. Cada conversión tiene un débito y un crédito.

@@ -238,7 +238,7 @@ Las fuentes no fijan la política completa de devoluciones. Se conserva esta pro
 | RF-08 | MVP | Pedidos | Cada comprador consulta estado, productos, dirección y seguimiento según el alcance logístico. |
 | RF-09 | MVP | Registro de referido | Registrar B desde A crea relación y 50.000 puntos pendientes para A, sin bono de bienvenida para B. |
 | RF-10 | MVP | Recompensas | Compra aprobada de cliente genera 5% en puntos (con IVA incluido) y 15% de comisión (sin IVA) una sola vez, con origen trazable. |
-| RF-11 | MVP | Saldos e historial | Distingue comisión convertible y puntos inactivos, disponibles, usados y caducados; muestra remanentes y vencimientos. |
+| RF-11 | MVP | Saldos e historial | El entrenador ve siempre sus puntos por compras de clientes (acumulado histórico y vigentes), sus puntos por entrenadores referidos (vigentes, pendientes y detalle por B) y su comisión convertible; muestra remanentes y vencimientos. Las consultas se resuelven con índices que las cubren (spec `negocio/03`). |
 | RF-12 | MVP | Conversión total | Con fórmula resuelta, consume todo el saldo de comisión confirmado y acredita puntos una sola vez; si falla, no deja saldos a medias. |
 | RF-13 | MVP | Caducidad | Cada lote vence a seis meses según el corte definido; no queda canjeable ni vuelve a descontarse. |
 | RF-14 | MVP | Canje | Precio completo, sin pago mixto, FIFO y remanentes; concurrencia no provoca sobregiro; IVA persistido. |
@@ -364,7 +364,7 @@ Estas decisiones completan las reglas; no dejan en duda los porcentajes, seis me
 | D-05 | Registro, verificación, coexistencia de roles y tratamiento de autorreferidos/cuentas duplicadas. | Producto y tecnología | Acceso y referidos. |
 | D-06 | Resuelta el 9 nov 2026: los 50.000 puntos pendientes no caducan; una vez activados, vencen a los seis meses. | Negocio | — |
 | D-07 | Corte exacto de seis meses y política de devolución con beneficios consumidos, incluyendo puntos restituidos (los 50.000 puntos de A ya tienen regla). | Negocio y finanzas | Antes del piloto. |
-| D-08 | Tratamiento de comisiones no convertidas y eventual liquidación externa. | Negocio | Comunicación al entrenador; no implica implementar pago bancario. |
+| D-08 | Resuelta el 9 nov 2026: no hay liquidación en dinero ni cierre de mes; la comisión solo se usa convirtiéndola a puntos. | Negocio | — |
 | D-09 | Meta mensual de dietas, rango/costo de puntos, inicio del mes gratis, renovación y reactivación. El texto cita 50.000 y 49.800 puntos. | Negocio y producto | Fase posterior de dietas. |
 | D-10 | Proveedor de pagos/SMS, verificación y conciliación disponibles en repositorios de referencia. | Tecnología y operación | Revisión e integración. |
 | D-11 | Duración y sustitución de cookie, varios QR, cliente existente, cambio de referente, ausencia de referencia y continuidad del 10%. | Negocio y producto | Antes de cerrar atribución/checkout. |
