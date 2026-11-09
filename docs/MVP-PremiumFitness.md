@@ -19,7 +19,7 @@ La app de dietas conserva su alcance en el producto y se implementa después del
 | Identidad | Registro, verificación de contacto, acceso, recuperación y perfil; áreas de cliente/entrenador. | RF-01, RF-02 | CU-01, CU-03, CU-07 |
 | Referidos | QR para clientes, QR para entrenadores, cookie de referente, atribución y relación A → B. | RF-03, RF-04, RF-09 | CU-02, CU-03, CU-06, CU-07 |
 | Comercio | Catálogo, detalle, carrito, dirección, descuentos, pago, pedido y seguimiento. | RF-05 a RF-08, RF-23 | CU-04, CU-13 |
-| Beneficios por venta | Aprobación de compra de cliente, 5% en puntos y 15% de comisión sin IVA. | RF-10 | CU-05 |
+| Beneficios por venta | Aprobación de compra de cliente, 5% en puntos con IVA incluido y 15% de comisión sin IVA. | RF-10 | CU-05 |
 | Incentivo de referido | 50.000 inactivos para A al registrar B; activación por compra aprobada de cliente de B. | RF-09, RF-20 | CU-07, CU-08 |
 | Cuenta de recompensas | Comisión convertible, puntos por estado, lotes, remanentes, historial y vencimiento. | RF-11, RF-13 | CU-09, CU-10 |
 | Conversión | Convertir el total de comisión, vista previa, confirmación y movimientos vinculados. | RF-12 | CU-11 |
@@ -32,7 +32,7 @@ Los CU describen recorridos; las reglas específicas de negocio completan los pu
 
 ### 3.1. Cliente referido
 
-Entrenador registrado → QR de clientes → registro de cliente y cookie → compra con 10% → aprobación verificada → 5% en puntos y 15% de comisión sin IVA para el entrenador → consulta de movimientos → canje.
+Entrenador registrado → QR de clientes → registro de cliente y cookie → compra con 10% → aprobación verificada → 5% en puntos (con IVA) y 15% de comisión (sin IVA) para el entrenador → consulta de movimientos → canje.
 
 **Datos conservados:** entrenador atribuido, pedido, productos, descuento, base sin IVA, IVA, pago y movimientos de recompensa.
 
@@ -72,7 +72,7 @@ Adaptar la UX de comisiones y onboarding de `join.nutramerican.com`, la compra d
 | A-02 | Completar registro de cliente por QR | Cookie con ID del entrenador; compra atribuible según la política definida. |
 | A-03 | Comprar como cliente referido | 10% visible antes de pagar; descuento, IVA y total persistidos. |
 | A-04 | Compra pendiente o rechazada | No acredita puntos ni comisión. |
-| A-05 | Aprobar compra con base elegible definida de 100.000 sin IVA | 5.000 puntos y 15.000 de comisión; movimientos relacionados con el pedido. |
+| A-05 | Aprobar compra de 119.000 con IVA (base de 100.000 sin IVA al 19%) | 5.950 puntos y 15.000 de comisión; movimientos relacionados con el pedido. |
 | A-06 | Repetir la aprobación de A-05 | Saldos sin nuevas acreditaciones. |
 | A-07 | B se registra desde A sin ventas | A ve 50.000 inactivos, excluidos del saldo canjeable. |
 | A-08 | Primera compra aprobada de un cliente de B | Activa una vez los 50.000 de A y acredita recompensas de B; otra aprobación no duplica el bono. |

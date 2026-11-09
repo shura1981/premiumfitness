@@ -150,7 +150,7 @@ Elegir motor de base de datos, migraciones, índices y restricciones. Diseñar t
 
 ### Trabajo
 
-- Ante la compra aprobada del cliente, calcular 5% en puntos y 15% de comisión sobre las bases sin IVA.
+- Ante la compra aprobada del cliente, calcular 5% en puntos sobre el valor con IVA incluido y la comisión (15% por defecto, o la del producto) sobre la base sin IVA.
 - Guardar base, porcentaje, redondeo y referencia del pedido para explicar cada recompensa.
 - Activar una sola vez los 50.000 puntos de A con la primera compra aprobada de un cliente de B; B recibe sus recompensas por esa compra.
 - Crear lotes por acumulación con seis meses de vigencia y procesos de vencimiento.

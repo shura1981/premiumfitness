@@ -7,7 +7,7 @@
 
 ## 1. Resumen del producto
 
-PremiumFitness conecta entrenadores y clientes mediante compras y referidos. Cada entrenador dispone de dos QR: uno para clientes y otro para invitar entrenadores. El cliente se registra desde el QR, conserva el ID del referente en una cookie y compra con 10% de descuento. Cuando la compra queda aprobada, el entrenador recibe 5% en puntos y 15% de comisión, calculados sin IVA.
+PremiumFitness conecta entrenadores y clientes mediante compras y referidos. Cada entrenador dispone de dos QR: uno para clientes y otro para invitar entrenadores. El cliente se registra desde el QR, conserva el ID del referente en una cookie y compra con 10% de descuento. Cuando la compra queda aprobada, el entrenador recibe 5% en puntos, calculados con IVA incluido, y 15% de comisión, calculada sin IVA.
 
 El entrenador compra con 25% de descuento o canjea puntos por productos a precio completo, sin pagos mixtos. Cada acumulación vence a los seis meses y se consume por FIFO. Al referir a B, el entrenador A obtiene 50.000 puntos inactivos que se activan con una compra de un cliente de B.
 
@@ -21,7 +21,7 @@ La app de dietas se desarrolla después del MVP comercial, como SaaS para múlti
 - [Fases de desarrollo](fases-de-desarrollo.md): repositorios de referencia, arquitectura y secuencia de implementación.
 - [Diagrama](img/diagrama-flujo.jpg): apoyo visual, sin añadir beneficios no respaldados por los textos.
 
-Se incorporan las precisiones de reglas-de-negocio.md que todavía aparecen pendientes en casos-de-uso-y-actores.md: base sin IVA del 5%, monto de 50.000, venta de clientes de B, seis meses, FIFO, precio completo y prohibición de pago mixto. La comisión corresponde al entrenador según el flujo explícito de aprobación; la mención aislada al cliente en requerimientos.md es una inconsistencia de redacción.
+Se incorporan las precisiones de reglas-de-negocio.md que todavía aparecen pendientes en casos-de-uso-y-actores.md: base del 5% (con IVA incluido desde el 9 nov 2026), monto de 50.000, venta de clientes de B, seis meses, FIFO, precio completo y prohibición de pago mixto. La comisión corresponde al entrenador según el flujo explícito de aprobación; la mención aislada al cliente en requerimientos.md es una inconsistencia de redacción.
 
 **Clasificación:** las reglas comerciales se presentan como confirmadas cuando las fuentes las establecen. La persistencia, permisos, idempotencia, pantallas y controles son requisitos técnicos derivados para implementarlas. Las propuestas comerciales y parámetros no definidos se identifican expresamente; no se asumen aprobados.
 
@@ -118,7 +118,7 @@ El registro no otorga un bono de bienvenida. Si proviene del QR de A, se conserv
 2. El servidor valida precios, disponibilidad y referencia; muestra 10% de descuento, IVA y total.
 3. Se crea el pedido con su atribución y desglose de cálculo.
 4. Se verifica el resultado de pago y la compra pasa a aprobada.
-5. Se acredita al entrenador 5% en puntos y 15% de comisión sobre las bases sin IVA.
+5. Se acredita al entrenador 5% en puntos sobre el valor con IVA y 15% de comisión sobre la base sin IVA.
 6. Se conserva el vínculo entre pedido y movimientos y se actualizan los saldos.
 
 Un pedido pendiente o rechazado no genera recompensas. La aprobación repetida no vuelve a acreditarlas. La entrega de productos no añade un período de retención de beneficios: el disparador confirmado es la compra aprobada.
@@ -170,7 +170,7 @@ La columna de fuente remite a los numerales de [reglas-de-negocio.md](reglas-de-
 | --- | --- | --- |
 | Dos QR y cookie | Invitaciones separadas; ID del entrenador en cookie del cliente. | Requerimientos; CU-02, CU-03, CU-06. |
 | Descuento cliente | 10% en la compra del flujo referido. | Requerimientos; CU-04. |
-| Recompensas | Compra aprobada: 5% en puntos sin IVA por producto y 15% de comisión sin IVA para el entrenador. | Requerimientos; reglas 1 y 7. |
+| Recompensas | Compra aprobada: 5% en puntos con IVA incluido y 15% de comisión sin IVA para el entrenador, con porcentajes configurables por producto. | Requerimientos; reglas 1, 7 y 15. |
 | Equivalencia | Un peso equivale a un punto. | Requerimientos; regla 1. |
 | Vigencia | Seis meses por acumulación. | Regla 2. |
 | Compra entrenador | 25% en todo el portafolio comprado con dinero por la app. | Requerimientos; regla 3. |
@@ -186,18 +186,18 @@ La columna de fuente remite a los numerales de [reglas-de-negocio.md](reglas-de-
 
 Para cada producto, conservar cantidad, precio, descuento, tasa de IVA, base e IVA. Si un importe incluye IVA, `base_sin_IVA = importe / (1 + tasa_IVA)`; `IVA = importe − base_sin_IVA`. La tasa pertenece al producto, no se fija una tasa única para el pedido.
 
-- Puntos de venta: calcular el 5% de la base sin IVA de cada producto y acumular los resultados, con equivalencia 1 peso = 1 punto.
-- Comisión: 15% de la base sin IVA de la compra atribuida.
+- Puntos de venta: calcular el 5% del valor con IVA incluido y acumular los resultados, con equivalencia 1 peso = 1 punto. *(9 nov 2026: los puntos se calculan con IVA incluido; solo la comisión discrimina el IVA.)*
+- Comisión: porcentaje de comisión de cada producto (15% por defecto) sobre su base sin IVA.
 - Compra propia: descuento de 25% sobre los productos del portafolio.
 - Canje: puntos requeridos equivalentes al precio completo del producto, sin descuento.
 
-**Ejemplo aislado del porcentaje:** una base elegible ya determinada de 100.000 sin IVA genera 5.000 puntos y 15.000 de comisión. Este ejemplo no decide si la base se determina antes o después del descuento del cliente.
+**Ejemplo aislado del porcentaje:** una compra de 119.000 con IVA (100.000 de base sin IVA al 19%) genera 5.950 puntos y 15.000 de comisión. Este ejemplo no decide si la base se determina antes o después del descuento del cliente.
 
 **Ejemplo de canje:** con 300.000 puntos, canjear un producto de 249.900 consume 249.900 y deja 50.100, si todo el saldo está disponible y vigente.
 
 **Ejemplo FIFO:** lotes disponibles de 100.000 y 200.000, en ese orden de acumulación: el canje anterior agota el primero, consume 149.900 del segundo y conserva 50.100. No se marca todo el segundo lote como usado.
 
-El ejemplo de requerimientos que asigna 12.500 puntos a un precio de 249.900 no sustituye la regla sin IVA. El orden de descuento/base y el redondeo por línea o pedido deben precisarse. Tampoco se adopta automáticamente `comisión × 1,5`: el texto del 50% mezcla comisión con puntos acumulados.
+El ejemplo de requerimientos que asigna 12.500 puntos a un precio de 249.900 coincide con la regla vigente de puntos con IVA incluido (12.495 antes de redondear). El orden de descuento/base y el redondeo por línea o pedido deben precisarse. Tampoco se adopta automáticamente `comisión × 1,5`: el texto del 50% mezcla comisión con puntos acumulados.
 
 ### 7.3. Integridad, disponibilidad y vencimiento
 
@@ -237,7 +237,7 @@ Las fuentes no fijan la política completa de devoluciones. Se conserva esta pro
 | RF-07 | MVP | Pago | Aprobación verificada; resultado persistido; un retorno del navegador no basta y los duplicados no generan beneficios extra. |
 | RF-08 | MVP | Pedidos | Cada comprador consulta estado, productos, dirección y seguimiento según el alcance logístico. |
 | RF-09 | MVP | Registro de referido | Registrar B desde A crea relación y 50.000 puntos inactivos para A, sin bono de bienvenida para B. |
-| RF-10 | MVP | Recompensas | Compra aprobada de cliente genera 5% en puntos y 15% de comisión sin IVA una sola vez, con origen trazable. |
+| RF-10 | MVP | Recompensas | Compra aprobada de cliente genera 5% en puntos (con IVA incluido) y 15% de comisión (sin IVA) una sola vez, con origen trazable. |
 | RF-11 | MVP | Saldos e historial | Distingue comisión convertible y puntos inactivos, disponibles, usados y caducados; muestra remanentes y vencimientos. |
 | RF-12 | MVP | Conversión total | Con fórmula resuelta, consume todo el saldo de comisión confirmado y acredita puntos una sola vez; si falla, no deja saldos a medias. |
 | RF-13 | MVP | Caducidad | Cada lote vence a seis meses según el corte definido; no queda canjeable ni vuelve a descontarse. |
