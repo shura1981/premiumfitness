@@ -109,4 +109,15 @@ DB_NAME=premiumfitness
 JWT_SECRET=super-secure-secret-minimum-32-chars
 JWT_REFRESH_SECRET=super-secure-refresh-secret-minimum-32-chars
 CORS_ALLOWED_ORIGINS=http://localhost:4200
+
+# Constantes de negocio (docs/reglas-de-negocio.md, reglas 1, 2, 6, 15 y nota de conversión)
+CLIENT_DISCOUNT_PERCENTAGE=10
+TRAINER_DISCOUNT_PERCENTAGE=25
+CLIENT_PURCHASE_POINTS_PERCENTAGE=5
+TRAINER_COMMISSION_PERCENTAGE=15
+TRAINER_REFERRAL_POINTS=50000
+POINTS_EXPIRATION_MONTHS=6
+COMMISSION_CONVERSION_PERCENTAGE=50
 ```
+
+Ninguna constante de negocio se escribe en el código: se leen de estas variables. Las estrategias por producto (`product_discount_rules`) son datos del catálogo y tienen prioridad sobre los porcentajes por defecto. Cada pedido, referido y conversión guarda el valor que aplicó, para que un cambio en las variables no altere el histórico (spec `specs/negocio/02-puntos-por-referido-y-constantes.md`).
