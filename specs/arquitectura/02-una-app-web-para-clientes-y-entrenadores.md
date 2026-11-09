@@ -47,12 +47,40 @@ PremiumFitness tiene **tres apps**:
    - un **entrenador** que abre cualquiera de los dos enlaces ve el aviso de que el enlace no le aplica.
 7. **Sesión:** una cookie `pf_rt_web` para la app web y `pf_rt_admin` para el admin. La app de dietas guarda el refresh token en el almacenamiento seguro del dispositivo.
 
+## Estructura de la app web
+
+Angular con componentes standalone y rutas de carga diferida (`loadChildren`), sin `NgModule`.
+
+```
+src/app/
+├── core/          # auth, interceptor del token, guards por rol, config de Firebase
+├── shared/        # componentes y pipes comunes (tarjeta de producto, precio con descuento…)
+├── features/
+│   ├── catalog/   # común: catálogo y detalle de producto
+│   ├── cart/      # común: carrito y checkout
+│   ├── orders/    # común: pedidos y seguimiento
+│   ├── account/   # común: perfil, direcciones y notificaciones
+│   ├── client/    # área del cliente: asociar cupón
+│   └── trainer/   # área del entrenador: puntos, comisión, conversión, canje, referidos, enlaces y QR
+└── app.routes.ts  # /trainer/** con loadChildren y guard de rol trainer
+```
+
+**Reglas de aislamiento:**
+
+1. **Carga aparte:** cada feature se carga con `loadChildren` y genera su propio archivo JavaScript. El área `trainer/` solo se descarga si el rol es `trainer`.
+2. **Dependencias:** una feature **no importa nada de otra feature**; solo de `core/` y `shared/`. Si dos features necesitan lo mismo, ese código se sube a `shared/`.
+3. **Lint:** la regla 2 se impone con `eslint-plugin-boundaries`. El build falla si una feature importa de otra.
+4. **Acceso:** las rutas de `trainer/` tienen un guard por rol. El backend exige `role = trainer` en sus endpoints.
+5. **Pruebas:** `core/` y `shared/` afectan a clientes y entrenadores, así que todo cambio ahí lleva pruebas.
+
 ## Criterios de aceptación
 
 1. **Enlaces:** un cliente y un entrenador entran a la misma URL y cada uno ve el área de su rol.
 2. **Seguridad:** un cliente no puede llamar a un endpoint de entrenador aunque fuerce la ruta en el navegador (403).
 3. **Referido de entrenador:** `/r/t/<id>` registra a B como entrenador referido por A, y `/r/c/<id>` registra o asocia a un cliente.
 4. **Tokens:** un token `web` no sirve en `/api/admin/*` ni en `/api/diets/*`.
+5. **Carga:** un cliente no descarga el archivo JavaScript del área `trainer/`. Se comprueba en la pestaña Red del navegador.
+6. **Lint:** un import de `features/trainer` dentro de `features/client`, o al revés, hace fallar el lint.
 
 ## Supuestos y preguntas abiertas
 
@@ -70,3 +98,5 @@ PremiumFitness tiene **tres apps**:
 - [x] Actualizar el spec de seguridad (cookies, claim `app` y rutas), el de push y el de dietas
 - [x] Cambiar los enums `app` del DER (`refresh_tokens`, `push_devices` y `push_notifications`)
 - [x] Actualizar AGENTS.md, `codebase-standards.md`, el PRD y el spec `arquitectura/01`
+- [x] Definir la estructura de la app web y las reglas de aislamiento entre features
+- [ ] Configurar `eslint-plugin-boundaries` al crear el proyecto Angular
