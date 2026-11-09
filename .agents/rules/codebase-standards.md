@@ -59,6 +59,8 @@ Cada feature vive en `src/Features/<FeatureName>/`: Controller, Model, Repositor
 | `Commission` | Movimientos, conversión a puntos, cierre mensual y Excel | `negocio/04`, `negocio/05` |
 | `Point` | Lotes, movimientos, consumo FIFO y vencimiento | `negocio/03` |
 | `Redemption` | Canje de productos con puntos a precio completo | CU-12 |
+| `Notification` | Dispositivos y outbox de push con FCM HTTP v1 | `integraciones/01` |
+| `DietAccess` | Estado y canje de acceso a la app de dietas (Flutter) | `integraciones/02` |
 
 ## Codebase Scanning Instructions
 
@@ -112,7 +114,7 @@ Spec: `specs/seguridad/01-autenticacion-y-sesiones.md`.
 - Login con celular (`users.num_cell`, único) y contraseña. Un rol por cuenta: `client` o `trainer`.
 - Access token JWT de 15 min, solo en memoria del frontend, con `sub`, `role` y `app`. Una API rechaza los tokens de otra app.
 - Refresh token de 30 días en cookie `httpOnly`, `Secure`, `SameSite=Strict`, rotado en cada uso y guardado como hash en `refresh_tokens`. Reutilizar uno ya rotado revoca toda la familia.
-- Una cookie por app (`pf_rt_client`, `pf_rt_trainer`, `pf_rt_admin`), limitada a la ruta de auth de su app.
+- Una cookie por app (`pf_rt_client`, `pf_rt_trainer`, `pf_rt_admin`), limitada a la ruta de auth de su app. La app de dietas (Flutter, app `diets`) no usa cookie: guarda el refresh token en `flutter_secure_storage` y lo envía en el cuerpo.
 - Admin: login con `tb_empleados` (externa, **no se toca**: solo lectura), sesión de 12 horas.
 
 ## Verification Code Flow
@@ -136,7 +138,7 @@ En PremiumFitness el «QR» es un enlace con el id del entrenador en base64 (reg
 - **Nunca** se programan tareas dentro de la aplicación. LiteSpeed levanta varios procesos y cada uno ejecutaría la tarea (incidente de api-comisiones, spec `negocio/05`).
 - El cron de cPanel llama al endpoint con el header `X-Cron-Job-Token`, que valida `CronJobTokenMiddleware` contra `CRON_JOB_TOKEN`.
 - Cada job es idempotente: el cierre mensual responde 409 si el período ya existe.
-- Jobs: cierre mensual de comisión (día 1, 01:00), vencimiento de lotes de puntos (diario), limpieza de refresh tokens y códigos vencidos (diaria), procesamiento de eventos de pago (radical).
+- Jobs: envío de push pendientes (cada minuto), cierre mensual de comisión (día 1, 01:00), vencimiento de lotes de puntos y avisos de vencimiento de puntos y de dietas (diario), limpieza de refresh tokens y códigos vencidos (diaria), procesamiento de eventos de pago (radical).
 
 ## Email Templates
 
@@ -158,6 +160,7 @@ interface NotificationChannelInterface
 
 - `EmailNotificationChannel` — envío por SMTP vía PHPMailer.
 - `SmsNotificationChannel` — envío por SMS vía Relax Global API (`SMS_API_URL`, `SMS_API_TOKEN`). Proveedor por confirmar (D-10).
+- `FcmPushChannel` — push con **FCM HTTP v1** (cuenta de servicio, OAuth2 con JWT RS256). Nunca el API legacy `fcm/send` con server key, que Google retiró. Se envía desde la outbox `push_notifications`, nunca dentro de la petición del usuario.
 - Los canales se instancian con `SmsNotificationChannel::fromEnv()` o `EmailNotificationChannel::fromEnv()`.
 
 ## External HTTP Client Pattern
@@ -226,6 +229,17 @@ TRAINER_COMMISSION_PERCENTAGE=15
 TRAINER_REFERRAL_POINTS=50000
 POINTS_EXPIRATION_MONTHS=6
 COMMISSION_CONVERSION_PERCENTAGE=50
+
+# Notificaciones push (spec integraciones/01)
+FIREBASE_PROJECT_ID=premiumfitness
+FIREBASE_CREDENTIALS_PATH=/ruta/privada/firebase-service-account.json
+PUSH_MAX_ATTEMPTS=5
+PUSH_EXPIRY_NOTICE_DAYS=7
+
+# Acceso a dietas (spec integraciones/02; la meta es provisional y su lógica puede cambiar)
+DIET_ACCESS_POINTS_GOAL=249000
+DIET_ACCESS_POINTS_COST=50000
+DIET_FREE_DAYS=30
 
 # Cierre mensual de comisión (spec negocio/05)
 COMMISSION_REPORT_RECIPIENTS=financiero1@dominio.com,financiero2@dominio.com

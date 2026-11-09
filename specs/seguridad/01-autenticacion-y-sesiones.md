@@ -63,6 +63,8 @@ Definir cómo se registran, inician sesión, mantienen la sesión y recuperan el
    | Entrenadores | `pf_rt_trainer` | `/api/trainer/auth` |
    | Admin | `pf_rt_admin` | `/api/admin/auth` |
 
+   La app de dietas (Flutter, app `diets`) es nativa: no usa cookie, guarda el refresh token en `flutter_secure_storage` y lo envía en el cuerpo de `/api/diets/auth/refresh` (spec `integraciones/02`).
+
    Las apps están en subdominios del mismo dominio, así que `SameSite=Strict` funciona. CORS solo acepta los orígenes de `CORS_ALLOWED_ORIGINS`, con credenciales.
 7. **Recuperación:** se pide un código SMS para recuperar la contraseña. Al verificarlo se emite un token de un solo uso de 10 minutos (`password_reset_tokens`) para fijar la nueva contraseña. Al cambiarla se revocan todas las sesiones.
 8. **Códigos SMS:**

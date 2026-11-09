@@ -242,10 +242,10 @@ Las fuentes no fijan la política completa de devoluciones. Se conserva esta pro
 | RF-12 | MVP | Conversión total | Consume todo el saldo de comisión y acredita comisión + mín(50% × puntos vigentes, comisión) una sola vez; si falla, no deja saldos a medias. |
 | RF-13 | MVP | Caducidad | Cada lote vence a seis meses según el corte definido; no queda canjeable ni vuelve a descontarse. |
 | RF-14 | MVP | Canje | Precio completo, sin pago mixto, FIFO y remanentes; concurrencia no provoca sobregiro; IVA persistido. |
-| RF-15 | Posterior | Dietas | Mes gratis, meta o canje, validación diaria y desactivación limitada a dietas; sin cobro repetido del mismo período. |
+| RF-15 | Posterior | Dietas | La app de dietas (Flutter, aparte) consulta `GET /api/diets/access`. Acceso por mes gratis (30 días desde el primer ingreso), meta del mes anterior (249.000 puntos por clientes, provisional) o canje de 50.000 puntos por el mes; validación diaria; desactivación limitada a dietas (spec `integraciones/02`). |
 | RF-16 | MVP | Operación mínima | Acceso autorizado para gestionar/consultar datos necesarios de catálogo, pedidos, canjes y movimientos; ajustes auditados. |
 | RF-17 | MVP | Ajustes | Cancelaciones/devoluciones generan ajustes según la política acordada, ligados al original y sin duplicados. |
-| RF-18 | Mejora | Avisos externos | Si se incorporan, los fallos de envío no revierten compras, conversiones ni canjes. |
+| RF-18 | MVP | Notificaciones push | FCM HTTP v1 desde el backend con outbox y cron; los fallos de envío no revierten compras, conversiones ni canjes (spec `integraciones/01`). |
 | RF-19 | MVP | Reportes | Por período y entrenador: ventas/IVA, IVA de canjes, comisiones y puntos emitidos, redimidos, vencidos y disponibles conciliados. Excel mensual generado en el cierre (CU-21), con hoja de cuadre y descarga solo con sesión de administrador (spec `negocio/05`). |
 | RF-20 | MVP | Activar puntos por referido | Primera compra aprobada de un cliente de B activa una sola vez los 50.000 puntos de A, sin monto mínimo. La compra propia de B no cuenta. B recibe sus recompensas normales. |
 | RF-21 | Mejora | Aviso de vencimiento | Avisos por lote y canal sin duplicados. Las fechas visibles sí forman parte del MVP. |
@@ -365,7 +365,7 @@ Estas decisiones completan las reglas; no dejan en duda los porcentajes, seis me
 | D-06 | Resuelta el 9 nov 2026: los 50.000 puntos pendientes no caducan; una vez activados, vencen a los seis meses. | Negocio | — |
 | D-07 | Corte exacto de seis meses y política de devolución con beneficios consumidos, incluyendo puntos restituidos (los 50.000 puntos de A ya tienen regla). | Negocio y finanzas | Antes del piloto. |
 | D-08 | Resuelta el 9 nov 2026: la comisión no convertida se paga en dinero al final de cada mes. Pendiente en términos y condiciones: medio, plazo, mínimo y retenciones. | Negocio y legal | Antes del piloto. |
-| D-09 | Meta mensual de dietas, rango/costo de puntos, inicio del mes gratis, renovación y reactivación. El texto cita 50.000 y 49.800 puntos. | Negocio y producto | Fase posterior de dietas. |
+| D-09 | Resuelta el 9 nov 2026 salvo el valor definitivo de la meta (249.000 puntos provisional, lógica sujeta a cambio): costo 50.000 puntos, mes gratis desde el primer ingreso, meta del mes anterior. | Negocio y producto | Antes de la fase de dietas. |
 | D-10 | Proveedor de pagos/SMS, verificación y conciliación disponibles en repositorios de referencia. | Tecnología y operación | Revisión e integración. |
 | D-11 | Duración y sustitución de cookie, varios QR, cliente existente, cambio de referente, ausencia de referencia y continuidad del 10%. | Negocio y producto | Antes de cerrar atribución/checkout. |
 | D-12 | Base de datos, distribución PWA, infraestructura y tamaño/concurrencia del piloto. | Tecnología y producto | Después de revisar repositorios; el backend (fork de radical, PHP 8.5 + MariaDB) y Angular ya están definidos. |

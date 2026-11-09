@@ -1,6 +1,6 @@
 # 01 — Diagrama entidad relación (DER)
 
-**Estado:** propuesta v0.12 lista para revisión · **Creado:** 7 de noviembre de 2026
+**Estado:** propuesta v0.13 lista para revisión · **Creado:** 7 de noviembre de 2026
 
 ## Petición original
 
@@ -47,6 +47,11 @@
 - **Códigos SMS:** `verification_codes` guarda el hash del código y añade `purpose`, `destination` y `attempts`.
 - **Sesiones:** nueva tabla `refresh_tokens`, con rotación por familia y una sesión por app.
 - **Pagos:** `commission_settlements` ya no registra el pago; el Excel del cierre es lo que se paga.
+
+**Revisión v0.13, 9 de noviembre de 2026:** notificaciones push y acceso a dietas (specs `integraciones/01` e `integraciones/02`).
+
+- **Push:** nuevas tablas `push_devices` y `push_notifications` (outbox).
+- **Dietas:** nueva tabla `diet_access_periods`, columna `trainers.diet_first_access_at`, columna `point_movements.diet_access_period_id`, y `refresh_tokens.app` añade `diets`.
 
 ## Objetivo
 
@@ -154,6 +159,8 @@ Proponer el modelo de datos del MVP comercial para revisarlo con negocio y tecno
 | S-42 | No hay tabla de saldos precalculados: los saldos se calculan sumando `point_lots`, `trainer_referrals` y `commission_movements` con índices que cubren cada consulta. La comisión no convertida se liquida al corte del último día del mes en `commission_settlements` (única por `trainer_id` + `period`); los movimientos liquidados guardan `settlement_id`. | Confirmado (pago mensual); sin tabla de saldos: Derivado | Specs `negocio/03` y `negocio/04`. |
 | S-43 | Un período cerrado no se recalcula: `force` solo regenera el Excel y el correo. Las correcciones posteriores entran como ajustes del mes siguiente. El Excel se guarda fuera de la carpeta pública. | Derivado | Spec `negocio/05`: en api-comisiones `force` sobrescribe meses cerrados y el Excel se descarga sin autenticación. |
 | S-44 | `refresh_tokens` guarda solo el hash del token. Cada renovación crea una fila nueva y enlaza la anterior (`replaced_by_id`); reutilizar una fila ya reemplazada revoca toda la `family_id`. | Confirmado | Spec `seguridad/01`; skill `jwt-security`. |
+| S-45 | `users.token_push_notification` de radical se conserva sin usar: los tokens viven en `push_devices`, porque un usuario puede tener varios dispositivos y apps. | Derivado | Spec `integraciones/01`. |
+| S-46 | El acceso a dietas se guarda por mes en `diet_access_periods` (único por entrenador, período y origen). El canje descuenta los puntos con `point_movements` enlazados al período. | Confirmado | Spec `integraciones/02`. |
 | S-30 | `products.discount_list` (tramos por cantidad con su `sap_code`) se conserva por la integración, aunque los descuentos de PremiumFitness (10% y 25%) dependen del rol y no de la cantidad. | Derivado | Radical. Falta confirmar si los tramos aplican. |
 
 ## Plan
@@ -178,6 +185,9 @@ Diagrama editable: [diagrama-entidad-relacion.drawio](../../docs/img/diagrama-en
 | Identidad y referidos | `document_types` | Existente | Tipos de documento. |
 | Identidad y referidos | `verification_codes` | Adaptada | Códigos SMS de 6 dígitos (hash), propósito, destino e intentos. |
 | Identidad y referidos | `refresh_tokens` | Nueva | Sesiones de 30 días por app (admin, 12 h) con rotación y revocación. |
+| Identidad y referidos | `push_devices` | Nueva | Tokens FCM por usuario, app y plataforma. |
+| Identidad y referidos | `push_notifications` | Nueva | Outbox de notificaciones push con reintentos. |
+| Recompensas y operación | `diet_access_periods` | Nueva | Acceso mensual a dietas: gratis, por meta o por canje de puntos. |
 | Identidad y referidos | `password_reset_tokens` | Existente | Recuperación de contraseña. |
 | Identidad y referidos | `addresses`, `address_user_map` | Existente | Direcciones del usuario, con la principal marcada. |
 | Identidad y referidos | `cities`, `localities`, `address_locality_map` | Existente | Ciudad con código DANE y localidad opcional. |
@@ -210,7 +220,7 @@ Diagrama editable: [diagrama-entidad-relacion.drawio](../../docs/img/diagrama-en
 
 - **Índices de consulta de saldos** (spec `negocio/03`):
   - `point_lots (trainer_id, status, expires_at, source, remaining_points)`
-  - `point_lots (trainer_id, source, initial_points)`
+  - `point_lots (trainer_id, source, accrued_at, initial_points)`
   - `point_lots (trainer_id, status, accrued_at, id)`
   - `point_lots (status, expires_at)`
   - `trainer_referrals (referrer_id, activated_at, referral_points)`
@@ -253,4 +263,5 @@ Diagrama editable: [diagrama-entidad-relacion.drawio](../../docs/img/diagrama-en
 - [x] Añadir la liquidación mensual de comisión y los campos de la conversión (v0.10)
 - [x] Añadir `commission_periods` a partir de api-comisiones (v0.11)
 - [x] Añadir `refresh_tokens`, ajustar `verification_codes` y hacer único `users.num_cell` (v0.12)
+- [x] Añadir push (`push_devices`, `push_notifications`) y acceso a dietas (`diet_access_periods`) (v0.13)
 - [ ] Revisión y aprobación del modelo por negocio y tecnología

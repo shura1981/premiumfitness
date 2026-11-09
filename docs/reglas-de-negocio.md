@@ -42,6 +42,12 @@ El entrenador A rifiere al entrenador B (entrenador A obtiene 50 mil pero en est
 
 11. Si el entrenador cumple su meta de ventas tiene acceso a la app de dietas, en dado caso no cumpla el valor de la app de dietas es de 50,000 mil puntos (primer mes gratis) serian 4 Bipro que equivalen 49,800 puntos.
 
+    Precisiones (9 nov 2026; spec `specs/integraciones/02-acceso-app-de-dietas.md`). **La lógica de la meta puede cambiar.**
+    - El acceso es por mes calendario. Da acceso en el mes `M` haber ganado en `M − 1` al menos `DIET_ACCESS_POINTS_GOAL` puntos por compras de sus clientes. El valor provisional es 249.000 puntos.
+    - El mes gratis son 30 días desde el primer ingreso a la app de dietas.
+    - Sin meta ni mes gratis, el entrenador puede canjear 50.000 puntos (`DIET_ACCESS_POINTS_COST`) por el mes en curso. El canje es por FIFO y se hace una sola vez por mes.
+    - La app de dietas (Flutter) consulta el estado al abrir y al menos una vez al día (regla 8). Sin meta, sin mes gratis y sin canje, se desactiva solo dietas.
+
 12. El QR es una forma de presentar el enlace del entrenador: un enlace con su id codificado en base64. El entrenador puede compartirlo por redes sociales, WhatsApp o en QR. El enlace de clientes lleva a la app de clientes, y el enlace para otros entrenadores lleva a la app de entrenadores. Son apps distintas, cada una en su subdominio. El entrenador B solo queda referido por A si se registra desde el enlace (o el QR) de A; no hay un cupón para entrenadores.
 
 13. Cada entrenador tiene un cupón con un nombre único. El cliente queda asociado a un entrenador de dos formas:

@@ -270,8 +270,8 @@ def row_label(key, name, typ, mark, stub):
 # =====================================================================
 db = Page("Base de datos", "db")
 db.header("PremiumFitness — Diagrama entidad relación de la base de datos",
-          "v0.12 · 9 nov 2026 · base: esquema real de backend-radical-nutrition (dump + migraciones) sin credit_balances, "
-          "más las tablas nuevas de autenticación, referidos, comisiones, puntos, liquidación y operación · spec: specs/diseño/01-DER.md")
+          "v0.13 · 9 nov 2026 · base: esquema real de backend-radical-nutrition (dump + migraciones) sin credit_balances, "
+          "más las tablas nuevas de autenticación, push, referidos, comisiones, puntos, liquidación, dietas y operación · spec: specs/diseño/01-DER.md")
 Y0 = 170
 ry = db.ry
 
@@ -286,11 +286,22 @@ db.table("prt", "password_reset_tokens", "E", 40, db.B("vc") + 40,
 db.table("rt", "refresh_tokens", "N", 40, db.B("prt") + 40, [
     r("PK", "id", "bigint(20) (AI)"), r("FK", "user_id", "bigint(20) NULL · cliente o entrenador"),
     r("FK", "agent_id", "int(11) NULL · agente del admin"),
-    r("", "app", "enum('client','trainer','admin')"), r("", "family_id", "char(36) · sesión"),
+    r("", "app", "enum('client','trainer','admin','diets')"), r("", "family_id", "char(36) · sesión"),
     r("UQ", "token_hash", "char(64)"), r("", "expires_at", "timestamp · 30 días (admin 12 h)"),
     r("", "revoked_at", "timestamp NULL"), r("FK", "replaced_by_id", "bigint(20) NULL · rotación"),
     r("", "ip / user_agent", "varchar(45) / varchar(255)"), r("", "created_at", "timestamp")])
-UX = max(db.R("vc"), db.R("prt"), db.R("dt"), db.R("rt")) + 90
+db.table("pd", "push_devices", "N", 40, db.B("rt") + 40, [
+    r("PK", "id", "bigint(20) (AI)"), r("FK", "user_id", "bigint(20)"),
+    r("", "app", "enum('client','trainer','diets')"), r("", "platform", "enum('web','android','ios')"),
+    r("UQ", "token", "varchar(255) · token FCM"), r("", "created_at / last_seen_at", "timestamp")])
+db.table("pn", "push_notifications", "N", 40, db.B("pd") + 40, [
+    r("PK", "id", "bigint(20) (AI)"), r("FK", "user_id", "bigint(20)"),
+    r("", "app", "enum('client','trainer','diets')"), r("", "type", "varchar(50)"),
+    r("", "title / body", "varchar(100) / varchar(255)"), r("", "data", "json · route e id"),
+    r("", "status", "enum('pending','sent','failed') · outbox"), r("", "attempts", "tinyint(4)"),
+    r("", "last_error", "varchar(255) NULL"), r("UQ", "source_key", "varchar(64)"),
+    r("", "created_at / sent_at", "timestamp")])
+UX = max(db.R("vc"), db.R("prt"), db.R("dt"), db.R("rt"), db.R("pd"), db.R("pn")) + 90
 db.table("users", "users", "A", UX, Y0, rad("users", uq=("num_cell",), notes={"num_cell": "login"}, extra=[
     ("", "phone_verified_at", "timestamp NULL"),
     ("", "role", "enum('client','trainer')"),
@@ -310,6 +321,8 @@ xb = UX - 40
 db.rel("users.id", "vc.user_id", ONE, MANY0, "L", "R", [(xb, ry("users", "id")), (xb, ry("vc", "user_id"))])
 db.rel("users.id", "prt.user_id", ONE, MANY0, "L", "R", [(xb, ry("users", "id")), (xb, ry("prt", "user_id"))])
 db.rel("users.id", "rt.user_id", ZONE, MANY0, "L", "R", [(xb, ry("users", "id")), (xb, ry("rt", "user_id"))])
+db.rel("users.id", "pd.user_id", ONE, MANY0, "L", "R", [(xb, ry("users", "id")), (xb, ry("pd", "user_id"))])
+db.rel("users.id", "pn.user_id", ONE, MANY0, "L", "R", [(xb, ry("users", "id")), (xb, ry("pn", "user_id"))])
 db.rel("dt.id", "users.document_type_id", ONE, MANY0, "R", "L",
        [(xb + 20, ry("dt", "id")), (xb + 20, ry("users", "document_type_id"))])
 db.rel("users.id", "aum.user_id", ONE, MANY0, "R", "L")
@@ -328,7 +341,8 @@ db.rel("cities.id", "cw.city_id", ONE, MANY0, "R", "R",
 Y1 = db.B("users") + 130
 db.table("tr", "trainers", "N", UX, Y1, [
     r("PK FK", "user_id", "bigint(20)"), r("UQ", "coupon_code", "varchar(30) · cupón del entrenador"),
-    r("", "joined_at", "timestamp"), r("", "updated_at", "timestamp")], w=380)
+    r("", "joined_at", "timestamp"), r("", "updated_at", "timestamp"),
+    r("", "diet_first_access_at", "timestamp NULL · inicia el mes gratis")], w=380)
 db.table("cr", "client_referrals", "N", AX, Y1, [
     r("PK", "id", "bigint(20) (AI)"), r("FK UQ", "client_id", "bigint(20) · un entrenador por cliente"),
     r("FK", "trainer_id", "bigint(20)"), r("", "source", "enum('link','coupon')"), r("", "linked_at", "timestamp")])
@@ -465,8 +479,16 @@ PMX = db.R("pl") + 150
 db.table("pm", "point_movements", "N", PMX, Y3, [
     r("PK", "id", "bigint(20) (AI)"), r("FK", "point_lot_id", "bigint(20)"), r("FK", "order_id", "bigint(20) NULL · canje"),
     r("FK", "adjustment_id", "bigint(20) NULL"),
+    r("FK", "diet_access_period_id", "bigint(20) NULL · canje de dietas"),
     r("", "type", "enum('credit','redemption','expiration','adjustment')"),
     r("", "points", "int(11) · + / −"), r("UQ", "source_key", "varchar(64)"), r("", "created_at", "timestamp")])
+db.table("dap", "diet_access_periods", "N", db.R("pm") + 120, Y3, [
+    r("PK", "id", "bigint(20) (AI)"), r("FK", "trainer_id", "bigint(20)"),
+    r("UQ", "trainer_id + period + source", "char(7) · '2026-11'"),
+    r("", "source", "enum('free','sales_goal','points')"),
+    r("", "points_goal", "int(11) NULL · 249.000 (env)"), r("", "points_earned", "int(11) NULL · mes anterior"),
+    r("", "points_spent", "int(11) NULL · 50.000 (env)"),
+    r("", "valid_from / valid_to", "timestamp"), r("", "created_at", "timestamp")])
 YB = db.B("pl") + 90
 db.table("adj", "adjustments", "N", CMX + 120, YB, [
     r("PK", "id", "bigint(20) (AI)"), r("FK", "order_id", "bigint(20)"), r("FK", "agent_id", "int(11) · agente"),
@@ -539,6 +561,8 @@ db.rel("cs", "cm.settlement_id", ZONE, MANY0, ((xcs - db.L("cs")) / db.t["cs"]["
         (db.R("cm") + 60, ry("cm", "settlement_id"))], label="liquidación mensual")
 db.rel("cper.id", "cs.period_id", ONE, MANY0, "L", "R",
        [(db.L("cper") - 50, ry("cper", "id")), (db.L("cper") - 50, ry("cs", "period_id"))])
+db.rel("dap.id", "pm.diet_access_period_id", ONE, ZONE, "L", "R",
+       [(db.L("dap") - 40, ry("dap", "id")), (db.L("dap") - 40, ry("pm", "diet_access_period_id"))], label="canje")
 # enlaces largos entre bloques
 db.rel("emp.id_usuario", "ord.agent_id", ZONE, MANY0, "L", "L",
        [(20, ry("emp", "id_usuario")), (20, 88), (ZC - 15, 88), (ZC - 15, ry("ord", "agent_id"))], label="agente")
@@ -563,6 +587,7 @@ db.note(NX, Y0 + 350, 620, 300,
         "• audit_logs.user_id → users.<br>"
         "• commission_settlements.trainer_id → trainers.<br>"
         "• refresh_tokens.agent_id → tb_empleados; refresh_tokens.replaced_by_id → refresh_tokens.<br>"
+        "• diet_access_periods.trainer_id → trainers.<br>"
         "• orders_items.sap_code es una copia del código de sap_products, sin FK.<br>"
         "• orders_items guarda el descuento y la comisión vigentes de cada producto al momento de la compra: "
         "valor por defecto (variable de entorno) o estrategia del producto (product_discount_rules).<br>"

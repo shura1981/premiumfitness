@@ -155,8 +155,8 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 | CU-11 | Convertir el total de la comisión a puntos | Entrenador | Confirmado por producto (9 nov 2026). |
 | CU-12 | Canjear puntos por productos | Entrenador | Confirmado; reglas de canje incompletas. |
 | CU-13 | Comprar como entrenador con descuento | Entrenador comprador | Confirmado; acumulación pendiente. |
-| CU-14 | Acceder a la app de dietas | Entrenador | Confirmado; condiciones de habilitación pendientes. |
-| CU-15 | Desactivar acceso a dietas por incumplimiento | Entrenador afectado; evaluación de regla como disparador | Confirmado; evaluación pendiente. |
+| CU-14 | Acceder a la app de dietas | Entrenador | Confirmado por producto (9 nov 2026); valor de la meta provisional. |
+| CU-15 | Desactivar acceso a dietas por incumplimiento | Entrenador afectado; consulta de estado o proceso nocturno | Confirmado por producto (9 nov 2026). |
 | CU-16 | Tomar o liberar un pedido en el admin | Agente del call center | Confirmado por producto; liberación derivada de radical. |
 | CU-17 | Registrar el pedido en SAP | Agente del call center | Confirmado por producto. |
 | CU-18 | Registrar el envío del pedido | Agente del call center | Confirmado por producto. |
@@ -507,50 +507,42 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 
 ### CU-14. Acceder a la app de dietas
 
-- **Objetivo:** utilizar la herramienta de dietas ofrecida como beneficio.
+- **Objetivo:** que el entrenador use la app de dietas (Flutter, aparte) mientras tenga acceso.
 - **Actor:** ACT-01.
-- **Disparador:** el entrenador solicita acceso a dietas.
-- **Precondiciones:** entrenador registrado y acceso habilitado conforme a la modalidad de suscripción que se defina.
-- **Reglas:** RN-08.
+- **Disparador:** el entrenador abre la app de dietas, o la app hace su validación diaria.
+- **Reglas:** RN-08, reglas 8 y 11 de `reglas-de-negocio.md`, y spec `specs/integraciones/02-acceso-app-de-dietas.md`.
+- **Clasificación:** Confirmado por producto (9 nov 2026). El valor de la meta es provisional y la lógica puede cambiar.
 
 **Flujo principal:**
 
-1. El entrenador solicita ingresar a la app de dietas.
-2. El sistema verifica si su acceso está habilitado. Esta verificación es un detalle derivado de la posibilidad de desactivación.
-3. Si está habilitado, permite utilizar la herramienta de dietas.
-
-**Alternativas y errores:** si el beneficio está desactivado por incumplimiento, no se permite usarlo conforme a CU-15. Se propone informar el motivo y la condición de recuperación cuando esas reglas estén definidas.
-
-**Resultado:** acceso a la herramienta cuando corresponda.
-
-**Criterio de aceptación:** se puede diferenciar un entrenador con acceso habilitado de uno con acceso desactivado. No se especifican creación de dietas, asignación a clientes, planes nutricionales ni edición, porque los requisitos solo nombran el beneficio.
-
-**Pendientes:** activación inicial, posible cobro, periodicidad, integración con otra app y funciones concretas de dietas. La palabra «suscripción» no confirma por sí sola un pago periódico.
-
-### CU-15. Desactivar acceso a dietas por incumplimiento
-
-- **Objetivo:** aplicar la condición de permanencia del beneficio de dietas.
-- **Participante afectado:** ACT-01.
-- **Disparador:** se determina que el entrenador no cumple la regla de negocio.
-- **Precondiciones:** regla de permanencia definida, datos para evaluarla y acceso previamente habilitado.
-- **Reglas:** RN-08.
-
-**Flujo principal condicionado a aclaración:**
-
-1. Se evalúa al entrenador según la regla y el periodo que se acuerden.
-2. Se determina que no cumple la condición.
-3. Se desactiva su acceso a la app de dietas.
-4. Como comportamiento derivado, se conserva el motivo y se informa al entrenador en el siguiente intento de acceso.
+1. El entrenador inicia sesión en la app de dietas con su celular y su contraseña de PremiumFitness.
+2. La primera vez, la app registra el primer ingreso, que inicia 30 días gratis (`POST /api/diets/access/first-use`).
+3. La app consulta `GET /api/diets/access`. El backend calcula el estado en ese momento: mes gratis, meta del mes anterior (249.000 puntos por clientes, provisional) o canje del mes.
+4. Si tiene acceso, la app habilita sus funciones hasta `valid_until`.
 
 **Alternativas y errores:**
 
-- **Cumple la regla:** el acceso no se desactiva por este motivo.
-- **No hay datos suficientes para evaluar:** el tratamiento está pendiente; no se debe equiparar automáticamente una evaluación fallida con incumplimiento.
-- **Vuelve a cumplir:** reactivación, plazos y responsable no están definidos.
+- **Sin acceso pero con saldo:** la app ofrece canjear 50.000 puntos por el mes en curso (`POST /api/diets/access/redeem`). El canje es por FIFO, una sola vez por mes.
+- **Sin conexión:** la app usa el último estado guardado hasta `valid_until`.
 
-**Resultado:** acceso a dietas desactivado por incumplimiento conforme a la regla aprobada.
+**Criterio de aceptación:** los casos del spec `integraciones/02`: mes gratis, meta, canje, saldo insuficiente y separación de tokens.
 
-**Criterio de aceptación condicionado:** una vez definida la regla, se desactiva el acceso en el supuesto que corresponda. No hay fundamento en los requisitos para extender esa desactivación a la cuenta, las comisiones o los puntos.
+### CU-15. Desactivar acceso a dietas por incumplimiento
+
+- **Objetivo:** cortar el acceso a dietas cuando el entrenador no tiene mes gratis, no cumplió la meta del mes anterior y no canjeó puntos por el mes.
+- **Actor afectado:** ACT-01.
+- **Disparador:** la consulta de estado de la app de dietas o el proceso nocturno.
+- **Clasificación:** Confirmado por producto (9 nov 2026).
+
+**Flujo principal:**
+
+1. El backend responde `has_access = false` con el motivo y las opciones para recuperar el acceso: canjear puntos si alcanza, o cumplir la meta este mes para tener acceso el siguiente.
+2. La app de dietas bloquea sus funciones y muestra ese mensaje.
+3. Tres días antes de que venza el acceso, y al desactivarse, el entrenador recibe un push en la app de dietas (spec `integraciones/01`).
+
+**Alternativas y errores:** la desactivación solo afecta a dietas, no a la cuenta, las comisiones ni los puntos. Una falla técnica de la consulta no se trata como incumplimiento: la app usa el último estado válido.
+
+**Resultado:** acceso a dietas desactivado hasta que el entrenador canjee puntos o cumpla la meta.
 
 ### CU-16. Tomar o liberar un pedido en el admin
 
@@ -766,8 +758,8 @@ Las recompensas de CU-05 dependen de la aprobación del pago (paso 1), no del en
 | PD-05 | Puntos por referido | **Resuelta (9 nov 2026):** son 50.000 puntos, definidos en la variable de entorno `TRAINER_REFERRAL_POINTS`. | — | CU-08. |
 | PD-06 | Compra que activa el referido | **Resuelta (9 nov 2026):** la primera compra aprobada de cualquier cliente de B, una sola vez y sin monto mínimo; la compra propia de B no cuenta. Si se cancela o devuelve y A no ha usado los puntos, vuelven a quedar pendientes. | — | CU-07, CU-08. |
 | PD-07 | Conversión de comisión | **Resuelta (9 nov 2026):** total de la comisión; puntos recibidos = comisión + mín(50% × puntos vigentes, comisión). | — | CU-10, CU-11. |
-| PD-08 | Permanencia en dietas | Se menciona una regla de negocio sin describirla. | Definir condición, periodo de evaluación, activación inicial, desactivación y reactivación. | CU-14, CU-15. |
-| PD-09 | Suscripción de dietas | No se define si hay pago o si depende de actividad comercial. | Definir modalidad y funciones de la herramienta. | CU-14, CU-15. |
+| PD-08 | Permanencia en dietas | **Resuelta (9 nov 2026):** meta en puntos por clientes del mes anterior (249.000, provisional), mes gratis de 30 días desde el primer ingreso, canje de 50.000 puntos por mes y validación diaria. La lógica de la meta puede cambiar. | Valor definitivo de la meta. | CU-14, CU-15. |
+| PD-09 | Suscripción de dietas | **Resuelta (9 nov 2026):** no hay pago en dinero; el acceso se gana con la meta o se compra con 50.000 puntos al mes. La app de dietas es aparte (Flutter) y consulta el estado al backend. | Integración del login en Flutter. | CU-14, CU-15. |
 | PD-10 | Enlace y asociación | Resuelto en parte el 9 nov 2026: la asociación se guarda en la cuenta y no se cambia por el cliente. Falta definir cuánto tiempo guarda la app el id del enlace antes del registro. | Definir el almacenamiento temporal del id. | CU-02, CU-03. |
 | PD-11 | Continuidad del descuento | Resuelto el 9 nov 2026: el descuento aplica a todo el catálogo mientras el cliente esté asociado. | Ninguna. | CU-04. |
 | PD-12 | Acumulación y valoración | No se indica si descuentos, promociones y puntos se combinan ni cuál es el precio de canje. | Definir compatibilidad, base del descuento y valor de productos en puntos. | CU-04, CU-12, CU-13. |
