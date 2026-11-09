@@ -55,14 +55,14 @@ Alinear las reglas de negocio, los casos de uso y el modelo de datos con el func
 | S-04 | El cliente sin cupón compra a precio completo y no genera recompensas. | Confirmado |
 | S-05 | Los porcentajes por defecto (10% cliente, 25% entrenador, 5% puntos y 15% comisión) se guardan como configuración versionada. Cada producto puede tener una regla vigente que cambie el descuento con cupón y la comisión. | Confirmado |
 | S-06 | La regla por producto también admite un descuento propio para la compra del entrenador. Si un valor es nulo, se usa el valor por defecto. | Derivado |
-| S-07 | Los puntos son el 5% del valor con IVA incluido. Falta definir si la base es el precio con o sin el descuento del cliente: el ejemplo de `requerimientos.md` (249.900 → 12.500) usa el precio completo. | Pendiente |
+| S-07 | Los puntos son el 5% de lo que pagó el cliente: valor con el descuento aplicado y con IVA incluido. Difiere del ejemplo de `requerimientos.md` (249.900 → 12.500 sobre el precio completo). | Confirmado (9 nov 2026) |
 | S-08 | Base64 no protege el id: cualquiera puede decodificarlo y armar el enlace de otro entrenador. Se acepta porque el enlace solo atribuye ventas. | Derivado |
-| S-09 | Falta definir qué pasa cuando un cliente ya registrado y sin entrenador abre el enlace de un entrenador: si se asocia automáticamente o debe escribir el cupón. | Pendiente |
-| S-10 | Falta definir si el entrenador B puede registrarse sin enlace y escribir después el cupón de A. | Pendiente |
+| S-09 | Un cliente ya registrado y sin entrenador que abre el enlace de un entrenador queda asociado a él al iniciar sesión. | Confirmado (9 nov 2026) |
+| S-10 | El entrenador B solo queda referido por A si se registra desde el enlace o el QR de A. No hay cupón para entrenadores. | Confirmado (9 nov 2026) |
 
 **Diferencias con `docs/requerimientos.md`:**
 
-- **Base de los puntos:** `requerimientos.md` dice «5% del valor de la compra», y su ejemplo coincide con el valor con IVA. La regla 7 de `reglas-de-negocio.md` decía «antes de IVA». Esta decisión vuelve a lo que dice `requerimientos.md`.
+- **Base de los puntos:** `requerimientos.md` dice «5% del valor de la compra», con IVA según su ejemplo, pero calcula sobre el precio completo (249.900 → 12.500). Producto confirmó que la base es lo pagado con descuento y con IVA. La regla 7 de `reglas-de-negocio.md`, que decía «antes de IVA», queda corregida.
 - **Enlace y cupón:** `requerimientos.md` habla solo de QR y cookie, no de enlaces ni cupones. Se registran como decisiones de producto.
 - **Porcentajes:** `requerimientos.md` los da como valores fijos. Pasan a ser valores por defecto configurables, con excepciones por producto, por decisión de producto.
 
@@ -87,4 +87,4 @@ Alinear las reglas de negocio, los casos de uso y el modelo de datos con el func
 - [x] Regenerar el DER y actualizar `specs/diseño/01-DER.md`
 - [ ] Redibujar `docs/img/reglas-de-negocio.png` y `.svg` con la base de puntos con IVA y las reglas nuevas
 - [ ] Revisar en el PRD y el MVP las menciones al QR y a la cookie para que reflejen el enlace y el cupón
-- [ ] Resolver S-07, S-09 y S-10
+- [x] Resolver S-07, S-09 y S-10

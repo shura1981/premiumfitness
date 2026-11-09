@@ -72,7 +72,7 @@ Adaptar la UX de comisiones y onboarding de `join.nutramerican.com`, la compra d
 | A-02 | Completar registro de cliente por QR | Cookie con ID del entrenador; compra atribuible según la política definida. |
 | A-03 | Comprar como cliente referido | 10% visible antes de pagar; descuento, IVA y total persistidos. |
 | A-04 | Compra pendiente o rechazada | No acredita puntos ni comisión. |
-| A-05 | Aprobar compra de 119.000 con IVA (base de 100.000 sin IVA al 19%) | 5.950 puntos y 15.000 de comisión; movimientos relacionados con el pedido. |
+| A-05 | Aprobar compra pagada de 119.000 con IVA y descuento ya aplicado (base de 100.000 sin IVA al 19%) | 5.950 puntos y 15.000 de comisión; movimientos relacionados con el pedido. |
 | A-06 | Repetir la aprobación de A-05 | Saldos sin nuevas acreditaciones. |
 | A-07 | B se registra desde A sin ventas | A ve 50.000 inactivos, excluidos del saldo canjeable. |
 | A-08 | Primera compra aprobada de un cliente de B | Activa una vez los 50.000 de A y acredita recompensas de B; otra aprobación no duplica el bono. |

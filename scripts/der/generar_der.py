@@ -361,7 +361,7 @@ db.table("oi", "orders_items", "A", OIX, Y0, rad("orders_items",
                 ("", "tax_amount", "decimal(12,2)"),
                 ("", "commission_percentage", "decimal(5,2) NULL"),
                 ("", "commission_amount", "decimal(12,2) NULL · sobre tax_base"),
-                ("", "reward_points", "int(11) NULL · % con IVA"),
+                ("", "reward_points", "int(11) NULL · % de line_total"),
                 ("", "redemption_points", "int(11) NULL · canje")]))
 OW = db.t["oi"]["w"]
 db.table("oc", "orders_coupons", "A", OIX, db.B("oi") + 50,
@@ -537,7 +537,7 @@ db.note(NX, Y0 + 680, 620, 330,
         "<b>Cómo se usa orders</b><br>"
         "• client_purchase: cliente asociado a un entrenador (enlace o cupón); descuento por línea (10% por defecto). "
         "Genera comisión por línea sobre la base sin IVA (15% por defecto; ej. Nutra Balance 15% de descuento y 10% de comisión) "
-        "y puntos sobre el valor con IVA (5%). El entrenador se toma de orders_coupons.trainer_id.<br>"
+        "y puntos sobre lo pagado con IVA (5% de line_total). El entrenador se toma de orders_coupons.trainer_id.<br>"
         "• trainer_purchase: compra propia del entrenador, 25%; sin recompensas.<br>"
         "• redemption: canje con puntos a precio completo, sin pasarela; los puntos se descuentan en point_movements.<br>"
         "• Procesamiento: el agente del call center toma el pedido (agent_id), lo crea en SAP (sap_order_code), "

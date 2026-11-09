@@ -105,10 +105,10 @@ No se incluyen como actores un operador de bodega ni un soporte, porque ni los r
 | ID | Regla | Estado y precisión | Referencia en requisitos |
 | --- | --- | --- | --- |
 | RN-01 | El entrenador se registra y comparte dos enlaces: uno para clientes, que abre la app de clientes, y otro para entrenadores, que abre la app de entrenadores. Cada enlace lleva el id del entrenador en base64. El QR es una forma de presentar el enlace; también se comparte por redes sociales o WhatsApp. | Confirmado; enlaces y apps separadas confirmados por producto el 9 nov 2026. | Inicio del archivo y lista de tipos de QR. |
-| RN-02 | Al abrir el enlace, la app de clientes guarda el id del entrenador y lleva al login. Al registrarse o iniciar sesión, el cliente queda asociado a ese entrenador. | Confirmado; el login como destino lo confirmó producto el 9 nov 2026. Falta definir qué pasa si un cliente ya registrado y sin entrenador abre el enlace (PD-24). | «El cliente escanea, se registra…». |
+| RN-02 | Al abrir el enlace, la app de clientes guarda el id del entrenador y lleva al login. Al registrarse o iniciar sesión, el cliente sin entrenador queda asociado a ese entrenador. | Confirmado; el login como destino y la asociación al iniciar sesión los confirmó producto el 9 nov 2026. | «El cliente escanea, se registra…». |
 | RN-03 | El cliente asociado a un entrenador ve todo el catálogo con descuento: badge con el porcentaje, precio con descuento y precio real tachado. El descuento por defecto es del 10%. | Confirmado; el catálogo con descuento lo confirmó producto el 9 nov 2026. Aplica a todas sus compras mientras esté asociado. | «El cliente compra…». |
 | RN-04 | Las recompensas al entrenador por una venta se reconocen cuando la compra está aprobada. | Confirmado. Los demás estados no se definen. | «Cuando la compra sea Aprobada…». |
-| RN-05 | El entrenador recibe en puntos el 5% del valor de la compra del cliente, con IVA incluido. | Confirmado; el IVA incluido lo confirmó producto el 9 nov 2026. Faltan definir si la base es con o sin el descuento del cliente, y el redondeo (PD-02, PD-03). | Párrafo de aprobación y beneficio 1. |
+| RN-05 | El entrenador recibe en puntos el 5% de lo que pagó el cliente: valor con el descuento aplicado y con IVA incluido. | Confirmado; la base la confirmó producto el 9 nov 2026. Falta el redondeo (PD-03). | Párrafo de aprobación y beneficio 1. |
 | RN-06 | El entrenador recibe una comisión sobre el valor sin IVA de cada producto comprado. El porcentaje por defecto es del 15% y puede variar por producto (RN-22). | Confirmado por el párrafo de aprobación; existe una contradicción posterior sobre el beneficiario. | Párrafo de aprobación y beneficio 2. |
 | RN-07 | El entrenador A recibe un incentivo por referir otro entrenador, con activación condicionada a una venta con clientes en la app. | Confirmado en intención. Monto expresado como «50.000 mil puntos» y participante que debe vender pendientes de aclaración. | Párrafo posterior a «Entrenador comparte qr con otro entrenador». |
 | RN-08 | La app de dietas opera en modalidad de suscripción y se desactiva si el entrenador incumple una regla de negocio. | Confirmado. Regla, evaluación y alcance de la desactivación pendientes. | Beneficios para entrenadores, punto 1. |
@@ -129,8 +129,8 @@ No se incluyen como actores un operador de bodega ni un soporte, porque ni los r
 
 ### 4.1. Interpretación de importes y porcentajes
 
-- **Puntos por venta:** `puntos = valor con IVA × porcentaje de puntos` (5% por defecto), con un peso por punto. El IVA no se descuenta. Falta definir si el valor es antes o después del descuento del cliente, y el redondeo.
-- **Ejemplo de puntos:** `249.900 × 0,05 = 12.495`, mientras que el archivo indica `12.500`. El ejemplo usa el precio completo con IVA. No se adopta un redondeo a decenas, centenas u otra unidad sin confirmación.
+- **Puntos por venta:** `puntos = valor pagado (con descuento y con IVA) × porcentaje de puntos` (5% por defecto), con un peso por punto. El IVA no se descuenta. Falta definir el redondeo.
+- **Ejemplo de puntos:** una Bipro de 249.900 con 10% de descuento se paga 224.910 y genera `224.910 × 0,05 = 11.245,5` puntos antes de redondear. **Diferencia con requerimientos.md:** su ejemplo asigna 12.500 puntos sobre el precio completo; prevalece la confirmación de producto del 9 nov 2026 («sobre lo que pagó, es lo justo»). No se adopta un redondeo sin confirmación.
 - **Comisión:** por cada línea, `comisión = base sin IVA × porcentaje de comisión del producto` (15% por defecto; por ejemplo, 10% en Nutra Balance). No se debe confundir «quitar el IVA» con restar directamente una tasa al precio final. Los requisitos no definen las tasas ni el desglose tributario del pedido.
 - **Descuentos:** el 10% del cliente y el 25% del entrenador son valores por defecto. Cada producto puede tener su propio porcentaje (RN-22). Quedan pendientes la interacción con otras promociones, el envío y el orden de aplicación de descuentos e impuestos.
 - **Conversión:** no se establece una fórmula definitiva. La nota menciona convertir comisiones, pero calcula el 50% sobre puntos acumulados. El ejemplo de 100.000 puntos y 50.000 puntos no aclara si estos últimos se adicionan ni qué sucede con la comisión.
@@ -225,7 +225,7 @@ La restricción de no entregar efectivo se refiere expresamente al canje de punt
 
 - **Cliente que se registra sin enlace:** queda sin entrenador; puede asociarse después con CU-20.
 - **Cliente ya asociado que abre el enlace de otro entrenador:** conserva su entrenador. RN-20 no permite cambiarlo por sí mismo.
-- **Cliente ya registrado, sin entrenador, que abre un enlace:** falta definir si se asocia automáticamente al iniciar sesión o si debe escribir el cupón (PD-24).
+- **Cliente ya registrado, sin entrenador, que abre un enlace:** al iniciar sesión queda asociado al entrenador del enlace.
 - **El navegador pierde el id antes del registro:** el cliente puede asociarse luego con el cupón (CU-20).
 
 **Resultado:** cliente registrado y asociado al entrenador.
@@ -273,7 +273,7 @@ La restricción de no entregar efectivo se refiere expresamente al canje de punt
 
 1. El sistema reconoce la aprobación de la compra.
 2. Identifica al entrenador por el cupón guardado en el pedido.
-3. Calcula los puntos: porcentaje de puntos (5% por defecto) sobre el valor con IVA incluido, con la base y el redondeo que se confirmen.
+3. Calcula los puntos: porcentaje de puntos (5% por defecto) sobre lo que pagó el cliente, con el descuento aplicado y con IVA incluido, con el redondeo que se confirme.
 4. Por cada línea, obtiene la base sin IVA.
 5. Calcula la comisión de cada línea con el porcentaje vigente del producto (15% por defecto; menor si el producto tiene un descuento extra) y suma las líneas.
 7. Acredita los puntos y reconoce la comisión al entrenador.
@@ -329,7 +329,7 @@ La restricción de no entregar efectivo se refiere expresamente al canje de punt
 4. Se conserva la relación A → B para poder comprobar la condición del incentivo. Esta persistencia es una necesidad derivada.
 5. El incentivo queda sujeto a la condición de venta de CU-08; no se considera utilizable solo por el registro.
 
-**Alternativas y errores:** falta definir si B puede registrarse sin enlace y escribir después el cupón de A (PD-25). El autorreferido, un B ya registrado y varios referentes para B no tienen reglas definidas. Las restricciones contra abuso deberán acordarse, no asumirse.
+**Alternativas y errores:** si B se registra sin el enlace de A, no queda referido por A: no hay cupón para entrenadores. El autorreferido, un B ya registrado y varios referentes para B no tienen reglas definidas. Las restricciones contra abuso deberán acordarse, no asumirse.
 
 **Resultado:** B registrado y referencia a A conservada según el diseño que se apruebe.
 
@@ -696,7 +696,7 @@ Las recompensas de CU-05 dependen de la aprobación del pago (paso 1), no del en
 | ID | Tema | Evidencia o vacío | Decisión necesaria | Casos afectados |
 | --- | --- | --- | --- | --- |
 | PD-01 | Beneficiario del 15% | El párrafo de aprobación dice «entrenador»; el beneficio 2 dice «cliente». | Confirmar y unificar el beneficiario. Este documento sigue provisionalmente la instrucción explícita del párrafo de aprobación. | CU-05, CU-10, CU-11. |
-| PD-02 | Base de los puntos | Confirmado el 9 nov 2026: con IVA incluido. Falta definir si es antes o después del descuento del cliente, y si incluye el envío. | Definir componentes de la base y orden de cálculo. | CU-04, CU-05. |
+| PD-02 | Base de los puntos | Resuelto el 9 nov 2026: lo que pagó el cliente, con descuento y con IVA. Falta definir si incluye el envío. | Definir componentes de la base y orden de cálculo. | CU-04, CU-05. |
 | PD-03 | Redondeo de puntos | El ejemplo produce matemáticamente 12.495, pero el archivo indica 12.500. | Definir precisión, redondeo y momento de aplicación. | CU-05, CU-09. |
 | PD-04 | Base de comisión | Se exige retirar el IVA, sin detallar descuentos, tasas, envío o pedidos con tratamientos tributarios diferentes. | Definir la base sin IVA por compra o por producto. | CU-05. |
 | PD-05 | Incentivo por referido | La expresión «50.000 mil puntos» es ambigua; el diagrama muestra 50.000. | Confirmar el monto sin corregirlo por inferencia. | CU-08. |
@@ -718,8 +718,8 @@ Las recompensas de CU-05 dependen de la aprobación del pago (paso 1), no del en
 | PD-21 | Cliente en SAP | No se define si los usuarios se crean primero en SAP o en el portal. | Definir quién crea el socio de negocio y cuándo. | CU-01, CU-03, CU-17. |
 | PD-22 | Intranet y permisos del admin | Se asume la misma intranet de radical. No se definen perfiles de agente y supervisor. | Confirmar la intranet y quién puede reasignar pedidos o cambiar estados. | CU-16 a CU-18. |
 | PD-23 | Registro en SAP manual o automático | En radical, el agente crea el pedido en SAP y registra el código. | Confirmar si se mantiene manual o si se integra con el Service Layer. | CU-17. |
-| PD-24 | Cliente registrado sin entrenador que abre un enlace | No se define si se asocia automáticamente al iniciar sesión. | Decidir entre asociación automática o exigir el cupón. | CU-03, CU-20. |
-| PD-25 | Entrenador B sin enlace | No se define si B puede registrarse sin enlace y escribir después el cupón de A. | Decidir si existe ese camino. | CU-07. |
+| PD-24 | Cliente registrado sin entrenador que abre un enlace | Resuelto el 9 nov 2026: queda asociado al iniciar sesión. | Ninguna. | CU-03, CU-20. |
+| PD-25 | Entrenador B sin enlace | Resuelto el 9 nov 2026: B solo queda referido por A si se registra desde el enlace o QR de A. | Ninguna. | CU-07. |
 | PD-26 | Administración de estrategias por producto | No se define quién crea las estrategias de descuento y comisión, ni si tienen vigencia. | Definir responsable, vigencia y auditoría. | CU-04, CU-05. |
 
 ## 9. Diferencias entre el diagrama y la fuente de verdad

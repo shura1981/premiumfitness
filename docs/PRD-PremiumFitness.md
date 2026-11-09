@@ -191,13 +191,13 @@ Para cada producto, conservar cantidad, precio, descuento, tasa de IVA, base e I
 - Compra propia: descuento de 25% sobre los productos del portafolio.
 - Canje: puntos requeridos equivalentes al precio completo del producto, sin descuento.
 
-**Ejemplo aislado del porcentaje:** una compra de 119.000 con IVA (100.000 de base sin IVA al 19%) genera 5.950 puntos y 15.000 de comisión. Este ejemplo no decide si la base se determina antes o después del descuento del cliente.
+**Ejemplo aislado del porcentaje:** una compra pagada de 119.000 con IVA, ya con el descuento aplicado (100.000 de base sin IVA al 19%), genera 5.950 puntos y 15.000 de comisión. La base de los puntos es lo que pagó el cliente (9 nov 2026), no el precio antes del descuento del cliente.
 
 **Ejemplo de canje:** con 300.000 puntos, canjear un producto de 249.900 consume 249.900 y deja 50.100, si todo el saldo está disponible y vigente.
 
 **Ejemplo FIFO:** lotes disponibles de 100.000 y 200.000, en ese orden de acumulación: el canje anterior agota el primero, consume 149.900 del segundo y conserva 50.100. No se marca todo el segundo lote como usado.
 
-El ejemplo de requerimientos que asigna 12.500 puntos a un precio de 249.900 coincide con la regla vigente de puntos con IVA incluido (12.495 antes de redondear). El orden de descuento/base y el redondeo por línea o pedido deben precisarse. Tampoco se adopta automáticamente `comisión × 1,5`: el texto del 50% mezcla comisión con puntos acumulados.
+El ejemplo de requerimientos que asigna 12.500 puntos a un precio de 249.900 usa el precio completo; desde el 9 nov 2026 los puntos se calculan sobre lo pagado con descuento e IVA (con 10%: 224.910 → 11.245,5 antes de redondear). El orden de descuento/base y el redondeo por línea o pedido deben precisarse. Tampoco se adopta automáticamente `comisión × 1,5`: el texto del 50% mezcla comisión con puntos acumulados.
 
 ### 7.3. Integridad, disponibilidad y vencimiento
 

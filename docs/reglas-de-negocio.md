@@ -12,7 +12,7 @@ El diagrama resume las 11 reglas de este documento: cálculo y vencimiento de pu
 
 ## Detalle de las reglas
 
-1. 1 peso equivale a 1 punto. Los puntos que da la compra de un cliente son el 5% del valor de la compra **con IVA incluido**. El IVA solo se discrimina para calcular la comisión, no los puntos. *(Cambio del 9 nov 2026: antes se descontaba el IVA de cada producto.)*
+1. 1 peso equivale a 1 punto. Los puntos que da la compra de un cliente son el 5% de **lo que el cliente pagó, con el descuento aplicado y con IVA incluido**. El IVA solo se discrimina para calcular la comisión, no los puntos. *(Cambio del 9 nov 2026: antes se descontaba el IVA de cada producto.)*
 
 2. Los puntos tiene fecha de expiración, 6 meses por cada acumulacion.
 
@@ -36,11 +36,12 @@ El entrenador A rifiere al entrenador B (entrenador A obtiene 50 mil pero en est
 
 11. Si el entrenador cumple su meta de ventas tiene acceso a la app de dietas, en dado caso no cumpla el valor de la app de dietas es de 50,000 mil puntos (primer mes gratis) serian 4 Bipro que equivalen 49,800 puntos.
 
-12. El QR es una forma de presentar el enlace del entrenador: un enlace con su id codificado en base64. El entrenador puede compartirlo por redes sociales, WhatsApp o en QR. El enlace de clientes lleva a la app de clientes, y el enlace para otros entrenadores lleva a la app de entrenadores. Son apps distintas, cada una en su subdominio.
+12. El QR es una forma de presentar el enlace del entrenador: un enlace con su id codificado en base64. El entrenador puede compartirlo por redes sociales, WhatsApp o en QR. El enlace de clientes lleva a la app de clientes, y el enlace para otros entrenadores lleva a la app de entrenadores. Son apps distintas, cada una en su subdominio. El entrenador B solo queda referido por A si se registra desde el enlace (o el QR) de A; no hay un cupón para entrenadores.
 
 13. Cada entrenador tiene un cupón con un nombre único. El cliente queda asociado a un entrenador de dos formas:
     - Entra por el enlace del entrenador. El enlace lo lleva al login; si ya está registrado pasa al dashboard, y si no, se registra. El id del entrenador queda guardado.
     - Se registra sin enlace y luego escribe el cupón del entrenador.
+    - Si ya estaba registrado sin entrenador y abre el enlace, queda asociado a ese entrenador al iniciar sesión.
 
     Un cliente asociado no ve el campo del cupón. Un cliente sin cupón puede comprar a precio completo y su compra no genera recompensas.
 
