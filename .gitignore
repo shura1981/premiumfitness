@@ -1,1 +1,9 @@
 logs/
+
+# Secretos: nunca al repositorio
+.env
+.env.*
+!.env.example
+*service-account*.json
+firebase-*.json
+premiumfitness-12ca6-*.json
