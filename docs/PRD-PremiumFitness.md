@@ -246,7 +246,7 @@ Las fuentes no fijan la política completa de devoluciones. Se conserva esta pro
 | RF-16 | MVP | Operación mínima | Acceso autorizado para gestionar/consultar datos necesarios de catálogo, pedidos, canjes y movimientos; ajustes auditados. |
 | RF-17 | MVP | Ajustes | Cancelaciones/devoluciones generan ajustes según la política acordada, ligados al original y sin duplicados. |
 | RF-18 | Mejora | Avisos externos | Si se incorporan, los fallos de envío no revierten compras, conversiones ni canjes. |
-| RF-19 | MVP | Reportes | Por período y entrenador: ventas/IVA, IVA de canjes, comisiones y puntos emitidos, redimidos, vencidos y disponibles conciliados. |
+| RF-19 | MVP | Reportes | Por período y entrenador: ventas/IVA, IVA de canjes, comisiones y puntos emitidos, redimidos, vencidos y disponibles conciliados. Excel mensual generado en el cierre (CU-21), con hoja de cuadre y descarga solo con sesión de administrador (spec `negocio/05`). |
 | RF-20 | MVP | Activar puntos por referido | Primera compra aprobada de un cliente de B activa una sola vez los 50.000 puntos de A, sin monto mínimo. La compra propia de B no cuenta. B recibe sus recompensas normales. |
 | RF-21 | Mejora | Aviso de vencimiento | Avisos por lote y canal sin duplicados. Las fechas visibles sí forman parte del MVP. |
 | RF-22 | MVP | Liquidación mensual | Al corte del último día del mes se liquida la comisión no convertida y el admin registra el pago, que se hace por fuera de la app. La transferencia bancaria automática queda fuera. |
@@ -359,7 +359,7 @@ Estas decisiones completan las reglas; no dejan en duda los porcentajes, seis me
 | --- | --- | --- | --- |
 | D-01 | Moneda técnica, zona horaria y corte de períodos. | Negocio y tecnología | Arquitectura y cálculo temporal. |
 | D-02 | Catálogo, inventario, envío, entrega y cancelación de canjes. | Operación | Antes de checkout/canje real. |
-| D-03 | Puntos resueltos el 9 nov 2026: 5% de lo pagado por los productos (con descuento e IVA, sin envío), por pedido y redondeado al entero más cercano. Pendientes de la comisión: base antes o después del descuento, envío, promociones y redondeo. | Negocio y finanzas | Antes de activar recompensas reales. Los puntos incluyen IVA; la comisión lo excluye. |
+| D-03 | Resuelta el 9 nov 2026. **Puntos:** 5% de lo pagado por los productos (con descuento e IVA, sin envío), por pedido y redondeado al entero más cercano. **Comisión:** porcentaje vigente del producto sobre lo pagado con descuento, sin IVA y sin envío, por línea con 2 decimales; el total liquidado se redondea al peso. Es la misma base que usa hoy api-comisiones. | Negocio y finanzas | — |
 | D-04 | Resuelta el 9 nov 2026: puntos recibidos = comisión + mín(50% × puntos vigentes, comisión). | Negocio y finanzas | — |
 | D-05 | Registro, verificación, coexistencia de roles y tratamiento de autorreferidos/cuentas duplicadas. | Producto y tecnología | Acceso y referidos. |
 | D-06 | Resuelta el 9 nov 2026: los 50.000 puntos pendientes no caducan; una vez activados, vencen a los seis meses. | Negocio | — |

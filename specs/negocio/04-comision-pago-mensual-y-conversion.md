@@ -87,7 +87,7 @@ Definir qué hace el entrenador con su comisión, cómo se convierte a puntos y 
 | S-01 | La comisión es dinero que se paga al final de cada mes; para canjear productos hay que convertirla a puntos; no hay canje mixto. | Confirmado (9 nov 2026) |
 | S-02 | Fórmula `C + mín(50% × P, C)` con `P` = puntos vigentes. | Confirmado (9 nov 2026) |
 | S-03 | `P` incluye los puntos vigentes de todos los orígenes (clientes, referidos y conversiones anteriores), pero no los 50.000 pendientes. | Derivado de «lo que tenga actualmente vigente en puntos» |
-| S-04 | Corte el último día del mes, hora de Colombia, ejecutado por un cron el día 1 a las 00:05. | Derivado (D-01) |
+| S-04 | Corte el último día del mes, hora de Colombia. El cron del hosting lo dispara el día 1 a la 01:00 con una sola petición (spec `negocio/05`). | Derivado (D-01) |
 | S-05 | La empresa paga por fuera de la app. Un usuario del admin registra la fecha y la referencia del pago. | Derivado |
 | S-06 | Medio y plazo de pago, mínimo para pagar y retenciones o impuestos sobre la comisión. | Pendiente: términos y condiciones |
 | S-07 | Ajuste negativo y saldo negativo trasladado al mes siguiente. | Derivado |
@@ -99,7 +99,7 @@ Definir qué hace el entrenador con su comisión, cómo se convierte a puntos y 
 **Modelo de datos:**
 
 - `commission_conversions` añade `base_points` (`P`) y `bonus_points` (adicional con tope). Ya tenía `commission_amount`, `conversion_percentage` y `points_granted`.
-- Nueva tabla `commission_settlements`, una fila por entrenador y mes, con clave única (`trainer_id`, `period`):
+- Nueva tabla `commission_settlements`, una fila por entrenador y mes, con clave única (`period_id`, `trainer_id`); el período vive en `commission_periods` (spec `negocio/05`):
   - `commission_amount`, `conversions_amount`, `adjustments_amount` y `total_amount`;
   - `status` (`closed` o `paid`);
   - `closed_at`, `paid_at`, `payment_reference` y `agent_id`.
@@ -122,7 +122,7 @@ Lo protege `idempotency_key`.
 4. Asignar `settlement_id` a esos movimientos.
 5. Si el total es positivo, registrar el `settlement_debit` que deja el saldo en cero.
 
-La clave única (`trainer_id`, `period`) evita liquidar dos veces el mismo mes.
+La clave única de `commission_periods.period` y de (`period_id`, `trainer_id`) evita liquidar dos veces el mismo mes.
 
 ## Checklist
 

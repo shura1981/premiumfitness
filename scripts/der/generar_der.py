@@ -148,8 +148,9 @@ class Page:
                           f'<mxGeometry x="{x}" y="{y}" width="{width}" height="{h}" as="geometry"/></mxCell>')
         rowids = {}
         for i, (key, name, typ, mark) in enumerate(rows):
-            rid = f"{tid}.{name.split(' ')[0]}"
-            rowids[name.split(' ')[0]] = (rid, i)
+            col = name.split(' ')[0]
+            rid = f"{tid}.{col}" if col not in rowids else f"{tid}.{col}~{i}"  # ids únicos
+            rowids.setdefault(col, (rid, i))
             label = row_label(key, name, typ, mark, origin == "S")
             st = "text;html=1;align=left;verticalAlign=middle;spacingLeft=8;spacingRight=4;fontSize=12;overflow=hidden;"
             if "FK" in key and origin != "S":
@@ -467,14 +468,21 @@ db.table("al", "audit_logs", "N", db.R("emp") + 100, db.B("adj") + 60, [
     r("FK", "user_id", "bigint(20) NULL · cliente o entrenador"), r("", "action", "varchar(60)"),
     r("", "entity / entity_id", "varchar(60) / bigint(20)"), r("", "data", "json"), r("", "created_at", "timestamp")])
 db.table("cs", "commission_settlements", "N", db.R("al") + 100, db.B("adj") + 60, [
-    r("PK", "id", "bigint(20) (AI)"), r("FK", "trainer_id", "bigint(20)"),
-    r("UQ", "trainer_id + period", "char(7) · '2026-11'"),
+    r("PK", "id", "bigint(20) (AI)"), r("FK", "period_id", "bigint(20)"), r("FK", "trainer_id", "bigint(20)"),
+    r("UQ", "period_id + trainer_id", "una liquidación por mes"),
+    r("", "orders_count", "int(11)"),
     r("", "commission_amount", "decimal(12,2) · ventas del mes"),
     r("", "conversions_amount", "decimal(12,2) · convertido a puntos"),
     r("", "adjustments_amount", "decimal(12,2)"), r("", "total_amount", "decimal(12,2) · a pagar"),
     r("", "status", "enum('closed','paid')"), r("", "closed_at", "timestamp"),
     r("", "paid_at", "timestamp NULL"), r("", "payment_reference", "varchar(100) NULL"),
     r("FK", "agent_id", "int(11) NULL · quién registró el pago")])
+db.table("cper", "commission_periods", "N", db.R("cs") + 100, db.B("adj") + 60, [
+    r("PK", "id", "bigint(20) (AI)"), r("UQ", "period", "char(7) · '2026-11'"),
+    r("", "period_start / period_end", "date"), r("", "closed_at", "timestamp"),
+    r("", "trainers_count / orders_count", "int(11)"), r("", "total_amount", "decimal(12,2)"),
+    r("", "file_name", "varchar(150) NULL · Excel privado"),
+    r("", "report_sent_at", "timestamp NULL"), r("", "report_recipients", "varchar(255) NULL")])
 
 wt = db.t["tr"]["w"]
 txr = lambda x: ((x - db.L("tr")) / wt, 1)  # noqa: E731
@@ -519,6 +527,8 @@ xcs = db.L("cs") + 60
 db.rel("cs", "cm.settlement_id", ZONE, MANY0, ((xcs - db.L("cs")) / db.t["cs"]["w"], 0), "R",
        [(xcs, YB - 30), (db.R("cm") + 60, YB - 30),
         (db.R("cm") + 60, ry("cm", "settlement_id"))], label="liquidación mensual")
+db.rel("cper.id", "cs.period_id", ONE, MANY0, "L", "R",
+       [(db.L("cper") - 50, ry("cper", "id")), (db.L("cper") - 50, ry("cs", "period_id"))])
 # enlaces largos entre bloques
 db.rel("emp.id_usuario", "ord.agent_id", ZONE, MANY0, "L", "L",
        [(20, ry("emp", "id_usuario")), (20, 88), (ZC - 15, 88), (ZC - 15, ry("ord", "agent_id"))], label="agente")
@@ -562,7 +572,8 @@ db.note(NX, Y0 + 680, 620, 330,
         "• Referido A → B: los 50.000 puntos quedan pendientes en trainer_referrals (no caducan); la primera compra "
         "aprobada de un cliente de B crea el lote de A una sola vez.<br>"
         "• Saldo de comisión = Σ commission_movements.amount sin liquidar. Se convierte a puntos en cualquier momento "
-        "(C + mín(50% × P vigentes, C)); lo no convertido se liquida en dinero al cierre de mes (commission_settlements).")
+        "(C + mín(50% × P vigentes, C)); lo no convertido se liquida en dinero al cierre de mes (commission_periods + commission_settlements). "
+        "Un período cerrado no se recalcula; las correcciones entran como ajustes del mes siguiente.")
 
 pages = [db]
 

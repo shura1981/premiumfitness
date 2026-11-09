@@ -118,6 +118,10 @@ TRAINER_COMMISSION_PERCENTAGE=15
 TRAINER_REFERRAL_POINTS=50000
 POINTS_EXPIRATION_MONTHS=6
 COMMISSION_CONVERSION_PERCENTAGE=50
+
+# Cierre mensual de comisión (lo dispara el cron del hosting; nunca un programador dentro de la app)
+COMMISSION_CLOSE_TOKEN=secreto-exclusivo-del-cierre-minimo-32-caracteres
+REPORTS_STORAGE_PATH=/ruta/privada/fuera/de/public
 ```
 
 Ninguna constante de negocio se escribe en el código: se leen de estas variables. Las estrategias por producto (`product_discount_rules`) son datos del catálogo y tienen prioridad sobre los porcentajes por defecto. Cada pedido, referido y conversión guarda el valor que aplicó, para que un cambio en las variables no altere el histórico (spec `specs/negocio/02-puntos-por-referido-y-constantes.md`).

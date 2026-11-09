@@ -681,28 +681,38 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 
 ### CU-21. Liquidar la comisión del mes
 
-- **Objetivo:** dejar calculado lo que la empresa debe pagar a cada entrenador por la comisión que no convirtió.
-- **Actores:** proceso programado (cron) para el corte, y usuario del admin para registrar el pago.
-- **Disparador:** fin del último día del mes, hora de Colombia.
-- **Reglas:** regla 18 de `reglas-de-negocio.md`.
-- **Clasificación:** Confirmado por producto (9 nov 2026); medio y plazo de pago pendientes de los términos y condiciones.
+- **Objetivo:** cerrar el mes, dejar calculado lo que la empresa debe pagar a cada entrenador por la comisión que no convirtió, y entregar el reporte mensual.
+- **Actores:** cron del hosting para el cierre y usuario del admin para registrar el pago.
+- **Disparador:** el día 1 a la 01:00 (hora de Colombia), el cron del hosting hace una sola petición de cierre del mes anterior, con `year` y `month` explícitos. No se usa un programador dentro de la aplicación.
+- **Reglas:** regla 18 de `reglas-de-negocio.md`; spec `specs/negocio/05-reportes-y-conciliacion-mensual.md`.
+- **Clasificación:** Confirmado por producto (9 nov 2026). El proceso se toma del sistema actual (api-comisiones), simplificado. Medio de pago y destinatarios pendientes.
 
 **Flujo principal:**
 
-1. El día 1 a las 00:05 el cron toma cada entrenador con movimientos de comisión sin liquidar.
-2. Suma esos movimientos y crea la liquidación del mes con las ventas, lo convertido, los ajustes y el total a pagar.
-3. Marca los movimientos como liquidados. Si el total es positivo, registra el débito que deja el saldo en cero.
-4. La empresa paga por fuera de la app. Un usuario del admin registra la fecha y la referencia del pago.
+1. El sistema valida el secreto del cierre y el período.
+2. En una sola transacción:
+   - crea el período del mes;
+   - crea una liquidación por cada entrenador con comisión sin liquidar (pedidos, comisión, ajustes, lo convertido y el total a pagar);
+   - marca los movimientos como liquidados;
+   - registra el débito que deja el saldo en cero.
+3. Genera el Excel del mes fuera de la carpeta pública con estas hojas: resumen por entrenador, análisis de ventas, detalle de pedidos, productos, puntos, canjes y cuadre.
+4. Envía al administrador un correo con el resumen y un enlace que exige iniciar sesión.
+5. La empresa paga por fuera de la app. El agente registra en el admin la fecha y la referencia del pago de cada liquidación.
 
 **Alternativas y errores:**
 
+- **Mes ya cerrado:** responde 409 y no toca nada. Con `force` solo regenera el Excel y reenvía el correo; nunca recalcula importes.
 - **Total negativo** (por devoluciones): no se paga nada y la diferencia pasa al mes siguiente.
-- **El cron corre dos veces:** un entrenador no tiene dos liquidaciones del mismo mes.
-- **Devolución posterior al corte:** se descuenta en la liquidación siguiente.
+- **Devolución o corrección posterior al cierre:** entra como ajuste en el mes siguiente. Un mes cerrado no cambia.
+- **Fallo del correo:** el cierre queda hecho y el correo se reenvía con `force`.
 
-**Resultado:** liquidación del mes cerrada y, después, pagada.
+**Resultado:** período cerrado, liquidaciones por entrenador, reporte disponible y, después, pagos registrados.
 
-**Criterio de aceptación:** la suma de las liquidaciones más lo convertido coincide con la comisión generada menos los ajustes.
+**Criterio de aceptación:**
+
+- Cuadre de comisión: comisión del mes ± ajustes − convertido = total liquidado.
+- Cuadre de puntos: saldo inicial + emitidos − canjeados − vencidos ± ajustes = saldo final.
+- Disparar dos veces el cierre produce un solo período y un solo correo.
 
 ## 7. Recorridos completos y dependencias
 
