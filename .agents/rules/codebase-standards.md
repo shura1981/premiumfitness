@@ -231,7 +231,7 @@ POINTS_EXPIRATION_MONTHS=6
 COMMISSION_CONVERSION_PERCENTAGE=50
 
 # Notificaciones push (spec integraciones/01)
-FIREBASE_PROJECT_ID=premiumfitness
+FIREBASE_PROJECT_ID=premiumfitness-12ca6
 FIREBASE_CREDENTIALS_PATH=/ruta/privada/firebase-service-account.json
 PUSH_MAX_ATTEMPTS=5
 PUSH_EXPIRY_NOTICE_DAYS=7

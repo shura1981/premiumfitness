@@ -93,6 +93,24 @@ En iPhone y iPad las notificaciones web tienen más restricciones que en Android
 
 La lista es **Derivada** y requiere validación de producto.
 
+## Proyecto de Firebase
+
+Creado el 9 nov 2026 con la cuenta de la consola de Nutramerican, en el plan Spark (gratis). Google Analytics, Gemini y el programa de desarrolladores quedaron desactivados.
+
+| Dato | Valor |
+| --- | --- |
+| Nombre | PremiumFitness |
+| ID del proyecto (`FIREBASE_PROJECT_ID`) | `premiumfitness-12ca6` |
+| Número del proyecto / ID del remitente | `743385984575` |
+| API de FCM V1 | Habilitada |
+| API de FCM heredada | Inhabilitada |
+| App web `premiumfitness-web` (`appId`) | `1:743385984575:web:5313b81ffce001e5a6928a` |
+| Clave pública VAPID (certificado push web) | `BMpxiOlbihgKfwDyZc3nubRiP-LTf2q0AYUT9bQONGJBeTpjf7dlvcaO99SHwQzoN7T7aiHsfxraDWDfCqW604M` |
+
+**Dónde va cada dato:**
+- La configuración web completa (incluida la `apiKey`) y la clave VAPID van en el `environment` de la app Angular. Son públicas por diseño, pero la `apiKey` se restringe por dominio en Google Cloud.
+- La clave privada de la cuenta de servicio **no** se guarda en este repositorio. Va al servidor, en `FIREBASE_CREDENTIALS_PATH`.
+
 ## Criterios de aceptación
 
 1. Aprobar una compra crea las notificaciones en la misma transacción. Si Firebase está caído, la compra se aprueba igual y la notificación se reintenta.
@@ -107,7 +125,7 @@ La lista es **Derivada** y requiere validación de producto.
 | ID | Supuesto | Clase |
 | --- | --- | --- |
 | S-01 | No hay un servidor de push aparte: el backend PHP envía con FCM HTTP v1 desde un cron. | Derivado |
-| S-02 | Un solo proyecto de Firebase, con una app web (clientes y entrenadores) y las apps Android e iOS de dietas. El admin no recibe push. | Pendiente: proyecto dedicado «PremiumFitness» o reutilizar `elitenutritiongroup-9385a` |
+| S-02 | Proyecto de Firebase dedicado **PremiumFitness**, con una app web (clientes y entrenadores) y, más adelante, las apps Android e iOS de dietas. El admin no recibe push. No se reutiliza `elitenutritiongroup-9385a` porque tiene datos de otros sistemas y otra marca. | Confirmado (9 nov 2026) |
 | S-03 | `users.token_push_notification` de radical se conserva sin usar: los tokens viven en `push_devices`, porque un usuario puede tener varios dispositivos y apps. | Derivado |
 | S-04 | La lista de eventos de la tabla. | Derivado: requiere validación |
 | S-05 | El cron de envío corre cada minuto. Si el hosting no lo permite, la latencia de la notificación será la del intervalo mínimo del cron. | Derivado |
@@ -136,4 +154,7 @@ La lista es **Derivada** y requiere validación de producto.
 - [x] Documentar las restricciones y recomendaciones para iPhone y Safari
 - [ ] Probar el flujo de instalación y push en un iPhone real (S-06)
 - [ ] Validar la lista de eventos con producto (S-04)
-- [ ] Crear el proyecto de Firebase y la cuenta de servicio (S-02)
+- [x] Crear el proyecto de Firebase PremiumFitness, la app web y el certificado VAPID (S-02)
+- [ ] Crear la cuenta de servicio con solo el rol de envío de FCM y dejar su clave en el servidor
+- [ ] Restringir la `apiKey` web por dominio
+- [ ] Registrar las apps Android e iOS de dietas y subir la clave APNs (.p8) de Apple
