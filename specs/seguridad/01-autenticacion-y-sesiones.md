@@ -76,7 +76,7 @@ Definir cómo se registran, inician sesión, mantienen la sesión y recuperan el
    - **Envío de códigos:** 3 por minuto y 10 al día por celular.
    - **Verificación:** 5 por minuto por IP.
 
-   Los contadores viven en la base de datos, no en la memoria del proceso, porque LiteSpeed levanta varios procesos (spec `negocio/05`).
+   Los contadores nunca viven en la memoria del proceso, porque LiteSpeed levanta varios procesos (spec `negocio/05`). Se usa `RateLimitMiddleware` de radical, que guarda los contadores en disco, compartido por todos los procesos.
 10. **Logout:** revoca la familia de la sesión y borra la cookie.
 11. **Admin:**
     - inicia sesión con correo y contraseña de `tb_empleados`;
@@ -84,7 +84,7 @@ Definir cómo se registran, inician sesión, mantienen la sesión y recuperan el
     - aplica los mismos límites de intentos.
 
     `tb_empleados` no se toca: PremiumFitness solo la lee para el login y los JOIN, sin migrarla, escribir en ella ni cambiar sus contraseñas (S-06).
-12. **Cron del cierre:** usa su propio secreto (`COMMISSION_CLOSE_TOKEN`), nunca un JWT ni el secreto del login.
+12. **Crons:** se autentican con `CronJobTokenMiddleware` de radical (header `X-Cron-Job-Token` contra `CRON_JOB_TOKEN`), nunca con un JWT ni con el secreto del login.
 
 ## Lo que no se copia de radical
 
@@ -129,7 +129,7 @@ Definir cómo se registran, inician sesión, mantienen la sesión y recuperan el
     - `family_id` y `token_hash`, que es único;
     - `expires_at`, `revoked_at` y `replaced_by_id`;
     - `ip`, `user_agent` y `created_at`.
-- **Código:** se parte de las plantillas de las skills `jwt-security` y `sms-account-verification`. El rate limiting usa contadores en la base de datos.
+- **Código:** se parte de `Auth` de radical y de las plantillas PHP de las skills `jwt-security` y `sms-account-verification`. El rate limiting usa `RateLimitMiddleware`, con límites por IP y por celular.
 - **Rutas:** se agrupan por app (`/api/client/auth/*`, `/api/trainer/auth/*` y `/api/admin/auth/*`) para limitar la cookie a su ruta.
 - **Limpieza:** un proceso nocturno, disparado por el cron del hosting, borra los refresh tokens vencidos hace más de 30 días y los códigos usados o vencidos.
 

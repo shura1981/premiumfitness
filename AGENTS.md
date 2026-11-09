@@ -1,6 +1,6 @@
 # PremiumFitness
 
-Aplicación de referidos, compras, comisiones y puntos para los entrenadores y clientes de PremiumFitness. El backend usa Node.js con Express y el frontend usa Angular, con áreas separadas para entrenadores y clientes.
+Aplicación de referidos, compras, comisiones y puntos para los entrenadores y clientes de PremiumFitness. El backend es un **fork de `backend-radical-nutrition`** (PHP 8.5, Slim 4, MariaDB, Pest y PHPStan), desplegado en el mismo hosting. Los frontends son apps Angular separadas para clientes, entrenadores y admin, cada una en su subdominio.
 
 **Estado actual:** documentación y diseño. Todavía no hay código de aplicación.
 
@@ -10,6 +10,7 @@ Lee y aplica todas las reglas de `.agents/rules/`:
 
 - `.agents/rules/specs-y-progreso.md`: se aplica siempre. Indica cómo documentar cada requerimiento en `specs/`, cuándo escribir un plan y cómo marcar el progreso.
 - `.agents/rules/codebase-standards.md`: se aplica antes de escribir o modificar código.
+- `.agents/rules/agent-skills.md`: se aplica al crear o modificar una skill.
 
 Si se añaden reglas nuevas a esa carpeta, también se aplican.
 

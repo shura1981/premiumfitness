@@ -267,7 +267,7 @@ Se conservan los identificadores del PRD anterior para facilitar revisión: RF-0
 | Operación | Catálogo, pedidos, pagos, canjes, movimientos y reportes | Búsqueda por operación, período y entrenador; auditoría. |
 | Dietas — posterior | Acceso, estado de suscripción y recuperación | Mes gratis, meta, puntos necesarios, vigencia y motivo de desactivación. |
 
-**Stack definido:** backend Node.js con Express y frontend Angular, dividido para entrenadores y clientes. Motor de base de datos, despliegue y estructura de aplicaciones se seleccionan al revisar reutilización.
+**Stack definido (9 nov 2026):** backend como fork de backend-radical-nutrition (PHP 8.5, Slim 4, MariaDB 11.8), desplegado en el mismo hosting; frontends Angular para clientes, entrenadores y admin, cada uno en su subdominio. Antes decía Node.js con Express. Spec: `specs/arquitectura/01-stack-php-fork-de-radical.md`.
 
 **Referencias:** backend-radical-nutrition para datos, SMS, pagos, administración y envíos; join.nutramerican.com para onboarding, comisiones e instalación PWA por dispositivo; gifts.nutramerican.com para catálogo y compra. Las rutas y tareas completas permanecen en [fases de desarrollo](fases-de-desarrollo.md).
 
@@ -368,7 +368,7 @@ Estas decisiones completan las reglas; no dejan en duda los porcentajes, seis me
 | D-09 | Meta mensual de dietas, rango/costo de puntos, inicio del mes gratis, renovación y reactivación. El texto cita 50.000 y 49.800 puntos. | Negocio y producto | Fase posterior de dietas. |
 | D-10 | Proveedor de pagos/SMS, verificación y conciliación disponibles en repositorios de referencia. | Tecnología y operación | Revisión e integración. |
 | D-11 | Duración y sustitución de cookie, varios QR, cliente existente, cambio de referente, ausencia de referencia y continuidad del 10%. | Negocio y producto | Antes de cerrar atribución/checkout. |
-| D-12 | Base de datos, distribución PWA, infraestructura y tamaño/concurrencia del piloto. | Tecnología y producto | Después de revisar repositorios; Angular y Express ya están definidos. |
+| D-12 | Base de datos, distribución PWA, infraestructura y tamaño/concurrencia del piloto. | Tecnología y producto | Después de revisar repositorios; el backend (fork de radical, PHP 8.5 + MariaDB) y Angular ya están definidos. |
 | D-13 | Condiciones del programa, conservación de datos y permisos operativos/nutricionales. | Negocio y operación | Antes de uso real de cada módulo. |
 
 Las decisiones de dietas no bloquean el MVP comercial.
@@ -392,7 +392,7 @@ Las [fases de desarrollo](fases-de-desarrollo.md) contienen tareas, repositorios
 | Fase | Resultado | Dependencia |
 | --- | --- | --- |
 | 1. Reutilización | Inventario y matriz por componente de los proyectos existentes. | Acceso de lectura a repositorios. |
-| 2. Arquitectura | Datos, módulos Express, áreas Angular, contratos e integraciones. | Fase 1. |
+| 2. Arquitectura | Datos, features del fork de radical (Slim), áreas Angular, contratos e integraciones. | Fase 1. |
 | 3. Acceso y referidos | Registro, recuperación, ambos QR, cookie y relación A–B. | Fase 2. |
 | 4. Compras | Catálogo, descuentos, pagos, IVA y seguimiento de pedidos. | Fase 3. |
 | 5. Recompensas | Comisiones, puntos, puntos por referido, vencimientos y conversión. | Fase 4. |

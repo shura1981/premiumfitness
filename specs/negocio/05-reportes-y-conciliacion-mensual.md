@@ -43,7 +43,7 @@ Reutilizar lo que funciona del sistema actual de comisiones (proceso mensual, co
 | Cierra la conciliación y el Excel es lo que se paga | **Igual:** el Excel del cierre es lo que se paga. La app no registra el pago; los comprobantes de consignación son la evidencia, por fuera del sistema | Decisión de producto (9 nov 2026) |
 | Excel en `public/` con nombre predecible (`report-coupns-7-2026.xlsx`), descargable **sin autenticación** (`reportDownloadController`: «TODO: Implement token validation») | Archivo fuera de la carpeta pública y descarga solo desde el admin autenticado | El Excel trae nombres de clientes, ciudades y comisiones |
 | `tb_cupones_ventas` se llena con un script | La atribución se guarda al comprar (`orders_coupons.trainer_id`) | No hay que reconstruirla |
-| Secreto estático compartido entre el login y el cron | Un secreto exclusivo para el cierre, en una variable de entorno | Si se rota uno, no rompe el otro |
+| Secreto estático compartido entre el login y el cron | `CRON_JOB_TOKEN` de radical, exclusivo de los crons (`CronJobTokenMiddleware`) | Si se rota uno, no rompe el otro |
 
 ## Alcance
 
@@ -92,7 +92,7 @@ Reutilizar lo que funciona del sistema actual de comisiones (proceso mensual, co
 
 ### Proceso de cierre (CU-21)
 
-1. El cron del hosting ejecuta `POST /api/admin/commission-periods/close` con `{ year, month }` y el secreto `COMMISSION_CLOSE_TOKEN`.
+1. El cron del hosting ejecuta `POST /api/admin/commission-periods/close` con `{ year, month }` y el header `X-Cron-Job-Token` (`CRON_JOB_TOKEN`, validado por `CronJobTokenMiddleware` de radical).
 2. Si el período existe, responde 409 (salvo `force`, que solo regenera el Excel y el correo).
 3. En una sola transacción:
    - crea el período;
@@ -134,6 +134,6 @@ El cierre lee un solo mes. Además de los índices del spec `negocio/03`, usa:
 - [x] Documentar qué se extrae y qué se simplifica
 - [x] Añadir `commission_periods` y ajustar `commission_settlements` en `scripts/der/generar_der.py`, y regenerar el DER
 - [x] Actualizar CU-21 en `docs/casos-de-uso-y-actores.md`, y RF-19 y D-03 en el PRD
-- [x] Añadir `COMMISSION_CLOSE_TOKEN` a las variables de entorno de `.agents/rules/codebase-standards.md`
+- [x] Añadir las variables del cierre a `.agents/rules/codebase-standards.md` (se usa `CRON_JOB_TOKEN` de radical en lugar de `COMMISSION_CLOSE_TOKEN`)
 - [x] Definir los destinatarios del correo mensual y si se registra el pago (S-04)
 - [ ] Diseñar el Excel con la skill `xlsx-report-generator` de api-comisiones como referencia (fase de codificación)

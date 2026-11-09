@@ -1,115 +1,215 @@
 ---
-description: 'Estándares de arquitectura, código y mejores prácticas para el repositorio de PremiumFitness. Aplica para cualquier modificación o creación de código.'
-applyTo: '**/*.ts, **/*.js, **/*.json, **/*.html, **/*.css, **/*.scss'
+description: 'Estándares de arquitectura, código y mejores prácticas para el repositorio de PremiumFitness, fork de backend-radical-nutrition. Aplica para cualquier modificación o creación de código.'
+applyTo: '**/*.php, **/*.js, **/*.css, **/*.html'
 ---
 
 # PremiumFitness — Estándares de código
+
+PremiumFitness es un **fork de `backend-radical-nutrition`** (spec `specs/arquitectura/01-stack-php-fork-de-radical.md`). Estas reglas parten de las de radical y añaden las propias del proyecto. Todavía no hay código de aplicación: la primera tarea de codificación es crear el fork.
 
 ## Priority Guidelines
 
 When generating code for this repository:
 
-1. **Version Compatibility**: Always detect and respect the exact versions of languages, frameworks, and libraries used in this project:
-   - Node.js `v20.20.2` (as defined in `.nvmrc`)
-   - TypeScript `^5.0`
-   - Express.js `^4.19` (backend REST API)
-   - Angular `^18.0` (frontend SPA para entrenadores y clientes)
-   - MySQL / MariaDB (motor de persistencia relacional)
-2. **Architectural Consistency**: Maintain our Vertical Slicing / Screaming Architecture style (`src/features`, `src/infrastructure`, `src/shared`) and established boundaries.
-3. **Code Quality**: Prioritize maintainability, strict typing (`strict: true` in `tsconfig.json`), early returns, and security in all generated code.
+1. **Version Compatibility**: Always detect and respect the exact versions of languages, frameworks, and libraries used in this project (PHP 8.5, Slim 4, Firebase JWT, PHPMailer, Symfony RateLimiter/Cache, Pest, PHPStan).
+2. **Codebase Patterns**: When context files don't provide specific guidance, scan the codebase (or radical, before the fork exists) for established patterns.
+3. **Architectural Consistency**: Maintain our Vertical Slicing / Screaming Architecture style (`src/Features`, `src/Infrastructure`, `src/Shared`) and established boundaries.
+4. **Code Quality**: Prioritize maintainability, strict typing (PHPStan), and security in all generated code.
+5. **Specs first**: Follow `.agents/rules/specs-y-progreso.md`. The business rules live in `docs/reglas-de-negocio.md` and `specs/`; the data model in `specs/diseño/01-DER.md`.
 
-## Technology Stack
+## Technology Version Detection
 
-1. **Language & Runtime**:
-   - Node.js LTS (v20.20.2)
-   - TypeScript strict mode (no `any` sin justificación, interfaces explícitas, type safety en parámetros y retornos).
-2. **Backend Framework**:
-   - Express.js con routers modulares por feature slice.
-   - Middlewares: `express.json()`, `express.urlencoded()`, `cors`, `cookie-parser`, `helmet`.
-3. **Database & ORM / Query Builder**:
-   - MySQL pool de conexiones (`mysql2/promise`).
-   - Consultas siempre parametrizadas contra inyecciones SQL.
-4. **Authentication & Security**:
-   - "The Shielded Architecture": Access Token (JWT en memoria, TTL 15m, con `role` y `app`) + Refresh Token (`httpOnly`, `Secure`, `SameSite=Strict` cookie, TTL 30d con rotación, detección de reutilización y revocación en `refresh_tokens`).
-   - Una cookie por app (`pf_rt_client`, `pf_rt_trainer`, `pf_rt_admin`) limitada a la ruta de auth de su app. Login con celular y contraseña; el SMS solo verifica el celular y recupera la contraseña. Admin: `tb_empleados`, sesión de 12 h.
-   - Ningún endpoint emite tokens sin contraseña o sin un código verificado. Spec: `specs/seguridad/01-autenticacion-y-sesiones.md`.
-5. **Testing**:
-   - Vitest / Jest con TypeScript.
-   - Supertest para E2E sobre Express.
-   - Pruebas de integración sobre base de datos MySQL real.
+1. **Language Versions**:
+   - PHP 8.5 strict features: `declare(strict_types=1)`, typed properties, readonly classes/readonly properties, named arguments, match expressions, nullsafe operator, union types.
+   - JavaScript ES6+ for `assets/js/`.
+   - CSS/HTML5 for `views/` and `assets/css/`.
 
-## Organization & Feature Slices
+2. **Framework Versions**:
+   - Slim Framework `^4.15` (PSR-7, fast-route).
+   - Routes split across `app/Routes/ApiRoute.php`, `WebRoute.php`, `ResourceRoute.php`, `AdminRoute.php`.
 
-Todavía no hay código de aplicación. Esta es la estructura objetivo del backend, alineada con los módulos de `docs/fases-de-desarrollo.md` (§2.2), y se valida en la fase de arquitectura. Si al crear el código se decide otra organización, actualiza esta sección.
+3. **Library Versions**:
+   - `firebase/php-jwt ^6.10` — autenticación JWT (HS256).
+   - `phpmailer/phpmailer ^6.9` — envío SMTP.
+   - `vlucas/phpdotenv ^5.6` — variables de entorno.
+   - `symfony/rate-limiter ^8.0` + `symfony/cache ^8.0` — rate limiting con FilesystemAdapter (compartido entre los procesos de LiteSpeed).
+   - `pestphp/pest ^4.6` (dev) — pruebas con base de datos real.
+   - `phpstan/phpstan ^2.0` (dev) — análisis estático estricto.
+   - `ext-curl` — HTTP externo vía `CurlHttpClient`.
 
-El backend se organizará en Vertical Slices bajo `src/`:
+4. **Base de datos y frontend**:
+   - MariaDB 11.8, `utf8mb4_unicode_ci`.
+   - Apps Angular separadas, cada una en su subdominio: clientes, entrenadores y admin.
 
-```
-src/
-├── features/
-│   ├── auth/                  # Registro, verificación de contacto, login, refresh token, recuperación, logout
-│   ├── trainers/              # Perfil y área del entrenador
-│   ├── clients/               # Perfil y área del cliente
-│   ├── referrals/             # QR de clientes y de entrenadores, cookie de referente, atribución, relación A → B
-│   ├── catalog/               # Productos, categorías, detalle
-│   ├── orders/                # Carrito, pedidos con descuento (25% entrenador, 10% cliente), seguimiento
-│   ├── payments/              # Pasarelas de pago y persistencia de respuestas (proveedor por definir)
-│   ├── commissions/           # Comisión del 15% sin IVA, saldo, conversión
-│   ├── points/                # Lotes de puntos, estados, vencimiento a 6 meses, consumo FIFO
-│   ├── redemptions/           # Canje de productos con puntos a precio completo
-│   └── reports/               # Reportes por período y entrenador: ventas, IVA, comisiones, puntos
-├── infrastructure/
-│   ├── database/              # Pool MySQL, migraciones, transacciones
-│   ├── http/                  # Clientes HTTP externos (fetch con timeouts)
-│   ├── mail/                  # Servicio de emails transaccionales
-│   ├── sms/                   # Proveedor de mensajes SMS (OTP)
-│   └── middlewares/           # Auth, error handling, rate limiting, validación
-└── shared/
-    ├── errors/                # AppError, ValidationError, NotFoundError, UnauthorizedError
-    └── utils/                 # Criptografía, formateadores, constantes
-```
+## Feature Slices
 
-Cada feature slice suele contener:
-- `*.controller.ts`: Maneja HTTP Request/Response y valida inputs.
-- `*.service.ts`: Lógica de negocio pura y orquestación.
-- `*.repository.ts`: Interacción SQL parametrizada con la base de datos.
-- `*.validator.ts`: Esquemas de validación (Zod o schemas tipados).
-- `*.routes.ts`: Router Express de la feature.
+Cada feature vive en `src/Features/<FeatureName>/`: Controller, Model, Repository, Validator (varios validadores en `Validators/`) y, cuando hay lógica de negocio, Service.
+
+**Heredadas de radical:** `Address`, `Admin`, `Auth`, `Carrier`, `Category`, `City`, `CityWarehouse`, `CronJob`, `DocumentType`, `Locality`, `Order`, `PaymentGateway`, `Product`, `ProductGroup`, `Reports`, `SapProduct` y `User`.
+
+**De radical a revisar al hacer el fork:** `CreditBalance` (queda fuera del DER), y `PublicStore`, `RetailCheckout`, `RetailAccount` y `Checkout`, porque PremiumFitness no tiene tienda pública.
+
+**Nuevas de PremiumFitness:**
+
+| Feature | Responsabilidad | Spec |
+| --- | --- | --- |
+| `Trainer` | Perfil del entrenador, cupón y enlaces | `negocio/01` |
+| `Referral` | Vínculo cliente → entrenador (enlace o cupón) y referido A → B con sus 50.000 puntos | `negocio/01`, `negocio/02` |
+| `DiscountRule` | Estrategias por producto (`product_discount_rules`) | `negocio/01` |
+| `Commission` | Movimientos, conversión a puntos, cierre mensual y Excel | `negocio/04`, `negocio/05` |
+| `Point` | Lotes, movimientos, consumo FIFO y vencimiento | `negocio/03` |
+| `Redemption` | Canje de productos con puntos a precio completo | CU-12 |
+
+## Codebase Scanning Instructions
+
+1. Analyze patterns for:
+   - **Naming**: PascalCase para clases, camelCase para métodos/variables, SCREAMING_SNAKE para constantes. Tablas y columnas en inglés y `snake_case`.
+   - **Organización**: `src/Features/<Feature>/` para Modelos, Repositorios, Controllers, Services y Validators; `src/Infrastructure/` para servicios transversales (Middlewares, Auth, Database, Http, Mail, Notification, Validation, Controllers, Handlers); `src/Shared/Exceptions/` para excepciones compartidas.
+   - **Error handling**: Lanzar excepciones tipadas desde `src/Shared/Exceptions/`. Los middlewares las capturan y responden HTTP. Usar `HttpRequestException` para errores de APIs externas.
+   - **Routing**: Rutas API en `ApiRoute.php`, admin en `AdminRoute.php`, vistas HTML y SPA en `WebRoute.php`, recursos estáticos en `ResourceRoute.php`.
+   - **Value Objects / readonly classes**: `readonly class` con constructor público o privado + factory estático `fromApiResponse()`/`fromEnv()`.
+   - **Factories estáticas**: `fromEnv()` como único punto de acceso a `$_ENV`. Nunca leer `$_ENV` directamente fuera de estos métodos.
+
+2. Follow the most consistent patterns found in the codebase.
+3. Never introduce patterns not found in the existing codebase.
 
 ## Code Quality Standards
 
-### Maintainability & Clean Code
-- Usar TypeScript estricto.
-- Funciones cortas con **Early Return** para reducir anidación.
-- Manejo asíncrono moderno con `async/await` (evitar cadenas de `.then().catch()`).
-- Encapsular la lógica en servicios y repositorios; los controladores deben ser delgados.
+### Maintainability
+- Siempre incluir `declare(strict_types=1);` en todos los archivos PHP.
+- Usar tipos de retorno explícitos, propiedades tipadas y `readonly` donde aplique.
+- Mantener features encapsuladas en `src/Features/<FeatureName>/`.
+- Métodos orquestadores cortos que deleguen en métodos privados especializados (early return).
 
 ### Security
-- **Inyección SQL**: NUNCA concatenar strings en queries SQL. Usar siempre sentencias preparadas con placeholders `?`.
-- **CORS**: Configurar con dominios permitidos desde `process.env.CORS_ALLOWED_ORIGINS`.
-- **Tokens**: No exponer secrets ni guardar Access Tokens en `localStorage`.
-- **Validación**: Sanitizar y validar todos los cuerpos de petición (`req.body`, `req.query`, `req.params`).
-- **Rate Limiting**: Aplicar limitación de peticiones en endpoints sensibles (autenticación, SMS, OTP).
+- Validar input con `AbstractValidator.php` — reglas: `required`, `string`, `int`, `float`, `email`, `min:N`, `max:N`, `in:a,b,c`, `regex:/pattern/`.
+- `min`/`max` usan `mb_strlen()` para correcta validación UTF-8.
+- PDO parametrizado siempre en `AbstractRepository.php` — nunca concatenar strings en queries.
+- JWT validado en `JwtMiddleware.php` — claims accesibles vía `$request->getAttribute('jwt_claims')`.
+- Contraseñas hasheadas con `PasswordHasher` (ARGON2ID).
+- Rate limiting con `RateLimitMiddleware` en endpoints sensibles (login, registro, códigos SMS) — responde `429` con header `Retry-After`. Limitar por IP **y** por celular.
+- CORS con lista blanca de dominios desde `CORS_ALLOWED_ORIGINS` en `.env`.
+- `JWT_SECRET` y `JWT_REFRESH_SECRET` validados con longitud mínima de 32 caracteres en `load/bootstrap.php`.
+- **Ningún endpoint emite tokens sin contraseña o sin un código verificado.** Al hacer el fork se desactivan `POST /api/auth/login-with-credential` y el autologin por QR de radical.
+
+### Money, points and transactions
+- Ninguna constante de negocio se escribe en el código: se lee de las variables de entorno. Las estrategias por producto (`product_discount_rules`) son datos del catálogo y tienen prioridad sobre los valores por defecto.
+- Cada pedido, línea, referido y conversión guarda el valor que aplicó (porcentaje, IVA, puntos), para que un cambio en las variables no altere el histórico. Los reportes y el cierre **suman** lo guardado; nunca recalculan.
+- Las operaciones que mueven saldo (aprobación del pago, conversión, canje, vencimiento, cierre) van en una sola transacción, con la fila del entrenador bloqueada (`SELECT … FOR UPDATE`) y una clave única de idempotencia.
+- Los importes son `decimal(12,2)` y los puntos enteros, redondeados al entero más cercano (0,5 sube).
 
 ### Performance
-- Reusar el pool de MySQL para todas las conexiones.
-- Cerrar conexiones y recursos apropiadamente.
-- Usar paginación (`LIMIT`, `OFFSET`) en listados grandes.
+- PDO compartido vía `DB::getInstance()` — una sola conexión por request.
+- `FETCH_CLASS` en `AbstractRepository` para mapeo directo a objetos tipados.
+- Los saldos del dashboard se calculan con índices que cubren la consulta (spec `negocio/03`), sin tabla de saldos.
+- Assets estáticos servidos directamente por Apache (nunca pasar por PHP).
+- `TypedArgsStrategy` como estrategia de invocación por defecto: convierte automáticamente params numéricos de ruta a `int`, permitiendo type-hints `int $id` en controllers.
+
+## Authentication
+
+Spec: `specs/seguridad/01-autenticacion-y-sesiones.md`.
+
+- Login con celular (`users.num_cell`, único) y contraseña. Un rol por cuenta: `client` o `trainer`.
+- Access token JWT de 15 min, solo en memoria del frontend, con `sub`, `role` y `app`. Una API rechaza los tokens de otra app.
+- Refresh token de 30 días en cookie `httpOnly`, `Secure`, `SameSite=Strict`, rotado en cada uso y guardado como hash en `refresh_tokens`. Reutilizar uno ya rotado revoca toda la familia.
+- Una cookie por app (`pf_rt_client`, `pf_rt_trainer`, `pf_rt_admin`), limitada a la ruta de auth de su app.
+- Admin: login con `tb_empleados` (externa, **no se toca**: solo lectura), sesión de 12 horas.
+
+## Verification Code Flow
+
+Basado en `VerificationCodeService` de radical, ajustado al spec de autenticación:
+
+1. `generate()` invalida los códigos anteriores del mismo usuario y propósito, genera **6 dígitos**, guarda el **hash** con TTL de 5 minutos y lo envía por el canal.
+2. `verify()` compara en tiempo constante, cuenta los intentos (máximo 5) y marca el código como usado.
+3. Propósitos: `phone_verification` y `password_reset`. El código nunca se devuelve por la API ni se registra en logs.
+
+## Trainer Link Flow
+
+En PremiumFitness el «QR» es un enlace con el id del entrenador en base64 (regla 12). No se usa el autologin por QR de radical.
+
+1. El enlace de clientes abre la app de clientes en el login, y el de entrenadores abre la app de entrenadores.
+2. La app guarda el id hasta el registro o el login, y el backend crea el vínculo (`client_referrals` o `trainer_referrals`).
+3. Un id inválido o de un entrenador inactivo no asocia a nadie.
+
+## Scheduled Jobs
+
+- **Nunca** se programan tareas dentro de la aplicación. LiteSpeed levanta varios procesos y cada uno ejecutaría la tarea (incidente de api-comisiones, spec `negocio/05`).
+- El cron de cPanel llama al endpoint con el header `X-Cron-Job-Token`, que valida `CronJobTokenMiddleware` contra `CRON_JOB_TOKEN`.
+- Cada job es idempotente: el cierre mensual responde 409 si el período ya existe.
+- Jobs: cierre mensual de comisión (día 1, 01:00), vencimiento de lotes de puntos (diario), limpieza de refresh tokens y códigos vencidos (diaria), procesamiento de eventos de pago (radical).
+
+## Email Templates
+
+- Las plantillas de correo son archivos **HTML standalone** en `views/emails/<name>.html`.
+- Los `{{placeholders}}` se reemplazan con `str_replace` directo (sin escapar) — permite pasar HTML pre-construido.
+- `{{subject}}` y `{{year}}` se inyectan automáticamente por `Mailer::send()`.
+- Usar `MailMessage` (fluent builder) + `Mailer::fromEnv()->send()`.
+
+## Notification Channel Pattern
+
+Notificaciones desacopladas del canal mediante la interfaz `NotificationChannelInterface`:
+
+```php
+interface NotificationChannelInterface
+{
+    public function send(string $recipient, string $subject, string $message): void;
+}
+```
+
+- `EmailNotificationChannel` — envío por SMTP vía PHPMailer.
+- `SmsNotificationChannel` — envío por SMS vía Relax Global API (`SMS_API_URL`, `SMS_API_TOKEN`). Proveedor por confirmar (D-10).
+- Los canales se instancian con `SmsNotificationChannel::fromEnv()` o `EmailNotificationChannel::fromEnv()`.
+
+## External HTTP Client Pattern
+
+Usar `CurlHttpClient` para todo consumo de APIs externas:
+
+```php
+$http = new CurlHttpClient();
+$response = $http->request($url, [
+    'method'  => 'POST',
+    'headers' => ['Authorization' => 'Bearer ' . $token],
+    'payload' => $data,
+    'timeout' => 15,
+]);
+$decoded = json_decode($response, true, 512, JSON_THROW_ON_ERROR);
+```
+
+- Lanza `HttpRequestException` en errores HTTP — contiene `statusCode()`, `errorPayload()`, `toError()`.
+- **Nunca** usar `file_get_contents`, `curl_*` directo u otros clientes HTTP.
+
+## Middleware Registration Pattern
+
+Los middlewares se añaden en orden LIFO (el último en añadirse es el primero en ejecutarse):
+
+```php
+// Proteger ruta con JWT + rate limit + validación
+$app->post('/api/trainer/auth/login', [$authController, 'login'])
+    ->add(new ValidationMiddleware(new LoginValidator(), $app->getResponseFactory()))
+    ->add(new RateLimitMiddleware($app->getResponseFactory(), id: 'trainer-login', limit: 5, interval: '1 minute'));
+```
+
+## Private Files
+
+- Los reportes (Excel del cierre) se guardan en `REPORTS_STORAGE_PATH`, fuera de la carpeta pública, y solo se descargan desde el admin autenticado.
 
 ## Environment Variables
 
-Todas las variables de entorno se validan en el inicio de la aplicación y se acceden de forma tipada:
+Todas las variables se validan en `load/bootstrap.php` al arranque. Nunca acceder a `$_ENV` fuera de métodos `fromEnv()`.
 
-```env
-NODE_ENV=development|production
-PORT=3000
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-DB_PASS=secret
-DB_NAME=premiumfitness
-JWT_SECRET=super-secure-secret-minimum-32-chars
-JWT_REFRESH_SECRET=super-secure-refresh-secret-minimum-32-chars
+```
+APP_ENV=development|production
+DB_HOST, DB_NAME, DB_USER, DB_PASS
+CORS_ALLOWED_ORIGINS=https://clientes.dominio.com,https://entrenadores.dominio.com,https://admin.dominio.com
+MAIL_HOST, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD
+MAIL_FROM, MAIL_FROM_NAME, MAIL_ENCRYPTION=tls|ssl
+SAP_API_URL, SAP_API_KEY
+SMS_API_URL, SMS_API_TOKEN
+CRON_JOB_TOKEN=<mínimo 32 caracteres>
+
+# Autenticación (spec seguridad/01)
+JWT_SECRET=<mínimo 32 caracteres>
+JWT_REFRESH_SECRET=<mínimo 32 caracteres>
 JWT_ACCESS_TTL_MINUTES=15
 JWT_REFRESH_TTL_DAYS=30
 ADMIN_SESSION_TTL_HOURS=12
@@ -117,9 +217,8 @@ OTP_LENGTH=6
 OTP_TTL_MINUTES=5
 OTP_MAX_ATTEMPTS=5
 OTP_MAX_SENDS_PER_DAY=10
-CORS_ALLOWED_ORIGINS=http://localhost:4200
 
-# Constantes de negocio (docs/reglas-de-negocio.md, reglas 1, 2, 6, 15 y nota de conversión)
+# Constantes de negocio (reglas 1, 2, 6, 15 y 17 de docs/reglas-de-negocio.md)
 CLIENT_DISCOUNT_PERCENTAGE=10
 TRAINER_DISCOUNT_PERCENTAGE=25
 CLIENT_PURCHASE_POINTS_PERCENTAGE=5
@@ -128,10 +227,41 @@ TRAINER_REFERRAL_POINTS=50000
 POINTS_EXPIRATION_MONTHS=6
 COMMISSION_CONVERSION_PERCENTAGE=50
 
-# Cierre mensual de comisión (lo dispara el cron del hosting; nunca un programador dentro de la app)
-COMMISSION_CLOSE_TOKEN=secreto-exclusivo-del-cierre-minimo-32-caracteres
-COMMISSION_REPORT_RECIPIENTS=financiero1@premiumfitness.co,financiero2@premiumfitness.co
+# Cierre mensual de comisión (spec negocio/05)
+COMMISSION_REPORT_RECIPIENTS=financiero1@dominio.com,financiero2@dominio.com
 REPORTS_STORAGE_PATH=/ruta/privada/fuera/de/public
 ```
 
-Ninguna constante de negocio se escribe en el código: se leen de estas variables. Las estrategias por producto (`product_discount_rules`) son datos del catálogo y tienen prioridad sobre los porcentajes por defecto. Cada pedido, referido y conversión guarda el valor que aplicó, para que un cambio en las variables no altere el histórico (spec `specs/negocio/02-puntos-por-referido-y-constantes.md`).
+## Testing
+
+- Pest con base de datos MariaDB real (skill `backend-testing-pest-realdb`): `composer run test`, `test:unit`, `test:integration`, `test:e2e`.
+- Las reglas de dinero y puntos tienen pruebas con los ejemplos de los specs (por ejemplo, 224.910 → 11.246 puntos; 100.000 + 100.000 → 250.000 puntos tras convertir).
+- `composer run lint` (PHPStan) debe pasar antes de cerrar una tarea.
+
+## Documentation Requirements
+
+- Seguir el formato exacto de documentación encontrado en el codebase.
+- Documentar parámetros, retornos y excepciones para que PHPStan los analice estrictamente.
+- Documentar comportamiento no obvio con comentarios inline breves.
+
+## Technology-Specific Guidelines
+
+### PHP Guidelines
+- Strict adherence to modern PHP 8.5 standards.
+- Use strict typing `declare(strict_types=1);` in all PHP files.
+- Use only PHP language features compatible with the detected version.
+- Match PDO usage patterns from existing code via `AbstractRepository.php`.
+- Apply the dependency injection patterns evident in existing code.
+- Ensure the code passes the strict Linter (PHPStan).
+- Use `readonly class` for value objects de solo lectura.
+
+### JavaScript/HTML/CSS Guidelines
+- Frontend code of this repo goes into `assets/js`, `assets/css` and `views/`.
+- Las apps Angular (clientes, entrenadores y admin) se sirven cada una en su subdominio. Si se compilan dentro de este repo, como hace radical con `SpaController` y `dist/`, o si viven en repos propios, se decide al crear el fork.
+
+## General Best Practices
+
+- Follow naming conventions exactly as they appear in existing code.
+- Respect existing architectural boundaries without exception (Infrastructure should not leak into Features inappropriately).
+- When in doubt, prioritize consistency with existing code over external best practices.
+- Use Composer tasks properly (`composer run start`, `composer run lint`, `composer run test`).

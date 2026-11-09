@@ -29,7 +29,7 @@ Trabajo de revisión:
 2. Revisar registro, verificación SMS, inicio de sesión y recuperación de cuenta.
 3. Revisar creación de pagos, recepción/verificación de resultados, persistencia y conciliación.
 4. Identificar cómo maneja catálogo, precios, IVA, inventario, compra, administración y seguimiento de envíos.
-5. Clasificar cada componente como reutilizable, adaptable, integrable o solo referencia. La lógica PHP que se traslade al nuevo backend deberá adaptarse a Node.js; no se asume compatibilidad directa.
+5. Clasificar cada componente como reutilizable, adaptable, integrable o solo referencia. PremiumFitness es un fork de radical (decisión del 9 nov 2026), así que su código PHP se reutiliza directamente; solo se añade la lógica nueva y se retira lo que no aplica.
 
 ### 1.2. Onboarding y comisiones: join.nutramerican.com
 
@@ -83,12 +83,12 @@ Elegir motor de base de datos, migraciones, índices y restricciones. Diseñar t
 
 ### 2.2. Backend
 
-**Tecnología definida: Node.js con Express.**
+**Tecnología definida: fork de backend-radical-nutrition — PHP 8.5, Slim 4, MariaDB, Pest y PHPStan** (9 nov 2026; antes decía Node.js con Express). Spec: `specs/arquitectura/01-stack-php-fork-de-radical.md`.
 
 - Organizar módulos de identidad, referidos, catálogo, pedidos/pagos, comisiones, puntos, canjes y reportes.
 - Adaptar la autenticación, recuperación por SMS, pasarelas y persistencia de respuestas tomando el backend existente como referencia.
 - Definir contratos de API, permisos por rol, validaciones, errores y procesamiento de eventos repetidos.
-- Planificar tareas de vencimiento y conciliación. La evaluación diaria de dietas pertenece a la fase posterior.
+- Planificar tareas de vencimiento y conciliación con el cron del hosting y `CronJobTokenMiddleware`, nunca con programadores dentro de la app. La evaluación diaria de dietas pertenece a la fase posterior.
 - Definir configuración por entorno, almacenamiento de secretos, registros operativos y despliegue.
 
 ### 2.3. Frontend
