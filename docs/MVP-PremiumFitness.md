@@ -20,7 +20,7 @@ La app de dietas conserva su alcance en el producto y se implementa después del
 | Referidos | QR para clientes, QR para entrenadores, cookie de referente, atribución y relación A → B. | RF-03, RF-04, RF-09 | CU-02, CU-03, CU-06, CU-07 |
 | Comercio | Catálogo, detalle, carrito, dirección, descuentos, pago, pedido y seguimiento. | RF-05 a RF-08, RF-23 | CU-04, CU-13 |
 | Beneficios por venta | Aprobación de compra de cliente, 5% en puntos con IVA incluido y 15% de comisión sin IVA. | RF-10 | CU-05 |
-| Incentivo de referido | 50.000 inactivos para A al registrar B; activación por compra aprobada de cliente de B. | RF-09, RF-20 | CU-07, CU-08 |
+| Puntos por referido | 50.000 puntos pendientes para A al registrar B; activación por compra aprobada de cliente de B. | RF-09, RF-20 | CU-07, CU-08 |
 | Cuenta de recompensas | Comisión convertible, puntos por estado, lotes, remanentes, historial y vencimiento. | RF-11, RF-13 | CU-09, CU-10 |
 | Conversión | Convertir el total de comisión, vista previa, confirmación y movimientos vinculados. | RF-12 | CU-11 |
 | Canje | Productos a precio completo, consumo FIFO, sin pago mixto, IVA y entrega. | RF-14 | CU-12 |
@@ -40,7 +40,7 @@ Entrenador registrado → QR de clientes → registro de cliente y cookie → co
 
 A comparte QR de entrenadores → B se registra → A ve 50.000 inactivos → cliente de B compra → aprobación → activación única de 50.000 para A y recompensas habituales para B.
 
-**Condiciones:** registrar B no activa el bono; los puntos inactivos no permiten canjear; repetir la aprobación o recibir otra venta no vuelve a activar el mismo incentivo.
+**Condiciones:** registrar B no activa los puntos; los puntos pendientes no permiten canjear ni caducan; repetir la aprobación o recibir otra venta no vuelve a activarlos; la compra propia de B no los activa.
 
 ### 3.3. Compra propia, conversión y canje
 
@@ -56,7 +56,7 @@ La conversión parcial y el pago mixto no forman parte de estos flujos. No se co
 | --- | --- | --- |
 | Acceso | Registro, verificación, ingreso, recuperación | Rol, datos requeridos, referente si aplica y errores recuperables. |
 | Entrenador | Inicio y perfil | Acumulado de comisiones, saldo convertible, puntos disponibles/inactivos, próximos vencimientos. |
-| Referidos | Dos QR y consulta de referidos | Destino de cada QR, B registrados y estado de cada bono. |
+| Referidos | Dos QR y consulta de referidos | Destino de cada QR, B registrados y estado de sus 50.000 puntos. |
 | Recompensas | Historial, detalle de lote y conversión | Origen, fecha, importe, base, remanente, caducidad, puntos a recibir y comprobante. |
 | Compras | Catálogo, detalle, carrito, dirección, pago, resultado y pedidos | Precio, descuento, IVA, total, estado y seguimiento. |
 | Canjes | Selección, confirmación y detalle | Precio completo en puntos, saldo previo/posterior y entrega. |
@@ -75,7 +75,7 @@ Adaptar la UX de comisiones y onboarding de `join.nutramerican.com`, la compra d
 | A-05 | Aprobar compra pagada de 119.000 con IVA y descuento ya aplicado (base de 100.000 sin IVA al 19%) | 5.950 puntos y 15.000 de comisión; movimientos relacionados con el pedido. |
 | A-06 | Repetir la aprobación de A-05 | Saldos sin nuevas acreditaciones. |
 | A-07 | B se registra desde A sin ventas | A ve 50.000 inactivos, excluidos del saldo canjeable. |
-| A-08 | Primera compra aprobada de un cliente de B | Activa una vez los 50.000 de A y acredita recompensas de B; otra aprobación no duplica el bono. |
+| A-08 | Primera compra aprobada de un cliente de B | Activa una vez los 50.000 de A y acredita recompensas de B; otra aprobación no duplica los 50.000 puntos. |
 | A-09 | Comprar como entrenador con dinero | Aplica 25% al portafolio y registra IVA/pedido. |
 | A-10 | Canjear Bipro Classic de 249.900 | Exige 249.900 puntos; rechaza descuento del 25% y pago mixto. |
 | A-11 | Canjear 249.900 con lotes vigentes de 100.000 y 200.000, en ese orden | Consume 100.000 del primero y 149.900 del segundo; conserva 50.100. |
@@ -95,7 +95,6 @@ A-05 parte de un valor ya pagado, con el descuento aplicado y sin envío; los pu
 - Definir orden de cálculo, cargos elegibles y redondeo; cargar catálogo con IVA y precios correctos.
 - Resolver fórmula del incentivo del 50% para convertir comisiones.
 - Definir política de cookie, referencia existente y continuidad del descuento del cliente.
-- Precisar corte de caducidad y vigencia del bono inicialmente inactivo.
 - Seleccionar/verificar pagos y SMS; definir entrega, devoluciones, restituciones y responsables de operación.
 - Preparar entornos, permisos, copias y restauración; conciliar un conjunto de compras y canjes de prueba.
 

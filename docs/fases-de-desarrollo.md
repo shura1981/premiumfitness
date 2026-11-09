@@ -77,7 +77,7 @@ Tomar como referencia el modelo de `backend-radical-nutrition` y definir las ent
 - Comisiones con origen, importe, estado y saldo convertible.
 - Lotes de puntos con origen, cantidad, remanente, activación y caducidad.
 - Movimientos de puntos, conversiones, canjes y consumos de cada lote.
-- Registro de activación del bono de referido y auditoría de operaciones.
+- Registro de activación de los 50.000 puntos por referido y auditoría de operaciones.
 
 Elegir motor de base de datos, migraciones, índices y restricciones. Diseñar transacciones para impedir doble consumo, duplicación de recompensas y pérdida de trazabilidad.
 
@@ -118,13 +118,13 @@ Elegir motor de base de datos, migraciones, índices y restricciones. Diseñar t
 - Inicio de sesión, perfil y acceso separado para cliente y entrenador.
 - QR para clientes y QR para entrenadores, con destinos diferenciados.
 - Guardar en cookie el ID del entrenador en el recorrido del cliente.
-- Persistir la atribución necesaria para pedidos y la relación A → B para el bono.
-- Registrar el incentivo de 50.000 puntos de A como inactivo cuando B completa el registro referido.
+- Persistir la atribución necesaria para pedidos y la relación A → B para los 50.000 puntos.
+- Registrar los 50.000 puntos de A como pendientes en el referido cuando B completa el registro.
 - Mostrar mensajes para QR inválido, registro incompleto y referencia no disponible; aplicar la política definida para usuarios existentes y varios QR.
 
 **Entregables:** recorridos de registro operativos, ambos QR, perfiles y relaciones de referencia.
 
-**Aceptación:** se identifica quién refirió a cada participante; el registro de B no libera el bono; un usuario no consulta datos privados de otro. La política de cookie y sustitución de referente está documentada.
+**Aceptación:** se identifica quién refirió a cada participante; el registro de B no libera los 50.000 puntos; un usuario no consulta datos privados de otro. La política de cookie y sustitución de referente está documentada.
 
 ## Fase 4. Implementar catálogo, compras, pagos y pedidos
 
@@ -144,7 +144,7 @@ Elegir motor de base de datos, migraciones, índices y restricciones. Diseñar t
 
 **Aceptación:** se comprueban descuentos y desglose; el retorno del navegador no basta para aprobar; un pago rechazado no genera beneficios. Repetir una notificación no duplica la operación.
 
-## Fase 5. Implementar comisiones, puntos e incentivo por referido
+## Fase 5. Implementar comisiones, puntos y puntos por referido
 
 **Depende de:** fase 4. **Cobertura:** CU-05, CU-08, CU-09, CU-10 y CU-11.
 
@@ -158,7 +158,7 @@ Elegir motor de base de datos, migraciones, índices y restricciones. Diseñar t
 - Implementar conversión del total de comisión con vista previa y débito/crédito indivisibles, después de precisar la fórmula del incentivo del 50%.
 - Registrar ajustes sin borrar movimientos originales, conforme a la política de devoluciones acordada.
 
-**Entregables:** cuenta de comisiones y puntos, bono activable, historial, vencimientos y conversión.
+**Entregables:** cuenta de comisiones y puntos, activación de los puntos por referido, historial, vencimientos y conversión.
 
 **Aceptación:** no hay recompensas sin aprobación ni duplicados por reintentos; cada saldo se reconstruye desde movimientos. La conversión consume el total una sola vez. Si falta su fórmula, queda pendiente y no se declara completada esa función.
 

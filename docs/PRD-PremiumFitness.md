@@ -74,7 +74,7 @@ El entrenador no podrá consultar pagos privados, credenciales o saldos de otros
 4. Catálogo, detalle, carrito, direcciones, compra, pago y consulta/seguimiento de pedidos.
 5. Descuentos de 10% para el cliente referido y 25% para compras del entrenador con dinero.
 6. Aprobación verificable y registro separado de comisiones y puntos por compras de clientes.
-7. Referido A → B y activación del incentivo de 50.000 puntos.
+7. Referido A → B y activación de los 50.000 puntos de A.
 8. Saldos e historial por lote, vigencia de seis meses, consumo FIFO y remanentes.
 9. Conversión del total de comisión a puntos, con fórmula del incentivo precisada antes de habilitarla.
 10. Canje de productos a precio completo y sin pagos mixtos, con registro de IVA.
@@ -101,7 +101,7 @@ Los avisos externos, exportaciones avanzadas y automatización de soporte son me
 2. Accede a su perfil, resumen de comisiones/puntos y los dos QR.
 3. Puede compartir la invitación para clientes o para entrenadores.
 
-El registro no otorga un bono de bienvenida. Si proviene del QR de A, se conserva la relación y se registra el incentivo inactivo para A, como se describe en 6.4.
+El registro no otorga un bono de bienvenida. Si proviene del QR de A, se conserva la relación y quedan 50.000 puntos pendientes para A, como se describe en 6.4.
 
 ### 6.2. Registro del cliente y atribución — CU-02 y CU-03
 
@@ -126,12 +126,12 @@ Un pedido pendiente o rechazado no genera recompensas. La aprobación repetida n
 ### 6.4. Referido de entrenador — CU-06, CU-07 y CU-08
 
 1. A comparte su QR para entrenadores; B completa el registro desde esa invitación.
-2. Se registra A → B y un incentivo de 50.000 puntos inactivos para A, separado del saldo utilizable.
+2. Se registra A → B con 50.000 puntos pendientes para A (`TRAINER_REFERRAL_POINTS`), separados del saldo utilizable. Los puntos pendientes no caducan.
 3. B comparte su QR de clientes; uno de sus clientes compra.
 4. Al aprobarse esa compra, se activan los 50.000 puntos de A y se acreditan a B los beneficios habituales de su venta.
-5. Se guarda el pedido que activó el bono para evitar volver a activarlo.
+5. Se guarda el pedido que activó los puntos para no volver a activarlos. Si ese pedido se cancela o devuelve y A no ha usado los puntos, se retiran y vuelven a quedar pendientes; si los usó, los conserva.
 
-Se usa aprobación por continuidad con el primer flujo de compra. La activación única por relación A → B es el control derivado para no duplicar el mismo incentivo; nuevas ventas de B no crean otro bono de ese registro. No se añade comisión de la venta a A ni cadena multinivel.
+Se usa aprobación por continuidad con el primer flujo de compra. La activación única por relación A → B es el control derivado para no duplicar los 50.000 puntos; nuevas ventas de los clientes de B no crean otro lote. La compra propia de B no los activa y no hay monto mínimo (confirmado el 9 nov 2026). No se añade comisión de la venta a A ni cadena multinivel.
 
 ### 6.5. Consulta y conversión — CU-09, CU-10 y CU-11
 
@@ -201,12 +201,12 @@ El ejemplo de requerimientos que asigna 12.500 puntos a un precio de 249.900 usa
 
 ### 7.3. Integridad, disponibilidad y vencimiento
 
-- Cada compra, incentivo, conversión, canje y ajuste conserva una clave de origen única. Repetir una solicitud no crea otro beneficio.
-- Cada acumulación genera un lote con cantidad inicial, remanente y fecha de caducidad. El bono referido comienza inactivo.
+- Cada compra, referido activado, conversión, canje y ajuste conserva una clave de origen única. Repetir una solicitud no crea otro beneficio.
+- Cada acumulación genera un lote con cantidad inicial, remanente y fecha de caducidad. Los 50.000 puntos por referido no son un lote mientras están pendientes: el lote se crea al activarse.
 - El saldo canjeable suma remanentes activados y no caducados; excluye puntos usados, vencidos e inactivos aunque una tarea programada se retrase.
 - FIFO usa la fecha de acumulación de los lotes disponibles, con desempate estable por identificador; no se reemplaza por ordenar únicamente por vencimiento.
 - Un lote parcialmente consumido mantiene su fecha de caducidad original. Un consumo no renueva su vigencia.
-- Las conversiones crean un nuevo lote con seis meses de vigencia. El inicio del plazo para un bono registrado inactivo se precisa en §14.
+- Las conversiones crean un nuevo lote con seis meses de vigencia. Los 50.000 puntos por referido vencen a los seis meses de activarse; mientras están pendientes no caducan.
 - Se propone computar meses calendario y resolver fin de mes según la zona horaria acordada. Es una precisión técnica pendiente, no un cambio al plazo de seis meses.
 - Débitos y créditos se ejecutan con transacciones; el servidor verifica saldo, precio, permisos y estado al confirmar.
 - Los cambios de reglas aplican a operaciones futuras; el historial conserva la versión del cálculo original.
@@ -217,7 +217,7 @@ Las fuentes no fijan la política completa de devoluciones. Se conserva esta pro
 
 - Compra rechazada o cancelada antes de aprobarse: sin recompensas.
 - Devolución total: reversión de beneficios del pedido; parcial: recálculo sobre los importes conservados y ajuste de la diferencia, sin exceder el beneficio original.
-- Devolución de la venta que activó un referido: definir si revierte el bono de A y qué ocurre si ya se consumió.
+- Devolución de la venta que activó un referido: si A no ha usado los 50.000 puntos, se retiran (o su remanente) y vuelven a quedar pendientes; si los usó, los conserva.
 - Si puntos/comisiones ya se consumieron, definir compensación o deuda de ajuste antes de aplicarla; no imponer un bloqueo sin política acordada.
 - Canje no entregable: restitución trazable con vigencia por definir; no renovar ni perder puntos silenciosamente.
 - Los ajustes registran actor, motivo y operación original. No se borra el historial ni se descuenta dos veces un mismo saldo por reintentos.
@@ -236,7 +236,7 @@ Las fuentes no fijan la política completa de devoluciones. Se conserva esta pro
 | RF-06 | MVP | Descuento cliente | La compra elegible muestra 10%, IVA y total antes de confirmar y en el pedido. |
 | RF-07 | MVP | Pago | Aprobación verificada; resultado persistido; un retorno del navegador no basta y los duplicados no generan beneficios extra. |
 | RF-08 | MVP | Pedidos | Cada comprador consulta estado, productos, dirección y seguimiento según el alcance logístico. |
-| RF-09 | MVP | Registro de referido | Registrar B desde A crea relación y 50.000 puntos inactivos para A, sin bono de bienvenida para B. |
+| RF-09 | MVP | Registro de referido | Registrar B desde A crea relación y 50.000 puntos pendientes para A, sin bono de bienvenida para B. |
 | RF-10 | MVP | Recompensas | Compra aprobada de cliente genera 5% en puntos (con IVA incluido) y 15% de comisión (sin IVA) una sola vez, con origen trazable. |
 | RF-11 | MVP | Saldos e historial | Distingue comisión convertible y puntos inactivos, disponibles, usados y caducados; muestra remanentes y vencimientos. |
 | RF-12 | MVP | Conversión total | Con fórmula resuelta, consume todo el saldo de comisión confirmado y acredita puntos una sola vez; si falla, no deja saldos a medias. |
@@ -247,7 +247,7 @@ Las fuentes no fijan la política completa de devoluciones. Se conserva esta pro
 | RF-17 | MVP | Ajustes | Cancelaciones/devoluciones generan ajustes según la política acordada, ligados al original y sin duplicados. |
 | RF-18 | Mejora | Avisos externos | Si se incorporan, los fallos de envío no revierten compras, conversiones ni canjes. |
 | RF-19 | MVP | Reportes | Por período y entrenador: ventas/IVA, IVA de canjes, comisiones y puntos emitidos, redimidos, vencidos y disponibles conciliados. |
-| RF-20 | MVP | Activar incentivo | Primera compra aprobada de un cliente de B activa una sola vez el bono existente de A. B recibe sus recompensas normales. |
+| RF-20 | MVP | Activar puntos por referido | Primera compra aprobada de un cliente de B activa una sola vez los 50.000 puntos de A, sin monto mínimo. La compra propia de B no cuenta. B recibe sus recompensas normales. |
 | RF-21 | Mejora | Aviso de vencimiento | Avisos por lote y canal sin duplicados. Las fechas visibles sí forman parte del MVP. |
 | RF-22 | Fuera | Liquidación bancaria | Requiere un alcance específico; la consulta de comisión no promete retiro bancario. |
 | RF-23 | MVP | Compra entrenador | 25% en compra con dinero sobre todo el portafolio; no se aplica en canjes ni se mezcla dinero/puntos. |
@@ -260,7 +260,7 @@ Se conservan los identificadores del PRD anterior para facilitar revisión: RF-0
 | --- | --- | --- |
 | Acceso | Registro, verificación, inicio y recuperación | Rol, contacto, referente cuando corresponda y errores. |
 | Entrenador | Inicio y perfil | Comisiones, puntos por estado, vencimientos y accesos a QR/compra/canje. |
-| Referidos | QR clientes, QR entrenadores, relaciones | Referente, invitados y estado del bono de cada B. |
+| Referidos | QR clientes, QR entrenadores, relaciones | Referente, invitados y estado de los 50.000 puntos de cada B (pendientes o activados). |
 | Recompensas | Historial, detalle de lote, comisiones y conversión | Origen, base sin IVA, importe/puntos, remanente, fecha y vista previa. |
 | Compra/canje | Catálogo, producto, carrito, confirmación y pedidos | Descuento aplicable o precio completo en puntos, IVA, saldo y entrega. |
 | Cliente | Registro por QR, perfil, catálogo y pedidos | Entrenador, 10%, dirección, pago y seguimiento. |
@@ -281,7 +281,7 @@ Se conservan los identificadores del PRD anterior para facilitar revisión: RF-0
 | --- | --- |
 | Usuario, perfil y dirección | Identidad, rol, contacto, estado, datos de entrega y permisos. |
 | Referencia cliente–entrenador | Entrenador, cliente, origen/QR, fechas y política de asociación. |
-| Referido A–B | Participantes, registro, incentivo inactivo/activo y pedido que lo activó. |
+| Referido A–B | Participantes, registro, 50.000 puntos pendientes o activados y pedido que los activó. |
 | Producto y línea de pedido | Cantidad, precio completo, descuento, tasa/base/importe de IVA y total de la operación. |
 | Pedido, pago y envío | Comprador, atribución, dirección, estado, referencia externa, respuesta verificada y seguimiento. |
 | Movimiento de comisión | Pedido origen, base, porcentaje, importe, saldo convertible, conversión y ajuste relacionado. |
@@ -298,7 +298,7 @@ Se conservan los identificadores del PRD anterior para facilitar revisión: RF-0
 - **Pago:** pendiente, aprobado, rechazado o cancelado; devoluciones separadas según la política acordada.
 - **Pedido — propuesta:** creado, pendiente de pago, aprobado, en preparación, enviado y entregado; cancelaciones/devoluciones conservan historial.
 - **Comisión:** disponible tras compra aprobada, consumida por conversión o ajustada; la liquidación bancaria queda fuera.
-- **Lote:** inactivo para bono aún no habilitado, disponible, usado o caducado. Un lote parcial conserva remanente; el estado no sustituye las cantidades.
+- **Lote:** disponible, usado o caducado. Un lote parcial conserva remanente; el estado no sustituye las cantidades.
 - **Canje — propuesta:** solicitado, confirmado, en entrega, entregado o cancelado con restitución trazable.
 - **Dietas — posterior:** prueba gratuita, acceso por meta, acceso por puntos o desactivado.
 
@@ -324,13 +324,13 @@ Los siguientes objetivos son propuestas para dimensionar y verificar el piloto:
 
 ## 12. Instrumentación y operación
 
-Registrar eventos de registro de entrenador, apertura de QR, vinculación de cliente, registro de B, inicio de compra, aprobación verificada, recompensa acreditada, bono activado, conversión, canje, vencimiento y ajuste. Dietas incorporará evaluación y cambio de acceso en su etapa.
+Registrar eventos de registro de entrenador, apertura de QR, vinculación de cliente, registro de B, inicio de compra, aprobación verificada, recompensa acreditada, puntos por referido activados, conversión, canje, vencimiento y ajuste. Dietas incorporará evaluación y cambio de acceso en su etapa.
 
 Cada evento transaccional conserva fecha, actor, operación de origen y versión de regla. La información analítica no modifica los saldos; pedidos y movimientos son la fuente de verdad.
 
 Conciliar pagos, pedidos, comisiones y puntos. Si una compra está aprobada y falla la acreditación, registrar el procesamiento pendiente y reintentarlo sin duplicar beneficios; no revertir el pago por un fallo de visualización.
 
-Los reportes distinguen acumulado histórico y saldo actual, bonos inactivos/activados, puntos usados/caducados, comisión generada/convertida/ajustada e IVA de ventas/canjes. Deben permitir llegar al pedido o canje que explica cada cifra. La operación define responsables de entrega, incidencias y conciliación antes del piloto.
+Los reportes distinguen acumulado histórico y saldo actual, puntos por referido pendientes/activados, puntos usados/caducados, comisión generada/convertida/ajustada e IVA de ventas/canjes. Deben permitir llegar al pedido o canje que explica cada cifra. La operación define responsables de entrega, incidencias y conciliación antes del piloto.
 
 ## 13. Casos límite que deben resolverse
 
@@ -362,8 +362,8 @@ Estas decisiones completan las reglas; no dejan en duda los porcentajes, seis me
 | D-03 | Puntos resueltos el 9 nov 2026: 5% de lo pagado por los productos (con descuento e IVA, sin envío), por pedido y redondeado al entero más cercano. Pendientes de la comisión: base antes o después del descuento, envío, promociones y redondeo. | Negocio y finanzas | Antes de activar recompensas reales. Los puntos incluyen IVA; la comisión lo excluye. |
 | D-04 | Fórmula del 50%: si se calcula sobre comisión o puntos acumulados y qué cantidad final acredita. | Negocio y finanzas | Bloquea conversión, no el desarrollo de los otros módulos. |
 | D-05 | Registro, verificación, coexistencia de roles y tratamiento de autorreferidos/cuentas duplicadas. | Producto y tecnología | Acceso y referidos. |
-| D-06 | Inicio de vigencia del bono inactivo y tratamiento de su caducidad antes de una venta. | Negocio | Antes de activar vencimiento de incentivos. |
-| D-07 | Corte exacto de seis meses y política de devolución con beneficios consumidos, incluyendo bono de A y puntos restituidos. | Negocio y finanzas | Antes del piloto. |
+| D-06 | Resuelta el 9 nov 2026: los 50.000 puntos pendientes no caducan; una vez activados, vencen a los seis meses. | Negocio | — |
+| D-07 | Corte exacto de seis meses y política de devolución con beneficios consumidos, incluyendo puntos restituidos (los 50.000 puntos de A ya tienen regla). | Negocio y finanzas | Antes del piloto. |
 | D-08 | Tratamiento de comisiones no convertidas y eventual liquidación externa. | Negocio | Comunicación al entrenador; no implica implementar pago bancario. |
 | D-09 | Meta mensual de dietas, rango/costo de puntos, inicio del mes gratis, renovación y reactivación. El texto cita 50.000 y 49.800 puntos. | Negocio y producto | Fase posterior de dietas. |
 | D-10 | Proveedor de pagos/SMS, verificación y conciliación disponibles en repositorios de referencia. | Tecnología y operación | Revisión e integración. |
@@ -378,8 +378,8 @@ La conversión puede permanecer deshabilitada en un piloto parcial, identificado
 | Riesgo | Consecuencia | Mitigación propuesta |
 | --- | --- | --- |
 | Combinación de descuento, comisión y puntos sin validar margen | Incentivos económicamente insostenibles | Aprobar un modelo de margen por producto antes del piloto. El costo de puntos depende de su canje y no equivale automáticamente al 5 % en efectivo. |
-| Aplicación inconsistente de equivalencia o activación del bono | Expectativas y saldos inconsistentes | Mostrar 1 peso = 1 punto y el origen/estado del incentivo; verificar su activación única. |
-| Registros repetidos y autorreferidos | Abuso de bonos y recompensas | Verificación, límites, trazabilidad y revisión de casos sospechosos con criterios acordados. |
+| Aplicación inconsistente de equivalencia o activación de los puntos por referido | Expectativas y saldos inconsistentes | Mostrar 1 peso = 1 punto y el origen/estado de los puntos por referido; verificar su activación única. |
+| Registros repetidos y autorreferidos | Abuso de puntos por referido y recompensas | Verificación, límites, trazabilidad y revisión de casos sospechosos con criterios acordados. |
 | Duplicación de pagos o recompensas | Diferencias financieras | Idempotencia, transacciones y conciliación con alertas. |
 | Devoluciones posteriores al canje | Saldo sin respaldo | Política explícita de ajustes y conciliación, respetando la acreditación al aprobar la compra. |
 | App de dietas sin backend SaaS ni parámetros de acceso | Entrega posterior incompleta | Revisar Flutter/Angular, construir backend y precisar meta y costo antes de esa fase. |
@@ -395,7 +395,7 @@ Las [fases de desarrollo](fases-de-desarrollo.md) contienen tareas, repositorios
 | 2. Arquitectura | Datos, módulos Express, áreas Angular, contratos e integraciones. | Fase 1. |
 | 3. Acceso y referidos | Registro, recuperación, ambos QR, cookie y relación A–B. | Fase 2. |
 | 4. Compras | Catálogo, descuentos, pagos, IVA y seguimiento de pedidos. | Fase 3. |
-| 5. Recompensas | Comisiones, puntos, incentivo, vencimientos y conversión. | Fase 4; fórmula para conversión. |
+| 5. Recompensas | Comisiones, puntos, puntos por referido, vencimientos y conversión. | Fase 4; fórmula para conversión. |
 | 6. Canjes y reportes | FIFO, remanentes, entrega, IVA, operación y conciliación. | Fase 5. |
 | 7. Piloto | Validación, despliegue controlado y operación preparada. | Fases 3–6. |
 | 8. Dietas | App adaptada y backend SaaS con acceso condicionado. | MVP comercial y parámetros de dietas. |

@@ -46,7 +46,7 @@ El alcance confirmado comprende:
 3. Asociación del cliente con el entrenador, por el enlace o por su cupón.
 4. Compras de clientes con un descuento del 10%.
 5. Reconocimiento al entrenador del 5% en puntos (con IVA incluido) y del 15% de comisión sin IVA cuando una compra es aprobada. Los porcentajes son configurables por producto.
-6. Un incentivo por referir entrenadores, sujeto a la condición de venta indicada en los requisitos y a las aclaraciones correspondientes.
+6. 50.000 puntos por referir a otro entrenador, que se activan con la primera compra aprobada de un cliente del referido.
 7. Conversión del total de la comisión a puntos, con fórmula pendiente.
 8. Canje de puntos por productos exclusivamente a través de la app.
 9. Descuento del 25% para entrenadores en todo el portafolio.
@@ -79,7 +79,7 @@ Estas denominaciones distinguen participantes de una operación. **No son roles 
 | Participación | Descripción | Ejemplo |
 | --- | --- | --- |
 | Entrenador referente de clientes | Comparte su enlace para clientes o recibe clientes por su cupón, y es el destinatario de los beneficios de las compras atribuidas. | Un entrenador comparte su enlace por WhatsApp con un cliente que luego compra. |
-| Entrenador A o referente de entrenadores | Comparte el enlace para entrenadores y recibe el incentivo sujeto a activación. | A invita a B. |
+| Entrenador A o referente de entrenadores | Comparte el enlace para entrenadores y recibe 50.000 puntos cuando un cliente de B compra por primera vez. | A invita a B. |
 | Entrenador B o referido | Recibe el enlace para entrenadores y se registra en la app de entrenadores. | B se registra a partir del enlace de A. |
 | Entrenador comprador | Utiliza el descuento del 25% o canjea puntos por productos. | Un entrenador compra un producto del portafolio. |
 
@@ -110,7 +110,7 @@ No se incluyen como actores un operador de bodega ni un soporte, porque ni los r
 | RN-04 | Las recompensas al entrenador por una venta se reconocen cuando la compra está aprobada. | Confirmado. Los demás estados no se definen. | «Cuando la compra sea Aprobada…». |
 | RN-05 | El entrenador recibe en puntos el 5% de lo que pagó el cliente por los productos (con descuento y con IVA, sin envío), calculado sobre el total del pedido y redondeado al entero más cercano. | Confirmado; base, redondeo y envío definidos por producto el 9 nov 2026. | Párrafo de aprobación y beneficio 1. |
 | RN-06 | El entrenador recibe una comisión sobre el valor sin IVA de cada producto comprado. El porcentaje por defecto es del 15% y puede variar por producto (RN-22). | Confirmado por el párrafo de aprobación; existe una contradicción posterior sobre el beneficiario. | Párrafo de aprobación y beneficio 2. |
-| RN-07 | El entrenador A recibe un incentivo por referir otro entrenador, con activación condicionada a una venta con clientes en la app. | Confirmado en intención. Monto expresado como «50.000 mil puntos» y participante que debe vender pendientes de aclaración. | Párrafo posterior a «Entrenador comparte qr con otro entrenador». |
+| RN-07 | El entrenador A recibe 50.000 puntos por referir a otro entrenador (B). Quedan pendientes al registrarse B y se activan una sola vez con la primera compra aprobada de un cliente de B, sin monto mínimo. La compra propia de B no los activa. Los puntos pendientes no caducan; una vez activados, vencen a los 6 meses. | Confirmado por producto (9 nov 2026). El monto es la variable de entorno `TRAINER_REFERRAL_POINTS`. | Párrafo posterior a «Entrenador comparte qr con otro entrenador». |
 | RN-08 | La app de dietas opera en modalidad de suscripción y se desactiva si el entrenador incumple una regla de negocio. | Confirmado. Regla, evaluación y alcance de la desactivación pendientes. | Beneficios para entrenadores, punto 1. |
 | RN-09 | Los puntos se canjean por productos exclusivamente en la app; no se entregan en efectivo. | Confirmado. | Beneficios, punto 2, y último párrafo. |
 | RN-10 | El entrenador tiene un descuento para todo el portafolio, del 25% por defecto y configurable. | Confirmado. Acumulación con otros beneficios pendiente. | Beneficios para entrenadores, punto 3. |
@@ -125,7 +125,7 @@ No se incluyen como actores un operador de bodega ni un soporte, porque ni los r
 | RN-19 | El comprador puede consultar el estado de su pedido y, cuando existe guía, el rastreo en la transportadora. | Confirmado por producto. No se define un historial de cambios de estado. | Confirmación del 7 nov 2026; radical. |
 | RN-20 | Cada entrenador tiene un cupón con nombre único. Un cliente sin entrenador puede asociarse escribiendo ese cupón. Un cliente ya asociado no ve el campo del cupón y no cambia de entrenador por sí mismo. | Confirmado por producto. | Confirmación del 9 nov 2026. |
 | RN-21 | Un cliente sin entrenador puede comprar a precio completo; su compra no genera descuento ni recompensas. | Confirmado por producto. | Confirmación del 9 nov 2026. |
-| RN-22 | Los porcentajes no están fijos en el código. Descuento del cliente, descuento del entrenador, puntos y comisión tienen valores por defecto configurables (10%, 25%, 5% y 15%). Cada producto puede tener una estrategia propia; por ejemplo, Nutra Balance da un 5% más de descuento (15%) y su comisión baja al 10%. | Confirmado por producto. Falta definir quién administra las estrategias y si pueden tener vigencia. | Confirmación del 9 nov 2026. |
+| RN-22 | Los porcentajes no están fijos en el código. Descuento del cliente, descuento del entrenador, puntos y comisión tienen valores por defecto (10%, 25%, 5% y 15%) que, como los 50.000 puntos por referido, los 6 meses de vencimiento y el 50% de conversión, se definen en variables de entorno. Cada producto puede tener una estrategia propia; por ejemplo, Nutra Balance da un 5% más de descuento (15%) y su comisión baja al 10%. | Confirmado por producto. Falta definir quién administra las estrategias y si pueden tener vigencia. | Confirmación del 9 nov 2026. |
 
 ### 4.1. Interpretación de importes y porcentajes
 
@@ -148,7 +148,7 @@ La restricción de no entregar efectivo se refiere expresamente al canje de punt
 | CU-05 | Reconocer puntos y comisión por compra aprobada | Entrenador beneficiario; evento de aprobación como disparador | Confirmado; cálculos incompletos. |
 | CU-06 | Compartir el enlace para entrenadores | Entrenador A | Confirmado; enlace confirmado por producto. |
 | CU-07 | Registrar entrenador referido | Entrenador B | Derivado del flujo confirmado de referidos. |
-| CU-08 | Activar incentivo por entrenador referido | Entrenador A beneficiario; venta como disparador | Confirmado; condición y monto ambiguos. |
+| CU-08 | Activar los 50.000 puntos por entrenador referido | Entrenador A beneficiario; primera compra aprobada de un cliente de B como disparador | Confirmado por producto (9 nov 2026). |
 | CU-09 | Consultar puntos y movimientos | Entrenador | Derivado para permitir el uso informado de puntos. |
 | CU-10 | Consultar comisiones | Entrenador | Derivado para permitir una conversión informada. |
 | CU-11 | Convertir el total de la comisión a puntos | Entrenador | Confirmado; fórmula pendiente. |
@@ -308,55 +308,67 @@ La restricción de no entregar efectivo se refiere expresamente al canje de punt
 
 **Alternativas y errores:** un id inválido no identifica a A; B puede registrarse sin referente.
 
-**Resultado:** invitación a B compartida. Compartir el enlace no basta para activar el incentivo.
+**Resultado:** invitación a B compartida. Compartir el enlace no basta para activar los 50.000 puntos.
 
 **Criterio de aceptación:** el enlace para entrenadores abre la app de entrenadores e identifica a A; no se confunde con el enlace para clientes.
 
 ### CU-07. Registrar entrenador referido
 
-- **Objetivo:** registrar a B y conservar qué entrenador lo invitó para evaluar el incentivo.
+- **Objetivo:** registrar a B y dejar pendientes los 50.000 puntos de A.
 - **Actor:** ACT-01 como entrenador B; A participa como referente.
 - **Disparador:** B abre el enlace para entrenadores de A.
 - **Precondiciones:** A registrado y enlace con su id.
 - **Reglas:** RN-01 y RN-07.
-- **Clasificación:** detalle derivado del flujo de invitación; los requisitos no describen su almacenamiento ni su interfaz.
+- **Clasificación:** Confirmado por producto (9 nov 2026).
 
 **Flujo principal:**
 
 1. B abre el enlace compartido por A en la app de entrenadores.
 2. El sistema identifica a A como referente.
 3. B completa CU-01.
-4. Se conserva la relación A → B para poder comprobar la condición del incentivo. Esta persistencia es una necesidad derivada.
-5. El incentivo queda sujeto a la condición de venta de CU-08; no se considera utilizable solo por el registro.
+4. Se guarda la relación A → B con 50.000 puntos pendientes para A. El valor se toma de la variable de entorno `TRAINER_REFERRAL_POINTS` y queda fijado en el referido.
+5. Los puntos pendientes no se pueden canjear y no caducan. B no gana puntos por registrarse.
 
-**Alternativas y errores:** si B se registra sin el enlace de A, no queda referido por A: no hay cupón para entrenadores. El autorreferido, un B ya registrado y varios referentes para B no tienen reglas definidas. Las restricciones contra abuso deberán acordarse, no asumirse.
+**Alternativas y errores:** si B se registra sin el enlace de A, no queda referido por A: no hay cupón para entrenadores. B tiene un solo referente. El autorreferido y un B ya registrado siguen pendientes (D-05).
 
-**Resultado:** B registrado y referencia a A conservada según el diseño que se apruebe.
+**Resultado:** B registrado y 50.000 puntos pendientes para A.
 
-**Criterio de aceptación:** es posible identificar qué entrenador invitó a B al evaluar la venta calificadora. El registro por sí solo no activa el incentivo.
+**Criterio de aceptación:** al registrarse B desde el enlace de A, A ve 50.000 puntos pendientes que no suman a su saldo canjeable.
 
-### CU-08. Activar incentivo por entrenador referido
+### CU-08. Activar los 50.000 puntos por entrenador referido
 
-- **Objetivo:** habilitar para A los puntos del incentivo cuando se cumple la condición de venta.
+- **Objetivo:** dar a A sus 50.000 puntos cuando un cliente de B compra por primera vez.
 - **Beneficiario:** ACT-01 como entrenador A.
-- **Disparador:** se registra la venta que satisface la condición del referido.
-- **Precondiciones:** relación A → B identificada y regla de activación acordada.
-- **Reglas:** RN-07.
+- **Disparador:** se aprueba el pago de una compra de un cliente asociado a B.
+- **Precondiciones:** relación A → B con los puntos pendientes.
+- **Reglas:** RN-04, RN-05 y RN-07.
+- **Clasificación:** Confirmado por producto (9 nov 2026).
 
-**Flujo principal condicionado a aclaración:**
+**Flujo principal:**
 
-1. Se identifica una venta con clientes en la app relacionada con el flujo de referido.
-2. Se comprueba quién debe haber gestionado esa venta según la decisión de negocio pendiente: A o B.
-3. Se valida que la venta cumpla la condición acordada. Se propone exigir aprobación por remisión al primer flujo, pero la condición exacta debe confirmarse.
-4. Se determina el monto definitivo del incentivo.
-5. Se activa el incentivo para A y se incorpora a sus puntos disponibles conforme al diseño de saldos que se apruebe.
-6. Como control derivado, se conserva la referencia al entrenador invitado y a la venta que justificó la activación.
+1. Se aprueba el pago de la compra de un cliente de B. No hay monto mínimo.
+2. B recibe sus puntos y su comisión normales por esa compra (CU-05).
+3. El sistema comprueba si B tiene un referente con los puntos pendientes.
+4. Si los tiene, guarda el pedido que los activó y la fecha, y crea para A un lote de 50.000 puntos disponibles que vence a los 6 meses.
+5. Todo ocurre en la misma transacción que la aprobación: un pago notificado dos veces no duplica los puntos.
 
-**Alternativas y errores:** sin venta calificadora, el incentivo no se activa. La repetición del incentivo por varias ventas, los límites por referido y el manejo de una venta revertida están pendientes.
+**Alternativas y errores:**
 
-**Resultado:** incentivo activado para A únicamente cuando se cumple la condición que se confirme.
+- **Se activan una sola vez:** las compras siguientes de los clientes de B no le dan más puntos a A.
+- **Compra propia de B:** no activa los puntos de A.
+- **Pago no aprobado:** no activa nada.
+- **Cancelación o devolución de la compra que los activó:**
+  - Si A no ha usado los puntos, se le retiran y vuelven a quedar pendientes hasta la siguiente compra aprobada de un cliente de B.
+  - Si los usó en parte, se retira solo el remanente.
+  - Si los usó por completo, los conserva.
 
-**Criterio de aceptación condicionado:** una vez definido monto, entrenador que debe vender y venta calificadora, el sistema puede distinguir un referido sin condición cumplida de otro con incentivo activado. No es posible cerrar una prueba numérica definitiva con la redacción actual.
+**Resultado:** 50.000 puntos disponibles para A, una sola vez por referido.
+
+**Criterio de aceptación:**
+
+- Dado A → B pendiente, cuando se aprueba la primera compra de un cliente de B, A recibe un lote de 50.000 puntos.
+- Una segunda compra aprobada no crea otro lote.
+- Una compra aprobada de B como comprador no crea ningún lote para A.
 
 ### CU-09. Consultar puntos y movimientos
 
@@ -371,12 +383,12 @@ La restricción de no entregar efectivo se refiere expresamente al canje de punt
 
 1. El entrenador abre la consulta de puntos.
 2. El sistema presenta los puntos disponibles.
-3. Permite identificar abonos por compras, incentivos activados y conversiones, además de consumos por canje, si existen.
-4. Si se modelan incentivos pendientes de activación, los diferencia del saldo utilizable.
+3. Permite identificar abonos por compras, puntos por referido activados y conversiones, además de consumos por canje, si existen.
+4. Muestra aparte los 50.000 puntos por referido pendientes, que no suman al saldo utilizable.
 
 **Alternativas y errores:** sin movimientos, se propone mostrar saldo y ausencia de movimientos de forma explícita. La información de otros entrenadores no debe quedar accesible; este control de acceso es derivado.
 
-**Resultado y aceptación propuestos:** el entrenador puede distinguir lo que puede canjear de lo que aún no está activado. No se descuentan puntos por vencimiento sin una regla aprobada: los requisitos no establecen caducidad.
+**Resultado y aceptación propuestos:** el entrenador puede distinguir lo que puede canjear de lo que aún no está activado. Cada lote vence a los 6 meses de su acumulación (regla 2 de `reglas-de-negocio.md`).
 
 ### CU-10. Consultar comisiones
 
@@ -667,11 +679,11 @@ La restricción de no entregar efectivo se refiere expresamente al canje de punt
 
 1. A comparte el enlace para entrenadores: CU-06.
 2. B se registra desde ese enlace: CU-07, que utiliza CU-01.
-3. Se completa el recorrido de venta con clientes que se confirme como condición.
-4. Se activa para A el incentivo: CU-08.
+3. Un cliente de B hace su primera compra y se aprueba el pago: CU-04 y CU-05.
+4. Se activan para A los 50.000 puntos, una sola vez: CU-08.
 5. A puede utilizar los puntos activados en CU-12.
 
-La fuente no permite determinar de forma inequívoca si el paso 3 corresponde a clientes de A o de B.
+Confirmado por producto (9 nov 2026): la compra que activa los puntos es de un cliente de B.
 
 ### 7.3. Acceso condicionado a dietas
 
@@ -699,15 +711,15 @@ Las recompensas de CU-05 dependen de la aprobación del pago (paso 1), no del en
 | PD-02 | Base de los puntos | Resuelto el 9 nov 2026: lo pagado por los productos, con descuento y con IVA, sin el envío, sobre el total del pedido. | Ninguna. | CU-04, CU-05. |
 | PD-03 | Redondeo de puntos | Resuelto el 9 nov 2026: una sola vez por pedido, al entero más cercano (0,5 sube). | Ninguna. | CU-05, CU-09. |
 | PD-04 | Base de comisión | Se exige retirar el IVA, sin detallar descuentos, tasas, envío o pedidos con tratamientos tributarios diferentes. | Definir la base sin IVA por compra o por producto. | CU-05. |
-| PD-05 | Incentivo por referido | La expresión «50.000 mil puntos» es ambigua; el diagrama muestra 50.000. | Confirmar el monto sin corregirlo por inferencia. | CU-08. |
-| PD-06 | Venta que activa el referido | No se identifica inequívocamente si vende A o B, ni si basta crear la compra o debe aprobarse. | Precisar participante, evento, número de incentivos y límites por referido. | CU-07, CU-08. |
+| PD-05 | Puntos por referido | **Resuelta (9 nov 2026):** son 50.000 puntos, definidos en la variable de entorno `TRAINER_REFERRAL_POINTS`. | — | CU-08. |
+| PD-06 | Compra que activa el referido | **Resuelta (9 nov 2026):** la primera compra aprobada de cualquier cliente de B, una sola vez y sin monto mínimo; la compra propia de B no cuenta. Si se cancela o devuelve y A no ha usado los puntos, vuelven a quedar pendientes. | — | CU-07, CU-08. |
 | PD-07 | Conversión de comisión | El texto mezcla el total de comisión con un 50% de los puntos acumulados. | Definir saldo de entrada, fórmula, base del incentivo, puntos de salida y tratamiento de la comisión. | CU-10, CU-11. |
 | PD-08 | Permanencia en dietas | Se menciona una regla de negocio sin describirla. | Definir condición, periodo de evaluación, activación inicial, desactivación y reactivación. | CU-14, CU-15. |
 | PD-09 | Suscripción de dietas | No se define si hay pago o si depende de actividad comercial. | Definir modalidad y funciones de la herramienta. | CU-14, CU-15. |
 | PD-10 | Enlace y asociación | Resuelto en parte el 9 nov 2026: la asociación se guarda en la cuenta y no se cambia por el cliente. Falta definir cuánto tiempo guarda la app el id del enlace antes del registro. | Definir el almacenamiento temporal del id. | CU-02, CU-03. |
 | PD-11 | Continuidad del descuento | Resuelto el 9 nov 2026: el descuento aplica a todo el catálogo mientras el cliente esté asociado. | Ninguna. | CU-04. |
 | PD-12 | Acumulación y valoración | No se indica si descuentos, promociones y puntos se combinan ni cuál es el precio de canje. | Definir compatibilidad, base del descuento y valor de productos en puntos. | CU-04, CU-12, CU-13. |
-| PD-13 | Aprobación y reversión | No se define quién informa la aprobación ni qué ocurre con cancelaciones o devoluciones. | Definir origen del estado, transición válida y efectos sobre puntos, comisión e incentivos. | CU-04, CU-05, CU-08, CU-12. |
+| PD-13 | Aprobación y reversión | No se define quién informa la aprobación ni qué ocurre con cancelaciones o devoluciones. | Definir origen del estado, transición válida y efectos sobre puntos y comisión. Los 50.000 puntos por referido ya tienen regla (CU-08). | CU-04, CU-05, CU-08, CU-12. |
 | PD-14 | Liquidación de comisión | Solo se define su generación y conversión a puntos. | Definir si existe pago monetario, procedimiento, disponibilidad y restricciones. No confundirlo con el canje de puntos. | CU-10, CU-11. |
 | PD-15 | Mecánica del canje | Sin reglas de pago mixto, inventario, reserva, entrega o cancelación. | Definir qué hace efectivo el canje y cuándo se consumen o restituyen puntos. | CU-12. |
 | PD-16 | Registro y acceso | No hay campos, credenciales, verificación ni coexistencia de roles. | Definir datos mínimos, identificación y permisos. | CU-01, CU-03, CU-07 y consultas. |
@@ -744,7 +756,7 @@ Las recompensas de CU-05 dependen de la aprobación del pago (paso 1), no del en
 | Cliente compra con 10% de descuento. | ACT-02. | CU-04. | RN-03. |
 | Compra aprobada otorga 5% en puntos y 15% sin IVA al entrenador. | ACT-01 como beneficiario. | CU-05; CU-09 y CU-10 como consultas derivadas. | RN-04, RN-05, RN-06, RN-12. |
 | Comparte QR con otro entrenador. | ACT-01 como A y B. | CU-06, CU-07. | RN-01, RN-07. |
-| Incentivo de referido sujeto a venta. | ACT-01 como A beneficiario; vendedor por confirmar. | CU-08. | RN-07. |
+| 50.000 puntos por referido, sujetos a la primera compra de un cliente de B. | ACT-01 como A beneficiario. | CU-08. | RN-07. |
 | App de dietas en suscripción con desactivación por regla. | ACT-01. | CU-14, CU-15. | RN-08. |
 | Puntos canjeables por productos, solo en app y sin efectivo. | ACT-01. | CU-12. | RN-09. |
 | 25% de descuento para todo el portafolio. | ACT-01. | CU-13. | RN-10. |

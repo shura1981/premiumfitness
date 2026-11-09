@@ -1,6 +1,6 @@
 # 01 — Diagrama entidad relación (DER)
 
-**Estado:** propuesta v0.8 lista para revisión · **Creado:** 7 de noviembre de 2026
+**Estado:** propuesta v0.9 lista para revisión · **Creado:** 7 de noviembre de 2026
 
 ## Petición original
 
@@ -27,9 +27,16 @@
 - `orders_items` registra por línea la comisión y los puntos.
 - Los puntos se calculan con IVA incluido.
 
+**Revisión v0.9, 9 de noviembre de 2026:** cambios del spec `specs/negocio/02-puntos-por-referido-y-constantes.md`.
+
+- **Constantes:** las constantes del negocio pasan a variables de entorno. Se elimina `rule_versions` junto con todas las FK `rule_version_id`. Cada registro guarda el valor que aplicó: `orders.reward_percentage`, `trainer_referrals.referral_points` y `commission_conversions.conversion_percentage`.
+- **Puntos por referido:** los 50.000 puntos pendientes viven en `trainer_referrals`. El lote de A se crea solo al activarse, con la primera compra aprobada de un cliente de B.
+- **Estados:** se eliminan el estado `inactive` de `point_lots` y el tipo `activation` de `point_movements`.
+- **Puntos por pedido:** los puntos se calculan por pedido (`orders.reward_points`), no por línea.
+
 ## Objetivo
 
-Proponer el modelo de datos del MVP comercial para revisarlo con negocio y tecnología antes de la fase 2 (arquitectura). El modelo reutiliza las tablas de radical y añade solo lo que exige PremiumFitness. Debe soportar los recorridos del MVP: referidos por QR, compras con descuento, recompensas por venta, bono A → B, lotes de puntos con FIFO y caducidad, conversión de comisión, canjes y reportes conciliables.
+Proponer el modelo de datos del MVP comercial para revisarlo con negocio y tecnología antes de la fase 2 (arquitectura). El modelo reutiliza las tablas de radical y añade solo lo que exige PremiumFitness. Debe soportar los recorridos del MVP: referidos por QR, compras con descuento, recompensas por venta, 50.000 puntos por referido A → B, lotes de puntos con FIFO y caducidad, conversión de comisión, canjes y reportes conciliables.
 
 ## Fuentes
 
@@ -75,7 +82,7 @@ Proponer el modelo de datos del MVP comercial para revisarlo con negocio y tecno
 4. El modelo permite verificar:
    - La atribución del pedido al entrenador por el cupón guardado en el pedido, sin depender del navegador (A-02, A-03).
    - Que las recompensas se acreditan una sola vez por pedido, mediante claves de origen únicas (A-05, A-06).
-   - La activación única del bono A → B y el pedido que la causó (A-07, A-08).
+   - La activación única de los 50.000 puntos por referido A → B y el pedido que la causó (A-07, A-08).
    - Lotes con remanente, estado y caducidad, y consumo FIFO trazable por lote (A-11, A-12, A-15).
    - Conversión con débito de comisión y crédito de puntos vinculados (A-14).
    - IVA por línea en pedidos y canjes (A-03, A-09, A-10).
@@ -105,11 +112,11 @@ Proponer el modelo de datos del MVP comercial para revisarlo con negocio y tecno
 | S-13 | Compras de cliente, compras del entrenador y canjes usan la misma tabla `orders`, con `order_type`. El canje reutiliza el seguimiento de radical: estado, guía y transportadora. | Derivado | Radical guarda el envío en `orders`. Evita una tabla de envíos aparte. |
 | S-14 | El pago se persiste como en radical: `payment_gateway`, `payment_state_json` y `payment_event_jobs`. Se añade `payment_reference` única para la idempotencia. `payment_gateway` pasa a ser anulable para los canjes. | Derivado | Radical; D-10. Si hay que conservar cada intento de pago, se añadiría una tabla `payment_transactions`. |
 | S-15 | `products.price` es un entero con IVA incluido, como en radical. Se añade `tax_rate` por producto, y cada línea copia la tasa, la base y el IVA. | Confirmado | Radical; PRD §7.2; regla 10. |
-| S-16 | Los puntos son enteros (1 peso = 1 punto) y los importes son `decimal(12,2)`, como en radical. | Pendiente | Regla 1. El redondeo depende de D-03. |
+| S-16 | Los puntos son enteros (1 peso = 1 punto) y los importes son `decimal(12,2)`, como en radical. | Confirmado | Regla 1. Redondeo al entero más cercano (S-39). |
 | S-17 | La comisión es un libro de movimientos (`commission_movements`). El saldo convertible es la suma de esos movimientos. | Derivado | PRD §10. |
 | S-18 | Cada acumulación crea un lote en `point_lots`. El diseño sigue la idea de `credit_balances` de radical (monto, vencimiento y aplicación) y añade remanente y estados. | Confirmado | PRD §7.3; regla 9. |
-| S-19 | `point_lots.expires_at` es anulable para el bono inactivo hasta definir desde cuándo cuenta su vigencia. | Pendiente | D-06. |
-| S-20 | La conversión guarda la versión de regla aplicada. El cálculo exacto del 50% no se fija en el modelo. | Pendiente | D-04. |
+| S-19 | `point_lots.expires_at` es obligatorio: todo lote nace disponible y vence a los `POINTS_EXPIRATION_MONTHS` (6) de `accrued_at`. Los 50.000 puntos pendientes no son un lote, viven en `trainer_referrals` y no caducan. Antes decía: anulable para el lote inactivo del referido. | Confirmado | D-06 resuelta el 9 nov 2026. |
+| S-20 | La conversión guarda el porcentaje aplicado (`conversion_percentage`, de `COMMISSION_CONVERSION_PERCENTAGE`). El cálculo exacto del 50% no se fija en el modelo. | Pendiente | D-04. |
 | S-21 | Los orígenes de un lote o movimiento son FK explícitas anulables, no un par genérico `source_type` + `source_id`. | Derivado | Decisión de diseño: integridad referencial en base de datos. |
 | S-22 | La compra propia del entrenador (`order_type = trainer_purchase`) no genera recompensas. | Confirmado | PRD §6.6; MVP §3.3. |
 | S-23 | El beneficiario del 15% es el entrenador. | Pendiente | PD-01: requerimientos dice «el cliente recibe el 15%» en un punto y «el entrenador» en otro. |
@@ -126,19 +133,19 @@ Proponer el modelo de datos del MVP comercial para revisarlo con negocio y tecno
 | S-35 | `docs/casos-de-uso-y-actores.md` ya incluye al agente del call center (ACT-03) y los casos de uso CU-16 a CU-19 de procesamiento, envío y seguimiento del pedido. | Confirmado | Spec `specs/documentacion/01-casos-de-uso-pedidos-y-envios.md`. |
 | S-36 | `product_groups` y `product_group_map` se reutilizan tal cual: agrupan las presentaciones de un mismo producto (por ejemplo, 225 g y 900 g) en una relación N:M. | Confirmado | Indicación del usuario; radical. |
 | S-37 | `orders_coupons` se reutiliza de radical y se le añade `trainer_id`; guarda el cupón del entrenador en cada pedido de un cliente asociado. Antes decía: se reutiliza tal cual: un cupón por pedido (`order_id` único), con código, porcentaje y monto; el mismo código puede repetirse en muchos pedidos. El descuento se reparte en `orders_items.discount_percentage`. No se usa en el MVP. | Derivado | Radical, checkout retail. Para promociones reales faltaría un maestro `coupons` (vigencia, límites y a quién aplica), y definir si el cupón se combina con el 10% o el 25% y si reduce la base de puntos y comisión (PD-12). |
-| S-38 | Los porcentajes por defecto viven en `rule_versions.parameters`. `product_discount_rules` define excepciones por producto con vigencia: descuento con cupón, descuento del entrenador y comisión (NULL = valor por defecto). Al comprar, cada línea copia los porcentajes vigentes. | Confirmado; descuento del entrenador por producto derivado | Regla 15. |
+| S-38 | Los valores por defecto son variables de entorno (antes: `rule_versions.parameters`, eliminada en v0.9). `product_discount_rules` define excepciones por producto con vigencia: descuento con cupón, descuento del entrenador y comisión (NULL = valor por defecto). Al comprar, cada línea copia los porcentajes vigentes y el pedido copia el de puntos (`orders.reward_percentage`). | Confirmado; descuento del entrenador por producto derivado | Regla 15; spec negocio/02. |
 | S-39 | Comisión por línea: `commission_amount = tax_base × commission_percentage`; `commission_movements.amount` suma las líneas. Puntos por pedido: `orders.reward_points = round(Σ line_total de productos × porcentaje de puntos)`, al entero más cercano y sin el envío. | Confirmado | Reglas 1 y 7 (9 nov 2026). |
+| S-40 | Al registrarse B desde el enlace de A se crea `trainer_referrals` con `referral_points` = `TRAINER_REFERRAL_POINTS` (50.000), sin lote. La primera compra aprobada de un cliente de B guarda `activation_order_id` y `activated_at` y crea el lote de A (`source='trainer_referral'`) una sola vez. La compra propia de B no cuenta. | Confirmado | Regla 6; spec negocio/02. |
+| S-41 | Si se cancela o devuelve la compra que activó los 50.000 puntos y A no los ha usado, se revierte el remanente del lote con un ajuste y el referido vuelve a quedar pendiente. Si ya los usó, se mantienen. | Confirmado; reversión parcial derivada | Spec negocio/02. |
 | S-30 | `products.discount_list` (tramos por cantidad con su `sap_code`) se conserva por la integración, aunque los descuentos de PremiumFitness (10% y 25%) dependen del rol y no de la cantidad. | Derivado | Radical. Falta confirmar si los tramos aplican. |
 
 ## Plan
 
 1. Leer el esquema real de radical (SQL y migraciones), su DER y los modelos de join y gifts.
 2. Clasificar cada tabla de radical: se reutiliza, se adapta o queda fuera del MVP.
-3. Añadir solo las tablas nuevas que exigen las reglas: referidos, comisiones, lotes, movimientos, ajustes, versiones de regla y auditoría.
+3. Añadir solo las tablas nuevas que exigen las reglas: referidos, comisiones, lotes, movimientos, ajustes y auditoría.
 4. Generar el `.drawio` con `scripts/der/generar_der.py`, que lee el esquema de radical y lo dibuja con el estilo de sus DER, en un solo diagrama de la base. La tabla externa de agentes se dibuja en morado.
 5. Exportar el diagrama a PNG y revisar legibilidad y cruces.
-
-La FK `rule_version_id` se documenta en una nota del diagrama y no se dibuja desde todas las tablas que la usan.
 
 ## Modelo propuesto
 
@@ -158,7 +165,7 @@ Diagrama editable: [diagrama-entidad-relacion.drawio](../../docs/img/diagrama-en
 | Identidad y referidos | `cities`, `localities`, `address_locality_map` | Existente | Ciudad con código DANE y localidad opcional. |
 | Identidad y referidos | `trainers` | Nueva | Subtipo de `users` para el entrenador, con su cupón único. |
 | Identidad y referidos | `client_referrals` | Nueva | Único entrenador del cliente y origen del vínculo (enlace o cupón). |
-| Identidad y referidos | `trainer_referrals` | Nueva | Relación A → B y pedido que activó el bono. |
+| Identidad y referidos | `trainer_referrals` | Nueva | Relación A → B, los 50.000 puntos pendientes y el pedido que los activó. |
 | Pedidos y catálogo | `products` | Adaptada | Añade `tax_rate`. El precio ya incluye IVA. Conserva `discount_list` con los códigos SAP por tramo. |
 | Pedidos y catálogo | `categories` | Existente | Categorías del catálogo. |
 | Pedidos y catálogo | `product_groups`, `product_group_map` | Existente | Grupos de presentaciones de un mismo producto. |
@@ -171,9 +178,8 @@ Diagrama editable: [diagrama-entidad-relacion.drawio](../../docs/img/diagrama-en
 | Recompensas y operación | `commission_movements` | Nueva | Abono de comisión del pedido (suma de líneas), débitos por conversión y ajustes. |
 | Recompensas y operación | `commission_conversions` | Nueva | Conversión del total de comisión a puntos. |
 | Recompensas y operación | `point_lots` | Nueva | Lote con cantidad inicial, remanente, estado, fecha de acumulación y caducidad. |
-| Recompensas y operación | `point_movements` | Nueva | Abono, activación, consumo FIFO, caducidad y ajuste por lote. |
+| Recompensas y operación | `point_movements` | Nueva | Abono, consumo FIFO, caducidad y ajuste por lote. |
 | Recompensas y operación | `adjustments` | Nueva | Cancelaciones, devoluciones y restituciones ligadas al pedido original y al agente que las registra. |
-| Recompensas y operación | `rule_versions` | Nueva | Parámetros vigentes: porcentajes, bono, vigencia y fórmula de conversión. |
 | Recompensas y operación | `audit_logs` | Nueva | Agente o usuario, acción, entidad y datos de cada operación sensible. |
 | SAP y bodegas | `sap_products` | Existente | Maestro de artículos SAP (`sap_code` único). |
 | SAP y bodegas | `product_sap_map` | Existente | Relación N:M entre producto web y artículos SAP. |
@@ -183,7 +189,7 @@ Diagrama editable: [diagrama-entidad-relacion.drawio](../../docs/img/diagrama-en
 ### Controles de integridad
 
 - **Idempotencia:** son únicos `orders.payment_reference`, `commission_movements.source_key`, `point_lots.source_key`, `point_movements.source_key` y `commission_conversions.idempotency_key`. El dispatcher de radical ya trata como no-op un pedido aprobado.
-- **Bono único:** `trainer_referrals.referred_id`, `trainer_referrals.activation_order_id` y `point_lots.trainer_referral_id` son únicos.
+- **Puntos por referido una sola vez:** `trainer_referrals.referred_id`, `trainer_referrals.activation_order_id` y `point_lots.trainer_referral_id` son únicos.
 - **Conversión única:** `commission_movements.conversion_id` y `point_lots.conversion_id` son únicos. Cada conversión tiene un débito y un crédito.
 - **FIFO:** el consumo sigue `point_lots.accrued_at` con desempate por `id` (PRD §7.3). El saldo canjeable es la suma de `remaining_points` de los lotes `available` no caducados.
 - **Asignación del agente:** `orders.agent_id` solo se asigna si está vacío, y se libera solo si el pedido es del agente y no tiene `sap_order_code`.
@@ -214,4 +220,5 @@ Diagrama editable: [diagrama-entidad-relacion.drawio](../../docs/img/diagrama-en
 - [x] Generar las tablas de radical desde su esquema real (columnas, orden y tipos exactos) con `scripts/der/generar_der.py` (v0.6)
 - [x] Unificar el DER en un solo diagrama de la base: radical sin `credit_balances` más las tablas nuevas (v0.7)
 - [x] Ajustar referidos, cupón, descuentos por producto y puntos con IVA (v0.8)
+- [x] Pasar las constantes a variables de entorno, quitar `rule_versions` y crear el lote de los 50.000 puntos solo al activarse (v0.9)
 - [ ] Revisión y aprobación del modelo por negocio y tecnología

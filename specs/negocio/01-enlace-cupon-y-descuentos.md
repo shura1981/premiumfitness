@@ -53,7 +53,7 @@ Alinear las reglas de negocio, los casos de uso y el modelo de datos con el func
 | S-02 | Cada entrenador tiene un cupón con nombre único, que el cliente puede escribir si se registró sin enlace. | Confirmado |
 | S-03 | Un cliente asociado a un entrenador no ve el campo del cupón y no puede cambiar de entrenador por sí mismo. | Confirmado |
 | S-04 | El cliente sin cupón compra a precio completo y no genera recompensas. | Confirmado |
-| S-05 | Los porcentajes por defecto (10% cliente, 25% entrenador, 5% puntos y 15% comisión) se guardan como configuración versionada. Cada producto puede tener una regla vigente que cambie el descuento con cupón y la comisión. | Confirmado |
+| S-05 | Los porcentajes por defecto (10% cliente, 25% entrenador, 5% puntos y 15% comisión) son variables de entorno. Cada producto puede tener una regla vigente que cambie el descuento con cupón y la comisión. **Cambio del 9 nov 2026:** antes decía «configuración versionada» (`rule_versions`); producto pidió llevar las constantes a variables de entorno (spec `negocio/02`). | Confirmado |
 | S-06 | La regla por producto también admite un descuento propio para la compra del entrenador. Si un valor es nulo, se usa el valor por defecto. | Derivado |
 | S-07 | Los puntos son el 5% de lo que pagó el cliente: valor con el descuento aplicado y con IVA incluido. Difiere del ejemplo de `requerimientos.md` (249.900 → 12.500 sobre el precio completo). | Confirmado (9 nov 2026) |
 | S-08 | Base64 no protege el id: cualquiera puede decodificarlo y armar el enlace de otro entrenador. Se acepta porque el enlace solo atribuye ventas. | Derivado |

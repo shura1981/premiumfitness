@@ -321,8 +321,9 @@ db.table("cr", "client_referrals", "N", AX, Y1, [
     r("FK", "trainer_id", "bigint(20)"), r("", "source", "enum('link','coupon')"), r("", "linked_at", "timestamp")])
 db.table("trf", "trainer_referrals", "N", AX, db.B("cr") + 110, [
     r("PK", "id", "bigint(20) (AI)"), r("FK", "referrer_id", "bigint(20) · A"), r("FK UQ", "referred_id", "bigint(20) · B"),
-    r("FK UQ", "activation_order_id", "bigint(20) NULL"),
-    r("", "registered_at", "timestamp"), r("", "activated_at", "timestamp NULL")])
+    r("", "referral_points", "int(11) · 50.000 (env) al registrarse B"),
+    r("FK UQ", "activation_order_id", "bigint(20) NULL · 1.ª compra de cliente de B"),
+    r("", "registered_at", "timestamp"), r("", "activated_at", "timestamp NULL · NULL = pendiente")])
 
 ux_mid = db.L("tr") + 150
 db.rel("users", "tr", ONE, ZONE, ((ux_mid - db.L("users")) / db.t["users"]["w"], 1), (0.5, 0))
@@ -351,10 +352,10 @@ db.table("ord", "orders", "A", ZC, Y0, rad("orders",
                 ("", "discount_amount", "decimal(12,2)"),
                 ("", "tax_base", "decimal(12,2)"),
                 ("", "tax_amount", "decimal(12,2)"),
+                ("", "reward_percentage", "decimal(5,2) NULL · 5% (env) al comprar"),
                 ("", "reward_points", "int(11) NULL · 5% de lo pagado, redondeado"),
                 ("", "redemption_points", "int(11) NULL · costo del canje"),
-                ("", "approved_at", "timestamp NULL"),
-                ("FK", "rule_version_id", "bigint(20)")]))
+                ("", "approved_at", "timestamp NULL")]))
 OIX = db.R("ord") + 100
 db.table("oi", "orders_items", "A", OIX, Y0, rad("orders_items",
          notes={"sap_code": "artículo SAP (sin FK)", "discount_percentage": "descuento vigente del producto"},
@@ -429,27 +430,27 @@ db.table("cm", "commission_movements", "N", CMX, Y3, [
     r("", "type", "enum('sale_credit','conversion_debit','adjustment')"),
     r("", "tax_base", "decimal(12,2) NULL"),
     r("", "amount", "decimal(12,2) · Σ líneas · + abono / − débito"),
-    r("FK", "rule_version_id", "bigint(20)"), r("UQ", "source_key", "varchar(64)"), r("", "created_at", "timestamp")])
+    r("UQ", "source_key", "varchar(64)"), r("", "created_at", "timestamp")])
 CCX = db.R("cm") + 140
 db.table("cc", "commission_conversions", "N", CCX, Y3 + 40, [
     r("PK", "id", "bigint(20) (AI)"), r("FK", "trainer_id", "bigint(20)"),
-    r("", "commission_amount", "decimal(12,2)"), r("", "points_granted", "int(11)"),
-    r("FK", "rule_version_id", "bigint(20)"), r("UQ", "idempotency_key", "varchar(64)"), r("", "created_at", "timestamp")])
+    r("", "commission_amount", "decimal(12,2)"), r("", "conversion_percentage", "decimal(5,2) · 50% (env)"),
+    r("", "points_granted", "int(11)"), r("UQ", "idempotency_key", "varchar(64)"), r("", "created_at", "timestamp")])
 PLX = db.R("cc") + 150
 db.table("pl", "point_lots", "N", PLX, Y3, [
     r("PK", "id", "bigint(20) (AI)"), r("FK", "order_id", "bigint(20) NULL"), r("FK", "trainer_id", "bigint(20)"),
     r("FK UQ", "conversion_id", "bigint(20) NULL"), r("FK", "adjustment_id", "bigint(20) NULL"),
     r("FK UQ", "trainer_referral_id", "bigint(20) NULL"),
-    r("", "source", "enum('client_sale','referral_bonus','conversion','restitution')"),
+    r("", "source", "enum('client_sale','trainer_referral','conversion','restitution')"),
     r("", "initial_points", "int(11)"), r("", "remaining_points", "int(11)"),
-    r("", "status", "enum('inactive','available','used','expired')"),
-    r("", "accrued_at", "timestamp · orden FIFO"), r("", "activated_at", "timestamp NULL"),
-    r("", "expires_at", "timestamp NULL"), r("FK", "rule_version_id", "bigint(20)"), r("UQ", "source_key", "varchar(64)")])
+    r("", "status", "enum('available','used','expired')"),
+    r("", "accrued_at", "timestamp · orden FIFO"),
+    r("", "expires_at", "timestamp · accrued_at + 6 meses (env)"), r("UQ", "source_key", "varchar(64)")])
 PMX = db.R("pl") + 150
 db.table("pm", "point_movements", "N", PMX, Y3, [
     r("PK", "id", "bigint(20) (AI)"), r("FK", "point_lot_id", "bigint(20)"), r("FK", "order_id", "bigint(20) NULL · canje"),
     r("FK", "adjustment_id", "bigint(20) NULL"),
-    r("", "type", "enum('credit','activation','redemption','expiration','adjustment')"),
+    r("", "type", "enum('credit','redemption','expiration','adjustment')"),
     r("", "points", "int(11) · + / −"), r("UQ", "source_key", "varchar(64)"), r("", "created_at", "timestamp")])
 YB = db.B("pl") + 90
 db.table("adj", "adjustments", "N", CMX + 120, YB, [
@@ -463,10 +464,6 @@ db.table("al", "audit_logs", "N", db.R("emp") + 100, db.B("adj") + 60, [
     r("PK", "id", "bigint(20) (AI)"), r("FK", "agent_id", "int(11) NULL · agente"),
     r("FK", "user_id", "bigint(20) NULL · cliente o entrenador"), r("", "action", "varchar(60)"),
     r("", "entity / entity_id", "varchar(60) / bigint(20)"), r("", "data", "json"), r("", "created_at", "timestamp")])
-db.table("rv", "rule_versions", "N", PLX + 40, db.B("adj") + 60, [
-    r("PK", "id", "bigint(20) (AI)"), r("UQ", "code", "varchar(40)"),
-    r("", "parameters", "json · por defecto: 10%, 25%, 5%, 15%, 50.000, 6 meses"),
-    r("", "valid_from", "timestamp"), r("", "valid_to", "timestamp NULL")])
 
 wt = db.t["tr"]["w"]
 txr = lambda x: ((x - db.L("tr")) / wt, 1)  # noqa: E731
@@ -514,10 +511,10 @@ db.rel("tr", "oc.trainer_id", ONE, MANY0, txr(UX + 290), "R",
        [(UX + 290, yD - 45), (PX - 60, yD - 45), (PX - 60, ry("oc", "trainer_id"))], label="atribución por cupón")
 xtr = db.R("trf")
 db.rel("trf.activation_order_id", "ord", ZONE, ZONE, "R", (60 / wo, 1),
-       [(xtr + 100, ry("trf", "activation_order_id")), (xtr + 100, yD - 20), (ZC + 60, yD - 20)], label="activa bono")
+       [(xtr + 100, ry("trf", "activation_order_id")), (xtr + 100, yD - 20), (ZC + 60, yD - 20)], label="activa los 50.000 puntos")
 db.rel("trf.id", "pl.trainer_referral_id", ONE, ZONE, "R", "R",
        [(xtr + 130, ry("trf", "id")), (xtr + 130, yD + 10), (db.R("pl") + 40, yD + 10),
-        (db.R("pl") + 40, ry("pl", "trainer_referral_id"))], label="bono 50.000")
+        (db.R("pl") + 40, ry("pl", "trainer_referral_id"))], label="50.000 puntos para A")
 
 # --- Leyenda y notas ---------------------------------------------------
 NX = max(db.R("sp"), db.R("psm"), db.R("cat"), xsp) + 120
@@ -528,11 +525,12 @@ db.note(NX, Y0 + 350, 620, 300,
         "orders.balance_id: en PremiumFitness el saldo lo llevan point_lots.<br>"
         "• Externa: tb_empleados vive en la intranet; no se migra, se consulta por JOIN (orders.agent_id = id_usuario).<br><br>"
         "<b>Sin línea</b><br>"
-        "• rule_version_id de orders, commission_movements, commission_conversions y point_lots → rule_versions.<br>"
         "• audit_logs.user_id → users.<br>"
         "• orders_items.sap_code es una copia del código de sap_products, sin FK.<br>"
-        "• orders_items guarda el descuento, la comisión y los puntos vigentes de cada producto al momento de la compra: "
-        "valor por defecto (rule_versions) o estrategia del producto (product_discount_rules).")
+        "• orders_items guarda el descuento y la comisión vigentes de cada producto al momento de la compra: "
+        "valor por defecto (variable de entorno) o estrategia del producto (product_discount_rules).<br>"
+        "• Las constantes (10%, 25%, 5%, 15%, 50.000 puntos, 6 meses, 50%) son variables de entorno; "
+        "cada pedido, referido y conversión copia el valor que aplicó.")
 db.note(NX, Y0 + 680, 620, 330,
         "<b>Cómo se usa orders</b><br>"
         "• client_purchase: cliente asociado a un entrenador (enlace o cupón); descuento por línea (10% por defecto). "
@@ -545,6 +543,8 @@ db.note(NX, Y0 + 680, 620, 330,
         "<b>Controles</b><br>"
         "• payment_reference, source_key e idempotency_key únicos: un webhook repetido no duplica recompensas.<br>"
         "• FIFO por point_lots.accrued_at; saldo canjeable = Σ remaining_points disponibles y vigentes.<br>"
+        "• Referido A → B: los 50.000 puntos quedan pendientes en trainer_referrals (no caducan); la primera compra "
+        "aprobada de un cliente de B crea el lote de A una sola vez.<br>"
         "• Saldo de comisión = Σ commission_movements.amount.")
 
 pages = [db]

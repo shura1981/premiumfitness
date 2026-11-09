@@ -2,7 +2,7 @@
 
 ## Diagrama de flujo
 
-El diagrama resume las 11 reglas de este documento: cálculo y vencimiento de puntos, canje por FIFO, compras del entrenador, incentivo por referido y acceso a dietas. Las referencias «Regla» corresponden a los numerales del listado. El importe de dietas se señala como pendiente de aclarar porque el texto menciona «50,000 mil puntos» y también 49.800 puntos por cuatro Bipro.
+El diagrama resume las 11 reglas de este documento: cálculo y vencimiento de puntos, canje por FIFO, compras del entrenador, 50.000 puntos por referido y acceso a dietas. Las referencias «Regla» corresponden a los numerales del listado. El importe de dietas se señala como pendiente de aclarar porque el texto menciona «50,000 mil puntos» y también 49.800 puntos por cuatro Bipro.
 
 ![Diagrama de flujo de las reglas de negocio de PremiumFitness](img/reglas-de-negocio.png)
 
@@ -26,6 +26,12 @@ El diagrama resume las 11 reglas de este documento: cálculo y vencimiento de pu
 
 El entrenador A rifiere al entrenador B (entrenador A obtiene 50 mil pero en estado desactivado) el cliente del entrenador B realiza una compra entonces se debloquea los puntos ganados por el entrenador A. El entrenador B gana el 5% del valor de esa compra con IVA incluido.
 
+    Precisiones (9 nov 2026):
+    - Los 50.000 puntos se dan **una sola vez** por cada entrenador referido. Las compras siguientes de los clientes de B no le dan más puntos a A.
+    - Los activa la primera compra **aprobada** de cualquier cliente de B, sin monto mínimo. La compra propia de B (con su 25%) no los activa.
+    - Mientras están pendientes no caducan. Una vez activados, vencen a los 6 meses, como cualquier acumulación (regla 2).
+    - Si se cancela o devuelve la compra que los activó y A todavía no los ha usado, se le retiran y quedan otra vez pendientes hasta la siguiente compra aprobada de un cliente de B. Si A ya los usó, los conserva.
+
 7. Los puntos ganados por las compras de los clientes se calculan con IVA incluido. La comisión sí se calcula sobre el valor antes de IVA, discriminando el IVA de cada producto. *(Cambio del 9 nov 2026: antes los puntos también se calculaban antes de IVA.)*
 
 8. La app de dietas debe tener un rango de puntos mensuales para su uso, debe validar cada día la disponibilidad de saldo de puntos por mes.
@@ -47,4 +53,4 @@ El entrenador A rifiere al entrenador B (entrenador A obtiene 50 mil pero en est
 
 14. Cuando el cliente está asociado a un entrenador, todo el catálogo se muestra con el descuento aplicado: un badge con el porcentaje, el precio con descuento y el precio real tachado.
 
-15. Los porcentajes no son fijos. El 10% del cliente, el 25% del entrenador, el 5% en puntos y el 15% de comisión son valores por defecto configurables. Cada producto puede tener una estrategia propia que cambie el descuento con cupón y la comisión. Ejemplo: Nutra Balance tiene un 5% adicional (el cliente recibe 15% de descuento) y la comisión del entrenador baja al 10%.
+15. Los porcentajes no son fijos. El 10% del cliente, el 25% del entrenador, el 5% en puntos y el 15% de comisión son valores por defecto configurables, igual que los 50.000 puntos por referido, los 6 meses de vencimiento y el 50% de la conversión. Todas estas constantes se definen en variables de entorno, y cada pedido guarda el valor que se le aplicó. Cada producto puede tener una estrategia propia que cambie el descuento con cupón y la comisión. Ejemplo: Nutra Balance tiene un 5% adicional (el cliente recibe 15% de descuento) y la comisión del entrenador baja al 10%.
