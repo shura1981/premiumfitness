@@ -249,7 +249,7 @@ Las fuentes no fijan la política completa de devoluciones. Se conserva esta pro
 | RF-19 | MVP | Reportes | Por período y entrenador: ventas/IVA, IVA de canjes, comisiones y puntos emitidos, redimidos, vencidos y disponibles conciliados. Excel mensual generado en el cierre (CU-21), con hoja de cuadre y descarga solo con sesión de administrador (spec `negocio/05`). |
 | RF-20 | MVP | Activar puntos por referido | Primera compra aprobada de un cliente de B activa una sola vez los 50.000 puntos de A, sin monto mínimo. La compra propia de B no cuenta. B recibe sus recompensas normales. |
 | RF-21 | Mejora | Aviso de vencimiento | Avisos por lote y canal sin duplicados. Las fechas visibles sí forman parte del MVP. |
-| RF-22 | MVP | Liquidación mensual | Al corte del último día del mes se liquida la comisión no convertida y el Excel se envía a financiero; ese Excel es lo que se paga, por fuera de la app, y los comprobantes de consignación son la evidencia. La transferencia bancaria automática queda fuera. |
+| RF-22 | MVP | Liquidación mensual | Al corte del último día del mes se liquida la comisión no convertida y el Excel se envía a financiero. Financiero paga el día 4 del mes siguiente, en un solo pago, por fuera de la app, y registra cada pago con fecha, referencia y comprobante; el entrenador recibe un push y ve el comprobante. La transferencia bancaria automática queda fuera. |
 | RF-23 | MVP | Compra entrenador | 25% en compra con dinero sobre todo el portafolio; no se aplica en canjes ni se mezcla dinero/puntos. |
 
 Se conservan los identificadores del PRD anterior para facilitar revisión: RF-09 pasa de bienvenida a registro del referido; RF-15 corresponde a dietas posterior; RF-20 entra al MVP; RF-23 explicita la compra propia.

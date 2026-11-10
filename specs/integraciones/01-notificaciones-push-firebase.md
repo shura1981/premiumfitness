@@ -87,6 +87,7 @@ En iPhone y iPad las notificaciones web tienen más restricciones que en Android
 | Entrenador | Se activaron sus 50.000 puntos por referido | CU-08 |
 | Entrenador | Puntos que vencen en `PUSH_EXPIRY_NOTICE_DAYS` días | Proceso nocturno de vencimiento |
 | Entrenador | Cierre del mes: comisión liquidada | CU-21 |
+| Entrenador | Comisión pagada: «Te pagamos $100.000 de la comisión de octubre», con enlace al comprobante | CU-21, spec `negocio/04` |
 | Entrenador (app de dietas) | El acceso a dietas vence en 3 días o se desactivó | Spec `integraciones/02` |
 | Cliente | Pedido aprobado | CU-04 |
 | Cliente | Pedido enviado, con la guía | CU-18 |

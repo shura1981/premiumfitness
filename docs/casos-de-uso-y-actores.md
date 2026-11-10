@@ -675,7 +675,7 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 ### CU-21. Liquidar la comisión del mes
 
 - **Objetivo:** cerrar el mes, dejar calculado lo que la empresa debe pagar a cada entrenador por la comisión que no convirtió, y entregar el reporte mensual.
-- **Actores:** cron del hosting; las encargadas de financiero reciben el reporte.
+- **Actores:** cron del hosting; financiero recibe el reporte y registra los pagos en el admin.
 - **Disparador:** el día 1 a la 01:00 (hora de Colombia), el cron del hosting hace una sola petición de cierre del mes anterior, con `year` y `month` explícitos. No se usa un programador dentro de la aplicación.
 - **Reglas:** regla 18 de `reglas-de-negocio.md`; spec `specs/negocio/05-reportes-y-conciliacion-mensual.md`.
 - **Clasificación:** Confirmado por producto (9 nov 2026). El proceso se toma del sistema actual (api-comisiones), simplificado. Medio y plazo de pago: términos y condiciones.
@@ -685,12 +685,13 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 1. El sistema valida el secreto del cierre y el período.
 2. En una sola transacción:
    - crea el período del mes;
-   - crea una liquidación por cada entrenador con comisión sin liquidar (pedidos, comisión, ajustes, lo convertido y el total a pagar);
+   - crea una liquidación por cada entrenador con la comisión sin liquidar creada hasta el fin del mes (pedidos, comisión, ajustes, lo convertido y el total a pagar). Lo creado después de las 23:59:59 del último día es del mes siguiente;
    - marca los movimientos como liquidados;
    - registra el débito que deja el saldo en cero.
 3. Genera el Excel del mes fuera de la carpeta pública con estas hojas: resumen por entrenador, análisis de ventas, detalle de pedidos, productos, puntos, canjes y cuadre.
 4. Envía a las encargadas de financiero (lista en la variable de entorno `COMMISSION_REPORT_RECIPIENTS`) un correo con el resumen y un enlace que exige iniciar sesión.
-5. Financiero paga lo que dice el Excel. La app no registra el pago: los comprobantes de consignación son la evidencia.
+5. El día 4, financiero paga lo que dice el Excel, en un solo pago por entrenador, y registra en el admin el pago de cada liquidación: fecha, referencia y comprobante (captura o PDF). Si termina el día 4 sin registrar un pago, el admin lo marca como vencido.
+6. El entrenador recibe una notificación push y ve en la app la liquidación pagada con su comprobante.
 
 **Alternativas y errores:**
 
@@ -699,7 +700,7 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 - **Devolución o corrección posterior al cierre:** entra como ajuste en el mes siguiente. Un mes cerrado no cambia.
 - **Fallo del correo:** el cierre queda hecho y el correo se reenvía con `force`.
 
-**Resultado:** período cerrado, liquidaciones por entrenador y Excel enviado a financiero. Ese Excel es lo que se paga.
+**Resultado:** período cerrado, Excel enviado a financiero y cada liquidación pagada con su comprobante visible para el entrenador.
 
 **Criterio de aceptación:**
 

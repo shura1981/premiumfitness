@@ -69,4 +69,4 @@ El entrenador A rifiere al entrenador B (entrenador A obtiene 50 mil pero en est
 
     Ejemplo: con 100.000 puntos vigentes y 100.000 de comisión, recibe 100.000 + 50.000 = 150.000 y queda con **250.000 puntos**. El tope evita que el 50% se multiplique con conversiones pequeñas y repetidas: con 1.000.000 de puntos y 1.000 de comisión, recibe 2.000. Los puntos convertidos forman un lote que vence a los 6 meses.
 
-18. El último día de cada mes (hora de Colombia) se hace el corte: la comisión no convertida se liquida para pagarse y el saldo queda en cero. Una devolución posterior al corte se descuenta del mes siguiente.
+18. El último día de cada mes (hora de Colombia) se hace el corte: la comisión no convertida se liquida y el saldo queda en cero. Esa comisión se paga **el día 4 del mes siguiente**, en un solo pago, y el entrenador ve el comprobante en la app. Una devolución posterior al corte se descuenta del mes siguiente.

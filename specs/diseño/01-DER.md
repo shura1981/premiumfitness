@@ -1,6 +1,6 @@
 # 01 — Diagrama entidad relación (DER)
 
-**Estado:** propuesta v0.13 lista para revisión · **Creado:** 7 de noviembre de 2026
+**Estado:** propuesta v0.14 lista para revisión · **Creado:** 7 de noviembre de 2026
 
 ## Petición original
 
@@ -46,7 +46,9 @@
 - **Login:** `users.num_cell` pasa a ser único, porque es el usuario del login.
 - **Códigos SMS:** `verification_codes` guarda el hash del código y añade `purpose`, `destination` y `attempts`.
 - **Sesiones:** nueva tabla `refresh_tokens`, con rotación por familia y una sesión por app.
-- **Pagos:** `commission_settlements` ya no registra el pago; el Excel del cierre es lo que se paga.
+- **Pagos:** `commission_settlements` ya no registra el pago (revertido en v0.14).
+
+**Revisión v0.14, 10 de noviembre de 2026:** se vuelve a registrar el pago de cada liquidación (spec `negocio/04`, regla 10). `commission_settlements` añade `status`, `paid_at`, `payment_reference`, el comprobante (`receipt_path`, `receipt_mime`) y `paid_by_agent_id`.
 
 **Revisión v0.13, 9 de noviembre de 2026:** notificaciones push y acceso a dietas (specs `integraciones/01` e `integraciones/02`).
 
@@ -206,7 +208,7 @@ Diagrama editable: [diagrama-entidad-relacion.drawio](../../docs/img/diagrama-en
 | Pedidos y catálogo | `payment_event_jobs` | Existente | Reintento de webhooks que llegan antes que el pedido. |
 | Recompensas y operación | `commission_movements` | Nueva | Abono de comisión del pedido (suma de líneas), débitos por conversión y ajustes. |
 | Recompensas y operación | `commission_conversions` | Nueva | Conversión del total de comisión a puntos: comisión, puntos base, adicional con tope y total. |
-| Recompensas y operación | `commission_settlements` | Nueva | Liquidación mensual por entrenador de la comisión no convertida: lo que se paga. |
+| Recompensas y operación | `commission_settlements` | Nueva | Liquidación mensual por entrenador de la comisión no convertida, su pago y el comprobante. |
 | Recompensas y operación | `commission_periods` | Nueva | Cierre del mes: totales, archivo del reporte y envío del correo. |
 | Recompensas y operación | `point_lots` | Nueva | Lote con cantidad inicial, remanente, estado, fecha de acumulación y caducidad. |
 | Recompensas y operación | `point_movements` | Nueva | Abono, consumo FIFO, caducidad y ajuste por lote. |
@@ -265,4 +267,5 @@ Diagrama editable: [diagrama-entidad-relacion.drawio](../../docs/img/diagrama-en
 - [x] Añadir `commission_periods` a partir de api-comisiones (v0.11)
 - [x] Añadir `refresh_tokens`, ajustar `verification_codes` y hacer único `users.num_cell` (v0.12)
 - [x] Añadir push (`push_devices`, `push_notifications`) y acceso a dietas (`diet_access_periods`) (v0.13)
+- [x] Registrar el pago de la liquidación con comprobante (v0.14)
 - [ ] Revisión y aprobación del modelo por negocio y tecnología

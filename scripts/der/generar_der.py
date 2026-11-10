@@ -270,7 +270,7 @@ def row_label(key, name, typ, mark, stub):
 # =====================================================================
 db = Page("Base de datos", "db")
 db.header("PremiumFitness — Diagrama entidad relación de la base de datos",
-          "v0.13 · 9 nov 2026 · base: esquema real de backend-radical-nutrition (dump + migraciones) sin credit_balances, "
+          "v0.14 · 10 nov 2026 · base: esquema real de backend-radical-nutrition (dump + migraciones) sin credit_balances, "
           "más las tablas nuevas de autenticación, push, referidos, comisiones, puntos, liquidación, dietas y operación · spec: specs/diseño/01-DER.md")
 Y0 = 170
 ry = db.ry
@@ -508,7 +508,11 @@ db.table("cs", "commission_settlements", "N", db.R("al") + 100, db.B("adj") + 60
     r("", "commission_amount", "decimal(12,2) · ventas del mes"),
     r("", "conversions_amount", "decimal(12,2) · convertido a puntos"),
     r("", "adjustments_amount", "decimal(12,2)"), r("", "total_amount", "decimal(12,2) · a pagar"),
-    r("", "closed_at", "timestamp")])
+    r("", "closed_at", "timestamp"),
+    r("", "status", "enum('closed','paid')"), r("", "paid_at", "timestamp NULL"),
+    r("", "payment_reference", "varchar(100) NULL"),
+    r("", "receipt_path / receipt_mime", "varchar(255) / varchar(50) NULL · comprobante"),
+    r("FK", "paid_by_agent_id", "int(11) NULL · financiero")])
 db.table("cper", "commission_periods", "N", db.R("cs") + 100, db.B("adj") + 60, [
     r("PK", "id", "bigint(20) (AI)"), r("UQ", "period", "char(7) · '2026-11'"),
     r("", "period_start / period_end", "date"), r("", "closed_at", "timestamp"),
@@ -585,7 +589,7 @@ db.note(NX, Y0 + 350, 620, 300,
         "• Externa: tb_empleados vive en la intranet; no se migra, se consulta por JOIN (orders.agent_id = id_usuario).<br><br>"
         "<b>Sin línea</b><br>"
         "• audit_logs.user_id → users.<br>"
-        "• commission_settlements.trainer_id → trainers.<br>"
+        "• commission_settlements.trainer_id → trainers; commission_settlements.paid_by_agent_id → tb_empleados.<br>"
         "• refresh_tokens.agent_id → tb_empleados; refresh_tokens.replaced_by_id → refresh_tokens.<br>"
         "• diet_access_periods.trainer_id → trainers.<br>"
         "• orders_items.sap_code es una copia del código de sap_products, sin FK.<br>"

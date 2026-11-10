@@ -196,7 +196,7 @@ $app->post('/api/auth/login', [$authController, 'login'])
 
 ## Private Files
 
-- Los archivos privados viven en `storage/private/` dentro del proyecto: credenciales (`firebase-fcm-sender.json`) y reportes (Excel del cierre). Esa carpeta está bloqueada en el `.htaccess` (como `app/`, `src/` o `vendor/`) y excluida en el `.gitignore`. Los reportes solo se descargan desde el admin autenticado.
+- Los archivos privados viven en `storage/private/` dentro del proyecto: credenciales (`firebase-fcm-sender.json`), reportes (Excel del cierre) y comprobantes de pago de comisiones (`storage/private/receipts/`). Esa carpeta está bloqueada en el `.htaccess` (como `app/`, `src/` o `vendor/`) y excluida en el `.gitignore`. Los reportes solo se descargan desde el admin autenticado; un comprobante, desde el admin o por el entrenador dueño de la liquidación. Los archivos subidos se validan por su contenido real (`finfo`), no por la extensión.
 
 ## Environment Variables
 
@@ -245,6 +245,7 @@ DIET_FREE_DAYS=30
 
 # Cierre mensual de comisión (spec negocio/05)
 COMMISSION_REPORT_RECIPIENTS=financiero1@dominio.com,financiero2@dominio.com
+COMMISSION_PAYMENT_DAY=4
 REPORTS_STORAGE_PATH=storage/private/reports
 ```
 

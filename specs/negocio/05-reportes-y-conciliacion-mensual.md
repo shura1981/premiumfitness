@@ -40,7 +40,7 @@ Reutilizar lo que funciona del sistema actual de comisiones (proceso mensual, co
 | Promociones y bonos fijos en el código (15%, 20%, 30%, CreaStack con fechas) | Variables de entorno más `product_discount_rules` con vigencia | Regla 15 y spec `negocio/02` |
 | `force: true` recalcula y sobrescribe un mes cerrado | Un mes cerrado **no cambia**. `force` solo regenera el Excel y reenvía el correo. Las correcciones entran como ajustes en el mes siguiente | Lo pagado debe coincidir siempre con lo liquidado |
 | Una comisión negativa se suma en silencio y reduce el total del cupón | La comisión de una línea nunca es negativa. Las devoluciones son ajustes explícitos (`adjustments`) | Trampa documentada en el CLAUDE.md del repo |
-| Cierra la conciliación y el Excel es lo que se paga | **Igual:** el Excel del cierre es lo que se paga. La app no registra el pago; los comprobantes de consignación son la evidencia, por fuera del sistema | Decisión de producto (9 nov 2026) |
+| Cierra la conciliación y el Excel es lo que se paga; no registra el pago | El Excel del cierre es lo que se paga, y financiero **registra el pago de cada liquidación** con fecha, referencia y comprobante. El entrenador lo ve en la app (spec `negocio/04`, regla 10) | Hay que poder demostrar qué se pagó y al entrenador le da tranquilidad |
 | Excel en `public/` con nombre predecible (`report-coupns-7-2026.xlsx`), descargable **sin autenticación** (`reportDownloadController`: «TODO: Implement token validation») | Archivo fuera de la carpeta pública y descarga solo desde el admin autenticado | El Excel trae nombres de clientes, ciudades y comisiones |
 | `tb_cupones_ventas` se llena con un script | La atribución se guarda al comprar (`orders_coupons.trainer_id`) | No hay que reconstruirla |
 | Secreto estático compartido entre el login y el cron | `CRON_JOB_TOKEN` de radical, exclusivo de los crons (`CronJobTokenMiddleware`) | Si se rota uno, no rompe el otro |
@@ -73,7 +73,7 @@ Reutilizar lo que funciona del sistema actual de comisiones (proceso mensual, co
 | S-01 | Base de la comisión: lo pagado por el producto con el descuento, sin IVA y sin envío. Es la misma que usa hoy api-comisiones (`(pagado − flete) / 1.19`), pero con el IVA de cada producto. Cierra la parte de comisión de D-03. | Confirmado por el sistema en producción |
 | S-02 | La comisión se guarda por línea con 2 decimales. El total a pagar de cada liquidación se redondea al peso más cercano. | Derivado (api-comisiones redondea a entero por pedido) |
 | S-03 | El cierre corre el día 1 a la 01:00, hora de Colombia, sobre el mes anterior. api-comisiones lo corre el día 4 porque recalcula desde las visitas. Aquí no hace falta esperar: el mes se corta por `approved_at` y las cifras ya están guardadas. | Derivado |
-| S-04 | El correo va a las encargadas de financiero, definidas como lista en la variable de entorno `COMMISSION_REPORT_RECIPIENTS`. El pago no se registra en la app: el Excel del cierre es lo que se paga y los comprobantes de consignación son la evidencia. | Confirmado (9 nov 2026) |
+| S-04 | El correo va a las encargadas de financiero (`COMMISSION_REPORT_RECIPIENTS`). Financiero registra el pago de cada liquidación con su comprobante (spec `negocio/04`). **Cambio del 10 nov 2026:** antes decía que el pago no se registraba. | Confirmado (10 nov 2026) |
 
 ## Plan
 
@@ -88,7 +88,7 @@ Reutilizar lo que funciona del sistema actual de comisiones (proceso mensual, co
 - **`commission_settlements`:**
   - cambia `period` por `period_id` (FK), con clave única (`period_id`, `trainer_id`);
   - añade `orders_count`;
-  - sin estado de pago: la liquidación cerrada es lo que se paga.
+  - estado `closed` → `paid`, con `paid_at`, `payment_reference`, el comprobante y quién lo registró (spec `negocio/04`).
 
 ### Proceso de cierre (CU-21)
 
@@ -96,7 +96,7 @@ Reutilizar lo que funciona del sistema actual de comisiones (proceso mensual, co
 2. Si el período existe, responde 409 (salvo `force`, que solo regenera el Excel y el correo).
 3. En una sola transacción:
    - crea el período;
-   - crea una liquidación por entrenador con saldo sin liquidar;
+   - crea una liquidación por entrenador con los movimientos sin liquidar creados hasta el fin del período (los posteriores son del mes siguiente);
    - asigna `settlement_id` a los movimientos;
    - registra el débito que deja el saldo en cero.
 4. Genera el Excel fuera de la carpeta pública y guarda `file_name`.
@@ -120,7 +120,7 @@ El cierre lee un solo mes. Además de los índices del spec `negocio/03`, usa:
 
 - `orders (status_id, approved_at)`, para los pedidos aprobados del mes;
 - `point_movements (created_at)`, para los puntos emitidos, canjeados y vencidos del mes;
-- `commission_movements (settlement_id)`, para los movimientos aún sin liquidar.
+- `commission_movements (settlement_id, created_at)`, para los movimientos aún sin liquidar hasta el fin del período.
 
 ### Vistas del entrenador
 
