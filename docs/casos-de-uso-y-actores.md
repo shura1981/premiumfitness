@@ -690,7 +690,7 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
    - registra el débito que deja el saldo en cero.
 3. Genera el Excel del mes fuera de la carpeta pública con estas hojas: resumen por entrenador, análisis de ventas, detalle de pedidos, productos, puntos, canjes y cuadre.
 4. Envía a las encargadas de financiero (lista en la variable de entorno `COMMISSION_REPORT_RECIPIENTS`) un correo con el resumen y un enlace que exige iniciar sesión.
-5. El día 4, financiero paga lo que dice el Excel, en un solo pago por entrenador, y registra en el admin el pago de cada liquidación: fecha, referencia y comprobante (captura o PDF). Si termina el día 4 sin registrar un pago, el admin lo marca como vencido.
+5. El día 4 (o el siguiente día hábil si el 4 es sábado, domingo o festivo), financiero paga lo que dice el Excel, en un solo pago por entrenador, y registra en el admin el pago de cada liquidación: fecha, referencia y comprobante (captura o PDF). Si termina el día de pago sin registrar un pago, el admin lo marca como vencido.
 6. El entrenador recibe una notificación push y ve en la app la liquidación pagada con su comprobante.
 
 **Alternativas y errores:**

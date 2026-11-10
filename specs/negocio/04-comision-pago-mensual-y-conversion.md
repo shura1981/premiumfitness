@@ -60,12 +60,12 @@ Definir qué hace el entrenador con su comisión, cómo se convierte a puntos y 
    - **Conversión bloqueada:** desde las 00:00 del día 1 hasta que termina el cierre, el entrenador no puede convertir. Así no consume comisión del mes que se está liquidando.
    - **Después del cierre:** esa comisión ya no se puede convertir.
 8. **Devolución después del corte.** Genera un ajuste negativo que se descuenta del mes siguiente. Si el saldo de un mes queda negativo, no se paga nada y la diferencia pasa al siguiente.
-10. **Pago y comprobante.** La comisión de un mes se paga **el día 4 del mes siguiente** (`COMMISSION_PAYMENT_DAY`), **en un solo pago** por liquidación. Financiero paga por fuera de la app lo que dice el Excel del cierre y registra el pago en el admin, liquidación por liquidación:
+10. **Pago y comprobante.** La comisión de un mes se paga **el día 4 del mes siguiente** (`COMMISSION_PAYMENT_DAY`), **en un solo pago** por liquidación. Si el 4 cae en sábado, domingo o festivo, se paga el **siguiente día hábil** (por ejemplo, el domingo 4 oct 2026 pasa al lunes 5 oct). El día, el sentido del corrimiento y la lista de festivos son variables de entorno (S-11). El cierre calcula esa fecha, la guarda en la liquidación (`due_date`) y es la que ve el entrenador. Financiero paga por fuera de la app lo que dice el Excel del cierre y registra el pago en el admin, liquidación por liquidación:
     - fecha del pago, referencia de la transacción y el comprobante (captura o PDF);
     - la liquidación pasa de `closed` a `paid`; queda registrado quién lo hizo y cuándo (`audit_logs`);
     - el entrenador recibe una notificación push y ve el comprobante en la app;
     - un pago mal registrado se corrige desde el admin (otro comprobante u otra fecha) y queda auditado; no se borra.
-    - si el día 4 termina sin registrar el pago de una liquidación, el admin la marca como **vencida** en Cierre mensual, para que financiero la revise.
+    - si termina el día de pago (`due_date`) sin registrar el pago de una liquidación, el admin la marca como **vencida** en Cierre mensual, para que financiero la revise.
 11. **Constantes.** El 50% (`COMMISSION_CONVERSION_PERCENTAGE`) es una variable de entorno. Cada conversión guarda el porcentaje, los puntos base, el adicional y el total.
 
 ## Pantalla de conversión (app del entrenador)
@@ -115,10 +115,11 @@ La línea del último cierre en Inicio se mantiene hasta el cierre siguiente.
 | S-03 | `P` incluye los puntos vigentes de todos los orígenes (clientes, referidos y conversiones anteriores), pero no los 50.000 pendientes. | Derivado de «lo que tenga actualmente vigente en puntos» |
 | S-04 | Corte el último día del mes, hora de Colombia. El cron del hosting lo dispara el día 1 a la 01:00 con una sola petición (spec `negocio/05`). | Derivado (D-01) |
 | S-05 | Financiero paga por fuera de la app lo que dice el Excel del cierre y registra el pago en el admin con fecha, referencia y comprobante. El entrenador lo ve en la app. **Cambio del 10 nov 2026:** antes decía que el pago no se registraba. | Confirmado (10 nov 2026) |
-| S-06 | Plazo de pago: el día 4 del mes siguiente (confirmado el 10 nov 2026). Pendientes para los términos y condiciones: medio de pago, mínimo para pagar, retenciones o impuestos, y qué pasa si el 4 cae en fin de semana o festivo. | Pendiente: términos y condiciones |
+| S-06 | Plazo de pago: el día 4 del mes siguiente; si no es día hábil, el siguiente día hábil (confirmado el 10 nov 2026). Pendientes para los términos y condiciones: medio de pago, mínimo para pagar y retenciones o impuestos. | Pendiente: términos y condiciones |
 | S-07 | Ajuste negativo y saldo negativo trasladado al mes siguiente. | Derivado |
 | S-08 | Cada liquidación se paga en un solo pago, con un comprobante. No hay pagos parciales. | Confirmado (10 nov 2026) |
 | S-09 | Comprobante: imagen JPG, PNG o WebP, o PDF, de máximo 5 MB, validado por su contenido real (no por la extensión) y guardado en `storage/private/receipts/`. Lo ven el admin y el entrenador dueño de la liquidación. | Derivado |
+| S-11 | Día hábil: de lunes a viernes, sin los festivos. Todo es configurable porque puede cambiar: el día (`COMMISSION_PAYMENT_DAY=4`), hacia dónde se mueve si no es hábil (`COMMISSION_PAYMENT_SHIFT=next`, o `previous`) y los festivos (`NON_BUSINESS_DAYS`, lista de fechas `AAAA-MM-DD` separadas por comas, cargada con los festivos de Colombia de 2026 y 2027). Nada de esto está fijo en el código. Al arrancar se valida el formato; si al cerrar falta el año de la fecha de pago en `NON_BUSINESS_DAYS`, el cierre sigue con fines de semana y avisa a financiero en el correo del cierre para que se actualice la variable. | Confirmado que va en variables de entorno (10 nov 2026); el detalle es Derivado |
 | S-10 | Quién registra el pago: una persona de financiero con usuario en `tb_empleados` (inicia sesión en el admin). | Derivado: confirmar que financiero tiene usuario en la intranet |
 
 **Diferencias con `docs/requerimientos.md`:** el original no dice que la comisión se pague en dinero cada mes; dice que el entrenador «puede convertir el valor del total de la comisión en puntos». El pago mensual, el tope del 50% y la exclusión del canje mixto con comisión son decisiones de producto del 9 nov 2026. El ejemplo del original (100.000 puntos → 50.000 puntos) coincide con el 50% sobre los puntos vigentes.
@@ -163,4 +164,7 @@ La clave única de `commission_periods.period` y de (`period_id`, `trainer_id`) 
 - [x] Actualizar PRD (§6.5, RF-12, RF-22, D-04, D-08), MVP y fases
 - [x] Corregir el spec `negocio/03` (decía que no había liquidación mensual)
 - [x] Registrar el pago con comprobante y avisar al entrenador (regla 10, S-05)
+- [ ] Leer y validar `COMMISSION_PAYMENT_SHIFT` y `NON_BUSINESS_DAYS` en `load/bootstrap.php` (S-11)
+- [ ] Calcular la fecha de pago con esas variables, con pruebas de 2026 y 2027 (4 oct 2026 → 5 oct; 4 dic 2027 → 6 dic) y del aviso cuando falta el año
+- [ ] Guardar `due_date` en `commission_settlements` al cerrar y usarla en la app, el admin y la marca de vencida
 - [ ] Redactar los términos y condiciones del pago de la comisión (S-06)

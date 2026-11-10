@@ -246,6 +246,8 @@ DIET_FREE_DAYS=30
 # Cierre mensual de comisión (spec negocio/05)
 COMMISSION_REPORT_RECIPIENTS=financiero1@dominio.com,financiero2@dominio.com
 COMMISSION_PAYMENT_DAY=4
+COMMISSION_PAYMENT_SHIFT=next   # next|previous: si el día de pago no es hábil
+NON_BUSINESS_DAYS=2026-01-01,2026-01-12,...   # festivos AAAA-MM-DD; actualizar cada año
 REPORTS_STORAGE_PATH=storage/private/reports
 ```
 

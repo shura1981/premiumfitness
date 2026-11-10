@@ -48,7 +48,7 @@
 - **Sesiones:** nueva tabla `refresh_tokens`, con rotación por familia y una sesión por app.
 - **Pagos:** `commission_settlements` ya no registra el pago (revertido en v0.14).
 
-**Revisión v0.14, 10 de noviembre de 2026:** se vuelve a registrar el pago de cada liquidación (spec `negocio/04`, regla 10). `commission_settlements` añade `status`, `paid_at`, `payment_reference`, el comprobante (`receipt_path`, `receipt_mime`) y `paid_by_agent_id`.
+**Revisión v0.14, 10 de noviembre de 2026:** se vuelve a registrar el pago de cada liquidación (spec `negocio/04`, regla 10). `commission_settlements` añade `status`, `paid_at`, `payment_reference`, el comprobante (`receipt_path`, `receipt_mime`) y `paid_by_agent_id`. También `due_date`: el día de pago calculado al cierre (el 4 o el siguiente día hábil, según `COMMISSION_PAYMENT_DAY`, `COMMISSION_PAYMENT_SHIFT` y `NON_BUSINESS_DAYS`).
 
 **Revisión v0.13, 9 de noviembre de 2026:** notificaciones push y acceso a dietas (specs `integraciones/01` e `integraciones/02`).
 

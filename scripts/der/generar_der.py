@@ -509,6 +509,7 @@ db.table("cs", "commission_settlements", "N", db.R("al") + 100, db.B("adj") + 60
     r("", "conversions_amount", "decimal(12,2) · convertido a puntos"),
     r("", "adjustments_amount", "decimal(12,2)"), r("", "total_amount", "decimal(12,2) · a pagar"),
     r("", "closed_at", "timestamp"),
+    r("", "due_date", "date · día de pago (hábil)"),
     r("", "status", "enum('closed','paid')"), r("", "paid_at", "timestamp NULL"),
     r("", "payment_reference", "varchar(100) NULL"),
     r("", "receipt_path / receipt_mime", "varchar(255) / varchar(50) NULL · comprobante"),
