@@ -13,10 +13,10 @@ Que los entrenadores entiendan en una reunión qué ganan con PremiumFitness y c
 ## Alcance
 
 - **Presentación** de 19 diapositivas (`.pptx`, 16:9) con el tema oscuro del sistema de diseño: marino, tarjetas, oro como acento y Montserrat. Lleva notas del orador en cada diapositiva.
-- **Video** de 74 segundos (1080p, con voz en español y música) para abrir o cerrar la reunión.
+- **Video** de 73 segundos (1080p, con voz en español y música) para abrir o cerrar la reunión.
 - **Capturas en móvil:** 11 pantallas de la app de puntos y 13 de la app de dietas.
 
-Los archivos están en `docs/presentacion-entrenadores/`.
+Los archivos están en `docs/presentacion-entrenadores/`. La presentación que trata solo de la app de dietas tiene su propio spec: `documentacion/03`.
 
 ## Fuera de alcance
 
@@ -55,7 +55,8 @@ Los archivos están en `docs/presentacion-entrenadores/`.
 - **Pantallas de la app de puntos:** la app todavía no tiene código, así que son maquetas hechas con los componentes del sistema de diseño (spec `diseño/02`), en tema oscuro y a 390 × 844. En la presentación y en el video van rotuladas «Diseño de la app (en desarrollo)».
 - **Pantallas de la app de dietas:** capturas reales, generadas con las pruebas `ux` del repo Flutter (`test/ux_movil_test.dart` y `test/ux_pagos_movil_test.dart`). No se modificó ese repo.
 - **Presentación:** `pptxgenjs`, con tema, diseños de diapositiva y secciones editables.
-- **Video:** dos clips de ambiente y la voz generados con Higgsfield; las pantallas, los textos y el montaje se hicieron con Chrome y `ffmpeg`. Costó 338 créditos.
+- **Video:** dos clips de ambiente y la voz generados con Higgsfield; las pantallas, los textos y el montaje se hicieron con Chrome y `ffmpeg`. Costó 338 créditos, más unos 7 de las ocho muestras de voz y de la segunda grabación.
+- **Voz:** la primera versión usó la voz «Juan», que se rechazó por el acento. Se grabaron ocho muestras (`voces-de-prueba/`) y se eligió «Andre» (ElevenLabs, en Higgsfield). El video se remontó con esa voz el 14 de noviembre de 2026.
 
 ## Criterios de aceptación
 
@@ -73,7 +74,7 @@ Los archivos están en `docs/presentacion-entrenadores/`.
 | P-02 | Los precios de Bi-Pro Lite, Megaplex Lite y Bi-Pro Ripped en las maquetas son ilustrativos. Solo el de Bi-Pro Classic sale de las reglas. | Pendiente: los aporta el negocio |
 | P-03 | Las capturas de la app de dietas muestran el nombre del registro de prueba «STEVEN REALPE» y sus medidas. Se evitaron las pantallas con cédulas, teléfonos y correos de la base de pruebas. | Pendiente: decidir si se cambia el nombre |
 | P-04 | Los enlaces de las maquetas se muestran como `premiumfitness · /r/c/…` porque el dominio no está definido. | Pendiente |
-| P-05 | La voz del video es un locutor masculino sintético. No se escuchó antes de entregar. | Pendiente: revisar pronunciación |
+| P-05 | La voz del video es «Andre», elegida por quien pidió el video entre ocho muestras. El video remontado no se escuchó antes de entregar. | Confirmado (la voz) · Pendiente: escuchar el video completo |
 | P-06 | El mensaje de cierre es «Muy pronto»: no hay fecha de lanzamiento. | Derivado |
 | P-07 | Se descartó un tercer clip generado porque la ropa mostraba logos parecidos a marcas deportivas reales. | Derivado |
 
@@ -88,5 +89,6 @@ Los archivos están en `docs/presentacion-entrenadores/`.
 - [x] Revisar los fotogramas del video escena por escena
 - [ ] Abrir la presentación en PowerPoint o WPS y revisar el ajuste visual
   - No se pudo renderizar el `.pptx` en este equipo: no hay LibreOffice instalado.
-- [ ] Escuchar el video completo y aprobar la voz (P-05)
+- [x] Cambiar la voz del video por la elegida («Andre») y remontarlo
+- [ ] Escuchar el video completo con la voz nueva (P-05)
 - [ ] Resolver P-02, P-03 y P-04
