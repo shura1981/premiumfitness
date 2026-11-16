@@ -324,6 +324,7 @@ Los datos de Bipro (249.900 → 224.910) y de la conversión (100.000 + 100.000 
 | S-10 | El selector de acento (seis colores más uno personalizado) entra en el MVP, en Cuenta, como en la app de dietas. Reemplaza la propuesta de dejarlo fuera. | Confirmado (11 nov 2026) |
 | S-11 | Los rótulos de botón van en mayúsculas, como en la app de dietas. | Derivado |
 | S-12 | La web usa los valores corregidos de dos pares de la app de dietas que no llegan a los mínimos (borde de campos a 3:1 y pestaña activa a 4,5:1), y se pide la misma corrección a esa app para que ambas coincidan. | Derivado: el pedido de la corrección salió de la petición del 11 nov |
+| S-13 | **Regla de contraste de los rellenos de color** (botones, insignias, etiquetas): el texto o icono encima es blanco si llega a 4,5:1; si no, tinta (`#0b0c0f`) solo si llega a 7:1, porque la fórmula WCAG sobrevalora la tinta sobre tonos medios (índigo, azul, rojo) y a 4,5 se ve apagada. El relleno se separa de la tarjeta al menos 3:1 (WCAG 1.4.11). Si un acento no cumple, se mueve su luminosidad lo mínimo, sin cambiar el tono; los rellenos usan `--action` y `--primary` queda para texto e iconos sueltos. Los rojos fijos (insignia del carrito y etiqueta de descuento) llevan texto blanco sobre `#b3261e`/`#d00b14` en claro y `#c81e2b` en oscuro. Lo comprueban las pruebas de `accent.spec.ts` con todos los acentos y colores extremos. | Confirmado (16 nov 2026) |
 
 ## Checklist
 
@@ -337,3 +338,4 @@ Los datos de Bipro (249.900 → 224.910) y de la conversión (100.000 + 100.000 
 - [ ] Rehacer los mockups con el sistema de la app de dietas
 - [ ] Aprobar los mockups y resolver S-05
 - [ ] Que la app de dietas aplique las dos correcciones de contraste (S-12)
+- [x] Regla de contraste de los rellenos de color (S-13) en `accent.ts`, los tokens y sus pruebas (16 nov 2026)
