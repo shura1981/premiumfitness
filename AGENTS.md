@@ -21,6 +21,7 @@ composer run test          # Pest, contra la base local
 - El admin en local entra con un empleado real de `tb_empleados`. Los agentes `agente.prueba@premiumfitness.local` / `admin-local-123` solo existen en la base de las pruebas.
 - En local los SMS no se envían: con `SMS_DRIVER=log` el código queda en `logs/sms-dev.log`. Las pruebas usan `SMS_DRIVER=memory`.
 - Para probar una compra sin pagar de verdad: `php scripts/dev-pagar-pedido.php <id del pedido>` envía al backend local el aviso de pago aprobado de Bold, firmado. Solo corre en local.
+- Para recorrer la app con datos: `php scripts/dev-sembrar-demo.php` crea, con la API local, un entrenador demo (celular `3009000001`, contraseña en la constante `PASSWORD` del script) con clientes, compras pagadas, un entrenador referido activo, una conversión, un canje y un pedido sin pagar. Solo corre en local y necesita el backend en marcha y `SMS_DRIVER=log`.
 - Las pruebas escriben en la base local y no la limpian. Si algo queda raro, `scripts/reset-db.sh` la recrea.
 - Las apps: `npm run start:api` en `premiumfitness-web` (puerto 4200) y en `premiumfitness-admin` (puerto 4201) usan este backend; `npm start` usa su API simulada.
 - Toda ruta nueva de `/api` lleva su credencial; si es pública a propósito, se añade a la lista de `tests/E2E/Security/RoutesRequireCredentialsTest.php`.

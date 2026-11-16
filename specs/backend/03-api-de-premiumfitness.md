@@ -146,3 +146,4 @@ Resultado de la fase (15 nov 2026): 293 pruebas pasan, 62 de ellas nuevas de ses
 
 - [x] Conectar la app web y el admin al backend local y recorrer los flujos sin la API simulada (16 nov 2026). Salieron 3 fallas del backend, ya corregidas y con prueba: la lista de pedidos del admin fallaba con un canje, la corrección de un pago no leía el formulario y el agente local no tenía un cargo válido.
 - [x] Actualizar AGENTS.md y `codebase-standards.md` con lo que cambió
+- [x] Script `scripts/dev-sembrar-demo.php`: entrenador demo con clientes, compras, referido, conversión, canje y un pedido sin pagar, creado con la API local (16 nov 2026)

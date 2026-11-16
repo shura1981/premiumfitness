@@ -53,6 +53,7 @@ Tener los dos frontends de PremiumFitness creados y funcionando en local, con el
 | F-05 | El contrato de la API es `specs/backend/03-api-de-premiumfitness.plan.md`, el mismo para el backend, la app web y el admin. Reemplaza los contratos provisionales del plan de este spec. | Confirmado (16 nov 2026) |
 | F-09 | En local hay dos modos: `npm start` usa la API simulada y `npm run start:api` el backend de `localhost:8000` (web en el puerto 4200 y admin en el 4201, los orígenes que admite el CORS local). | Derivado |
 | F-10 | El SDK de Firebase de la app web queda fijo en la 13.1.0 (Apache-2.0): se evita instalar versiones publicadas hace menos de dos semanas. | Derivado |
+| F-11 | Ni la app web ni el admin se indexan en buscadores: `<meta name="robots" content="noindex, nofollow">` y el header `X-Robots-Tag`. No se bloquean con `robots.txt`: Google necesita leer la página para ver el `noindex`. | Confirmado (16 nov 2026) |
 | F-06 | El admin se crea clonando `admin-radical-nutrition` con su historial; el remoto original queda con el nombre `radical`, solo para traer cambios. | Derivado |
 | F-07 | Los iconos son Material Symbols Outlined como SVG dentro de la app (solo los que se usan), no la fuente completa desde Google Fonts: pesa menos y funciona sin conexión. | Derivado |
 | A-01 | El admin usa ApexCharts 4.7.0 y `ng-apexcharts` 1.17.1, las versiones de radical, con licencia MIT y versión fija. La actualización a Angular 22 las había subido a la 8, que ya no es MIT; se revirtió el 15 nov 2026. **No se usan paquetes de pago ni con licencia restringida.** | Confirmado (15 nov 2026) |
@@ -61,7 +62,7 @@ Tener los dos frontends de PremiumFitness creados y funcionando en local, con el
 
 ## Estado al 16 de noviembre de 2026
 
-- **App web (16 nov 2026):** `npm run build`, `npm run lint` y `npm test` (157 pruebas) pasan. Todas las pantallas del checklist están hechas y se recorrieron en el navegador contra la API simulada y contra el backend local.
+- **App web (16 nov 2026):** `npm run build`, `npm run lint` y `npm test` (161 pruebas) pasan. Todas las pantallas del checklist están hechas y se recorrieron en el navegador contra la API simulada y contra el backend local.
 - **Admin (16 nov 2026):** `npm run build` y `npm test` (127 pruebas) pasan. Las pantallas nuevas se recorrieron en el navegador contra la API simulada y contra el backend local.
 - Ninguno de los dos repos tiene commits nuevos: los cambios están en el árbol de trabajo.
 
@@ -109,6 +110,12 @@ Plan técnico: [01-apps-web-y-admin.plan.md](01-apps-web-y-admin.plan.md).
   - Falta probar la instalación y el push en un iPhone real.
 - [x] Conectar la app al backend real (`npm run start:api`) y recorrer los flujos sin la API simulada (16 nov 2026)
 - [x] Separar el login y el registro por rol y mover el área del entrenador a `/coach/**` (F-04, S-08; 16 nov 2026)
+- [x] Pantallas de acceso: título y logo más grandes (hasta 42 px; en pantallas angostas, el 11 % del ancho del formulario, sin desplazamiento lateral)
+- [x] Imágenes de producto con skeleton mientras cargan, carga diferida y la tienda con tarjetas de esqueleto (directiva `pfImage` en `shared/ui/lazy-image`)
+- [x] Que buscadores no indexen la app web: `noindex` en `index.html` y `X-Robots-Tag` en el `.htaccess` (F-11)
+- [x] Inicio del entrenador rediseñado: tarjeta de puntos en el color de acento con su origen, atajos, fichas por origen, comisión con el avance hasta el cierre y movimientos con icono (16 nov 2026)
+- [x] Esqueletos con brillo que recorre la forma (también en las imágenes que cargan), en lugar del parpadeo
+- [x] Llevar el mismo estilo a Puntos (lotes con barra de remanente y vencimiento), Comisión (avance al cierre y hoja de conversión «comisión → puntos») y Referidos (fichas que eligen la lista y enlace en el color de acento)
 - [ ] Pantalla para canjear el acceso del mes a la app de dietas (`POST /trainer/diet-access/redeem`): Inicio solo muestra el estado
 - [ ] Pruebas unitarias de las pantallas de `features/` (hoy se verifican en el navegador; `core/` y `shared/` sí tienen)
 
@@ -126,4 +133,5 @@ Plan técnico: [01-apps-web-y-admin.plan.md](01-apps-web-y-admin.plan.md).
 - [x] Añadir pruebas al admin: 127 pruebas (sesión, guards, validación del comprobante, estrategias, ajustes y API simulada)
 - [x] Conectar el admin al backend real (`npm run start:api`, puerto 4201) y recorrer sus flujos (16 nov 2026)
   - Tras las correcciones del backend falta repetir en el navegador: la lista de pedidos al entrar, el detalle de un canje y «Corregir pago».
+- [x] Que buscadores no indexen el admin: `noindex` en `index.html` y `X-Robots-Tag` en el `.htaccess` (F-11)
 - [ ] Reducir el bundle inicial: pesa 515 kB y el aviso salta a los 500 kB
