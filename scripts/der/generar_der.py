@@ -101,11 +101,12 @@ def r(key, name, typ="", mark=""):
     return (key, name, typ, mark)
 
 
-def rad(table, notes=None, fk=(), mods=None, extra=(), drop=(), uq=()):
+def rad(table, notes=None, fk=(), mods=None, extra=(), drop=(), uq=(), nofk=()):
     """Filas de una tabla de radical, exactamente como en su esquema.
     notes: comentario por columna · fk: columnas FK sin constraint en radical ·
     mods: {columna: tipo nuevo} (se marca «~») · extra: filas nuevas (se marcan «+») ·
-    drop: columnas que PremiumFitness no conserva · uq: columnas que pasan a ser únicas (se marca «~»)."""
+    drop: columnas que PremiumFitness no conserva · uq: columnas que pasan a ser únicas (se marca «~») ·
+    nofk: columnas que pierden su FK (se marca «~»)."""
     tb = SCHEMA[table]
     notes, mods = notes or {}, mods or {}
     rows = []
@@ -116,14 +117,14 @@ def rad(table, notes=None, fk=(), mods=None, extra=(), drop=(), uq=()):
         key = []
         if n in tb["pk"]:
             key.append("PK")
-        if n in tb["fk"] or n in fk:
+        if (n in tb["fk"] or n in fk) and n not in nofk:
             key.append("FK")
         if [n] in tb["uq"] or n in uq:
             key.append("UQ")
         typ = mods.get(n, c["type"] + (" (AI)" if tb["ai"] == n else "") + (" NULL" if c["null"] else ""))
         if n in notes:
             typ += " · " + notes[n]
-        rows.append(r(" ".join(key), n, typ, "~" if n in mods or n in uq else ""))
+        rows.append(r(" ".join(key), n, typ, "~" if n in mods or n in uq or n in nofk else ""))
     return rows + [r(k, n, t, "+") for k, n, t in extra]
 
 
@@ -214,7 +215,7 @@ class Page:
 
     def legend(self, x, y):
         w = 360
-        self.box(x, y, w, 320, "rounded=1;arcSize=4;fillColor=#ffffff;strokeColor=#bbbbbb;")
+        self.box(x, y, w, 350, "rounded=1;arcSize=4;fillColor=#ffffff;strokeColor=#bbbbbb;")
         self.text(x + 14, y + 10, 200, 20, "<b>LEYENDA</b>", "fontSize=12;")
         items = [("#f5f5f5", "#666666", "", "Existente en radical, idéntica"),
                  ("#d5e8d4", "#82b366", "", "Adaptada de radical"),
@@ -232,8 +233,9 @@ class Page:
         self.text(x + 14, yy + 44, 330, 40,
                   "Tablas de radical: columnas, orden y tipos tomados de su esquema SQL y sus migraciones.",
                   "fontSize=11;fontColor=#444444;")
-        self.text(x + 14, yy + 84, 330, 40,
-                  "Cardinalidad: ┼┼ uno · ○┼ cero o uno<br>○&lt; cero o muchos · ┼&lt; uno o muchos",
+        self.text(x + 14, yy + 84, 330, 60,
+                  "Cardinalidad: ┼┼ uno · ○┼ cero o uno<br>○&lt; cero o muchos · ┼&lt; uno o muchos<br>"
+                  "Línea punteada: relación lógica, sin FK (la tabla vive en otra base)",
                   "fontSize=11;fontColor=#444444;")
 
     def xml(self):
@@ -385,8 +387,11 @@ db.table("ord", "orders", "A", ZC, Y0, rad("orders",
                 ("", "approved_at", "timestamp NULL")]))
 OIX = db.R("ord") + 100
 db.table("oi", "orders_items", "A", OIX, Y0, rad("orders_items",
-         notes={"sap_code": "artículo SAP (sin FK)", "discount_percentage": "descuento vigente del producto"},
-         extra=[("", "tax_rate", "decimal(5,2)"), ("", "tax_base", "decimal(12,2)"),
+         notes={"product_sku": "codigo de la intranet (sin FK)", "product_full_price": "copia de valor",
+                "sap_code": "copia de sap_code (sin FK)", "discount_percentage": "descuento vigente del producto"},
+         nofk=("product_sku",),
+         extra=[("", "product_name", "varchar(255) · copia de producto"),
+                ("", "tax_rate", "decimal(5,2) · 19 o 0 (env)"), ("", "tax_base", "decimal(12,2)"),
                 ("", "tax_amount", "decimal(12,2)"),
                 ("", "commission_percentage", "decimal(5,2) NULL"),
                 ("", "commission_amount", "decimal(12,2) NULL · sobre tax_base"),
@@ -398,24 +403,25 @@ db.table("oc", "orders_coupons", "A", OIX, db.B("oi") + 50,
 db.table("pej", "payment_event_jobs", "E", OIX, db.B("oc") + 50, rad("payment_event_jobs"), w=OW)
 db.table("so", "status_orders", "E", OIX, db.B("pej") + 50, rad("status_orders"), w=OW)
 PX = OIX + OW + 100
-db.table("prod", "products", "A", PX, Y0, rad("products",
-         notes={"price": "IVA incluido", "discount_list": "tramos con sap_code"},
-         extra=[("", "tax_rate", "decimal(5,2)")]))
-db.table("pgm", "product_group_map", "E", PX, db.B("prod") + 60, rad("product_group_map"), w=db.t["prod"]["w"])
-db.table("pg", "product_groups", "E", PX, db.B("pgm") + 60,
-         rad("product_groups", notes={"name": "presentaciones de un producto"}), w=db.t["prod"]["w"])
-RCX = db.R("prod") + 110
+# Catálogo: tabla externa de la intranet (spec catalogo/01). Reemplaza products, categories,
+# product_groups, product_group_map, sap_products y product_sap_map de radical.
+db.table("ext", "tb_productos_megaplexstars · externa (crisenri_intranet)", "X", PX, Y0, [
+    r("PK", "codigo", "int · = product_sku"), r("", "producto", "varchar · nombre"),
+    r("", "valor", "int · precio con IVA"), r("", "activo", "bit · solo 1"),
+    r("", "promo", "bit NULL · 1 no entra"), r("", "agotado", "bit"),
+    r("", "category / presentation", "varchar"), r("", "grupo", "varchar · presentaciones"),
+    r("", "sap_code", "bigint · artículo SAP"), r("", "sap_name", "varchar NULL"),
+    r("", "orden / ruta / intro / imageswebp", "varchar / json · listado"),
+    r("", "description / uso / invima / tablasjpg", "text / json · ficha"),
+    r("", "descuento / old_price", "int · no se leen")])
+RCX = db.R("ext") + 110
 db.table("pdr", "product_discount_rules", "N", RCX, Y0, [
-    r("PK", "id", "bigint(20) (AI)"), r("FK", "product_sku", "bigint(20)"),
+    r("PK", "id", "bigint(20) (AI)"), r("", "product_sku", "bigint(20) · codigo (sin FK)"),
     r("", "client_discount_percentage", "decimal(5,2) NULL · con cupón"),
     r("", "trainer_discount_percentage", "decimal(5,2) NULL"),
     r("", "commission_percentage", "decimal(5,2) NULL"),
     r("", "valid_from", "timestamp"), r("", "valid_to", "timestamp NULL"),
     r("", "is_active", "bit(1)"), r("", "created_at / updated_at", "timestamp")])
-db.table("sp", "sap_products", "E", RCX, db.B("pdr") + 60, rad("sap_products"), w=db.t["pdr"]["w"])
-db.table("psm", "product_sap_map", "E", RCX, db.B("sp") + 60, rad("product_sap_map"), w=db.t["sp"]["w"])
-db.table("cat", "categories", "E", RCX, db.B("psm") + 60, rad("categories"), w=db.t["sp"]["w"])
-
 yoid = ry("ord", "order_id")
 xo = db.R("ord") + 40
 for t in ("oi", "oc", "pej"):
@@ -424,18 +430,12 @@ for t in ("oi", "oc", "pej"):
            [(xo, yoid), (xo, ry(t, "order_id"))], label={"oc": "cupón"}.get(t, ""))
 db.rel("so.status_id", "ord.status_id", ZONE, MANY0, "L", "R",
        [(db.R("ord") + 20, ry("so", "status_id")), (db.R("ord") + 20, ry("ord", "status_id"))])
-db.rel("prod.sku", "oi.product_sku", ONE, MANY0, "L", "R",
-       [(PX - 40, ry("prod", "sku")), (PX - 40, ry("oi", "product_sku"))])
-db.rel("prod.sku", "pdr.product_sku", ONE, MANY0, "R", "L",
-       [(db.R("prod") + 80, ry("prod", "sku")), (db.R("prod") + 80, ry("pdr", "product_sku"))], label="estrategia")
-db.rel("prod.sku", "psm.product_sku", ONE, MANY0, "R", "L",
-       [(db.R("prod") + 60, ry("prod", "sku")), (db.R("prod") + 60, ry("psm", "product_sku"))])
-xsp = db.R("sp") + 30
-db.rel("sp.id", "psm.sap_id", ONE, MANY0, "R", "R", [(xsp, ry("sp", "id")), (xsp, ry("psm", "sap_id"))])
-db.rel("cat.id", "prod.category_id", ONE, MANY0, "L", "R",
-       [(db.R("prod") + 30, ry("cat", "id")), (db.R("prod") + 30, ry("prod", "category_id"))])
-db.rel("prod", "pgm", ONE, MANY0, "B", "T", label="sku")
-db.rel("pg", "pgm", ONE, MANY0, "T", "B", label="grupo")
+# Sin FK: el catálogo vive en otra base. Las líneas son lógicas (punteadas).
+db.rel("ext.codigo", "oi.product_sku", ONE, MANY0, "L", "R",
+       [(PX - 40, ry("ext", "codigo")), (PX - 40, ry("oi", "product_sku"))], label="copia al comprar", dashed=True)
+db.rel("ext.codigo", "pdr.product_sku", ONE, MANY0, "R", "L",
+       [(db.R("ext") + 60, ry("ext", "codigo")), (db.R("ext") + 60, ry("pdr", "product_sku"))],
+       label="estrategia", dashed=True)
 # llegadas a orders desde la izquierda, por corredores superiores
 wu = db.t["users"]["w"]
 db.rel("users", "ord.user_id", ONE, MANY0, ((wu - 40) / wu, 0), "L",
@@ -581,24 +581,30 @@ db.rel("trf.id", "pl.trainer_referral_id", ONE, ZONE, "R", "R",
         (db.R("pl") + 40, ry("pl", "trainer_referral_id"))], label="50.000 puntos para A")
 
 # --- Leyenda y notas ---------------------------------------------------
-NX = max(db.R("sp"), db.R("psm"), db.R("cat"), xsp) + 120
+NX = db.R("pdr") + 120
 db.legend(NX, Y0)
-db.note(NX, Y0 + 350, 620, 300,
+db.note(NX, Y0 + 380, 620, 390,
         "<b>Origen</b><br>"
         "• Todas las tablas de radical se conservan idénticas, salvo credit_balances (saldo a favor retail) y su FK "
         "orders.balance_id: en PremiumFitness el saldo lo llevan point_lots.<br>"
-        "• Externa: tb_empleados vive en la intranet; no se migra, se consulta por JOIN (orders.agent_id = id_usuario).<br><br>"
+        "• Tampoco se llevan las del catálogo de radical (products, categories, product_groups, product_group_map, "
+        "sap_products y product_sap_map): el catálogo es tb_productos_megaplexstars.<br>"
+        "• Externas (crisenri_intranet, solo lectura): tb_empleados, por JOIN (orders.agent_id = id_usuario), "
+        "y tb_productos_megaplexstars, el maestro de productos de la web, que se lee con la interfaz ProductCatalog "
+        "(activo = 1 y promo distinto de 1; descuento y old_price no se leen).<br><br>"
         "<b>Sin línea</b><br>"
         "• audit_logs.user_id → users.<br>"
         "• commission_settlements.trainer_id → trainers; commission_settlements.paid_by_agent_id → tb_empleados.<br>"
         "• refresh_tokens.agent_id → tb_empleados; refresh_tokens.replaced_by_id → refresh_tokens.<br>"
         "• diet_access_periods.trainer_id → trainers.<br>"
-        "• orders_items.sap_code es una copia del código de sap_products, sin FK.<br>"
+        "• orders_items copia al comprar el codigo (product_sku), producto, valor y sap_code del catálogo, sin FK.<br>"
+        "• IVA por línea: VAT_PERCENTAGE (19) salvo los códigos de VAT_EXEMPT_PRODUCT_CODES (Nutra C, 0); "
+        "base = pagado / 1,19. No hay tasa en el catálogo.<br>"
         "• orders_items guarda el descuento y la comisión vigentes de cada producto al momento de la compra: "
         "valor por defecto (variable de entorno) o estrategia del producto (product_discount_rules).<br>"
         "• Las constantes (10%, 25%, 5%, 15%, 50.000 puntos, 6 meses, 50%) son variables de entorno; "
         "cada pedido, referido y conversión copia el valor que aplicó.")
-db.note(NX, Y0 + 680, 620, 330,
+db.note(NX, Y0 + 800, 620, 330,
         "<b>Cómo se usa orders</b><br>"
         "• client_purchase: cliente asociado a un entrenador (enlace o cupón); descuento por línea (10% por defecto). "
         "Genera comisión por línea sobre la base sin IVA (15% por defecto; ej. Nutra Balance 15% de descuento y 10% de comisión) "

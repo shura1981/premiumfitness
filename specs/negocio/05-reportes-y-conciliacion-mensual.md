@@ -36,7 +36,7 @@ Reutilizar lo que funciona del sistema actual de comisiones (proceso mensual, co
 | Hoy | En PremiumFitness | Por qué |
 | --- | --- | --- |
 | Se recalcula la comisión cada mes leyendo nombres de productos, sufijos y fechas fijas en el código | Cada línea guarda al comprar su porcentaje, su base sin IVA y su comisión (`orders_items`). El cierre **suma**, no recalcula | El cálculo depende de textos del checkout y existe duplicado en la intranet sin pruebas (CLAUDE.md del repo) |
-| IVA fijo `/ 1.19` | `tax_rate` por producto copiado en la línea | No todos los productos tienen el mismo IVA |
+| IVA fijo `/ 1.19` | Tasa por producto (`VAT_PERCENTAGE`, salvo los exentos de `VAT_EXEMPT_PRODUCT_CODES`) copiada en la línea (spec `catalogo/01`) | No todos los productos tienen el mismo IVA: Nutra C no tiene |
 | Promociones y bonos fijos en el código (15%, 20%, 30%, CreaStack con fechas) | Variables de entorno más `product_discount_rules` con vigencia | Regla 15 y spec `negocio/02` |
 | `force: true` recalcula y sobrescribe un mes cerrado | Un mes cerrado **no cambia**. `force` solo regenera el Excel y reenvía el correo. Las correcciones entran como ajustes en el mes siguiente | Lo pagado debe coincidir siempre con lo liquidado |
 | Una comisión negativa se suma en silencio y reduce el total del cupón | La comisión de una línea nunca es negativa. Las devoluciones son ajustes explícitos (`adjustments`) | Trampa documentada en el CLAUDE.md del repo |

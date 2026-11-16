@@ -47,9 +47,11 @@ When generating code for this repository:
 
 Cada feature vive en `src/Features/<FeatureName>/`: Controller, Model, Repository, Validator (varios validadores en `Validators/`) y, cuando hay lógica de negocio, Service.
 
-**Heredadas de radical:** `Address`, `Admin`, `Auth`, `Carrier`, `Category`, `City`, `CityWarehouse`, `CronJob`, `DocumentType`, `Locality`, `Order`, `PaymentGateway`, `Product`, `ProductGroup`, `Reports`, `SapProduct` y `User`.
+**Heredadas de radical:** `Address`, `Admin`, `Auth`, `Carrier`, `City`, `CityWarehouse`, `CronJob`, `DocumentType`, `Locality`, `Order`, `PaymentGateway`, `Reports` y `User`.
 
 **De radical a revisar al hacer el fork:** `CreditBalance` (queda fuera del DER), y `PublicStore`, `RetailCheckout`, `RetailAccount` y `Checkout`, porque PremiumFitness no tiene tienda pública.
+
+**Catálogo (spec `catalogo/01`):** `Product` deja de administrar una tabla propia y lee `crisenri_intranet.tb_productos_megaplexstars` (solo lectura) detrás de la interfaz `ProductCatalog`, que devuelve siempre `CatalogProduct`. `Category`, `ProductGroup` y `SapProduct` de radical no se usan: la tabla de la intranet trae `category`, `grupo`, `sap_code` y `sap_name`.
 
 **Nuevas de PremiumFitness:**
 
@@ -101,6 +103,7 @@ Cada feature vive en `src/Features/<FeatureName>/`: Controller, Model, Repositor
 - Cada pedido, línea, referido y conversión guarda el valor que aplicó (porcentaje, IVA, puntos), para que un cambio en las variables no altere el histórico. Los reportes y el cierre **suman** lo guardado; nunca recalculan.
 - Las operaciones que mueven saldo (aprobación del pago, conversión, canje, vencimiento, cierre) van en una sola transacción, con la fila del entrenador bloqueada (`SELECT … FOR UPDATE`) y una clave única de idempotencia.
 - Los importes son `decimal(12,2)` y los puntos enteros, redondeados al entero más cercano (0,5 sube).
+- El IVA se calcula al comprar, por línea: `VAT_PERCENTAGE` salvo los códigos de `VAT_EXEMPT_PRODUCT_CODES`. El catálogo no tiene tasa de IVA.
 
 ### Performance
 - PDO compartido vía `DB::getInstance()` — una sola conexión por request.
@@ -237,6 +240,12 @@ FIREBASE_PROJECT_ID=premiumfitness-12ca6
 FIREBASE_CREDENTIALS_PATH=storage/private/firebase-fcm-sender.json
 PUSH_MAX_ATTEMPTS=5
 PUSH_EXPIRY_NOTICE_DAYS=7
+
+# Catálogo e IVA (spec catalogo/01)
+INTRANET_DB_NAME=crisenri_intranet
+PRODUCT_CATALOG_CACHE_SECONDS=600
+VAT_PERCENTAGE=19
+VAT_EXEMPT_PRODUCT_CODES=<codigo de Nutra C>
 
 # Acceso a dietas (spec integraciones/02; la meta es provisional y su lógica puede cambiar)
 DIET_ACCESS_POINTS_GOAL=249000

@@ -1,6 +1,6 @@
 # 01 — Diagrama entidad relación (DER)
 
-**Estado:** propuesta v0.14 lista para revisión · **Creado:** 7 de noviembre de 2026
+**Estado:** propuesta v0.15 lista para revisión · **Creado:** 7 de noviembre de 2026
 
 ## Petición original
 
@@ -56,6 +56,12 @@
 - **Dietas:** nueva tabla `diet_access_periods`, columna `trainers.diet_first_access_at`, columna `point_movements.diet_access_period_id`, y `refresh_tokens.app` añade `diets`.
 - **Una sola app web** (spec `arquitectura/02`): los enums `app` pasan a `web`, `admin` y `diets` en `refresh_tokens`, y a `web` y `diets` en `push_devices` y `push_notifications`.
 
+**Revisión v0.15, 15 de noviembre de 2026:** el catálogo sale de la tabla de productos de la intranet (spec `specs/catalogo/01-catalogo-desde-la-intranet.md`).
+
+- **Catálogo externo:** `crisenri_intranet.tb_productos_megaplexstars`, el maestro de la web, se lee sin migrarla, como `tb_empleados`. Salen del modelo `products`, `categories`, `product_groups`, `product_group_map`, `sap_products` y `product_sap_map` de radical: la tabla de la intranet ya trae `category`, `grupo`, `sap_code` y `sap_name`.
+- **Sin FK al catálogo:** `orders_items.product_sku` y `product_discount_rules.product_sku` guardan el `codigo` de la intranet, sin FK. `orders_items` añade `product_name` y copia al comprar el nombre, el precio y el `sap_code`.
+- **IVA:** ya no hay tasa por producto. Cada línea toma `VAT_PERCENTAGE` (19), salvo los códigos de `VAT_EXEMPT_PRODUCT_CODES` (Nutra C), y guarda tasa, base e IVA.
+
 ## Objetivo
 
 Proponer el modelo de datos del MVP comercial para revisarlo con negocio y tecnología antes de la fase 2 (arquitectura). El modelo reutiliza las tablas de radical y añade solo lo que exige PremiumFitness. Debe soportar los recorridos del MVP: referidos por QR, compras con descuento, recompensas por venta, 50.000 puntos por referido A → B, lotes de puntos con FIFO y caducidad, conversión de comisión, canjes y reportes conciliables.
@@ -73,6 +79,7 @@ Proponer el modelo de datos del MVP comercial para revisarlo con negocio y tecno
   - Gestión de pedidos y call center: `src/Features/Admin` (login con `tb_empleados`), `src/Features/Order` (tomar, liberar, código SAP, guía y estado), `src/Features/Carrier` (rastreo de la guía), `src/Features/Reports` (pedidos aprobados por agente) y `docs/md/endpoints.md` §21 Admin.
   - Integración SAP: `docs/md/prd_radical_portal_equipo.md` §6.2, `docs/md/endpoints.md` (§5 SAP Products y §8 City Warehouses), `src/Features/Auth/QrController.php` y `src/Features/Checkout/CheckoutService.php`.
   - `.agents/rules/database-schema.md`.
+- **Catálogo de la intranet:** `crisenri_intranet.tb_productos_megaplexstars`, según el código que la lee hoy: `nutramerican.com` (Node, `productos/index.js`), `melonn` (`ProductDAO.js` y `nutramericanType.js`) y la skill `ficha-producto`.
 - **join.nutramerican.com:**
   - `user.model.ts`: el usuario se maneja con `fullName`.
   - `commission-report.model.ts`: reportes de comisiones por día, cupón, producto y ciudad.
@@ -133,7 +140,7 @@ Proponer el modelo de datos del MVP comercial para revisarlo con negocio y tecno
 | S-12 | Un entrenador B tiene como máximo un referente A (`trainer_referrals.referred_id` único). | Derivado | PRD §6.4. |
 | S-13 | Compras de cliente, compras del entrenador y canjes usan la misma tabla `orders`, con `order_type`. El canje reutiliza el seguimiento de radical: estado, guía y transportadora. | Derivado | Radical guarda el envío en `orders`. Evita una tabla de envíos aparte. |
 | S-14 | El pago se persiste como en radical: `payment_gateway`, `payment_state_json` y `payment_event_jobs`. Se añade `payment_reference` única para la idempotencia. `payment_gateway` pasa a ser anulable para los canjes. | Derivado | Radical; D-10. Si hay que conservar cada intento de pago, se añadiría una tabla `payment_transactions`. |
-| S-15 | `products.price` es un entero con IVA incluido, como en radical. Se añade `tax_rate` por producto, y cada línea copia la tasa, la base y el IVA. | Confirmado | Radical; PRD §7.2; regla 10. |
+| S-15 | El precio del catálogo (`valor`) es un entero con IVA incluido. Todos los productos tienen IVA del 19 % salvo Nutra C. La tasa sale de `VAT_PERCENTAGE` y de `VAT_EXEMPT_PRODUCT_CODES` (por código), y cada línea copia la tasa, la base y el IVA. Antes decía: se añade `tax_rate` por producto en `products`. | Confirmado (15 nov 2026) | Spec `catalogo/01`; regla 10. |
 | S-16 | Los puntos son enteros (1 peso = 1 punto) y los importes son `decimal(12,2)`, como en radical. | Confirmado | Regla 1. Redondeo al entero más cercano (S-39). |
 | S-17 | La comisión es un libro de movimientos (`commission_movements`). El saldo convertible es la suma de esos movimientos. | Derivado | PRD §10. |
 | S-18 | Cada acumulación crea un lote en `point_lots`. El diseño sigue la idea de `credit_balances` de radical (monto, vencimiento y aplicación) y añade remanente y estados. | Confirmado | PRD §7.3; regla 9. |
@@ -142,9 +149,9 @@ Proponer el modelo de datos del MVP comercial para revisarlo con negocio y tecno
 | S-21 | Los orígenes de un lote o movimiento son FK explícitas anulables, no un par genérico `source_type` + `source_id`. | Derivado | Decisión de diseño: integridad referencial en base de datos. |
 | S-22 | La compra propia del entrenador (`order_type = trainer_purchase`) no genera recompensas. | Confirmado | PRD §6.6; MVP §3.3. |
 | S-23 | El beneficiario del 15% es el entrenador. | Pendiente | PD-01: requerimientos dice «el cliente recibe el 15%» en un punto y «el entrenador» en otro. |
-| S-24 | PremiumFitness se integra con SAP Business One. Se reutilizan `sap_products`, `product_sap_map`, `city_warehouses`, `orders.sap_order_code`, `orders_items.sap_code` y `products.discount_list` tal como están en radical. | Confirmado | Indicación del usuario (7 nov 2026). `docs/requerimientos.md` no menciona SAP; no hay contradicción, pero conviene registrarlo en el PRD. |
+| S-24 | PremiumFitness se integra con SAP Business One. Se reutilizan `city_warehouses`, `orders.sap_order_code` y `orders_items.sap_code` de radical. El artículo SAP de cada producto es `sap_code` de la tabla de la intranet. Antes decía: también `sap_products`, `product_sap_map` y `products.discount_list` (salen en v0.15). | Confirmado | Indicación del usuario (7 nov 2026). `docs/requerimientos.md` no menciona SAP; no hay contradicción, pero conviene registrarlo en el PRD. |
 | S-25 | `city_warehouses` asigna a cada ciudad tres bodegas SAP en orden de prioridad para despachar. | Confirmado | Indicación del usuario; radical `city_warehouses`. |
-| S-26 | `orders_items.sap_code` es una copia del código del artículo SAP, sin FK, para conservar el histórico si cambia el maestro. | Derivado | Radical lo modela así. |
+| S-26 | `orders_items.sap_code` es una copia del `sap_code` del producto, sin FK, para conservar el histórico si cambia el maestro. | Derivado | Radical lo modela así. |
 | S-27 | Como en radical, el agente crea el pedido en SAP y registra `sap_order_code`, `tracking_number` y `carrier_name` desde el admin. Si más adelante el pedido se envía a SAP de forma automática, se añadiría una tabla de jobs similar a `payment_event_jobs`. | Confirmado | Indicación del usuario; radical `PATCH /api/admin/orders/{id}/sap-order-code/by-agent` y `/tracking-number`. |
 | S-28 | `users.document_type_id` + `document_id` identifican al cliente (socio de negocio) en SAP, como en el login por QR de radical. Falta definir si los entrenadores y clientes de PremiumFitness se crean primero en SAP o en el portal. | Pendiente | Radical `QrController`. |
 | S-29 | Falta definir si los canjes (`order_type = redemption`) también se registran en SAP y con qué documento. | Pendiente | D-02. |
@@ -153,7 +160,7 @@ Proponer el modelo de datos del MVP comercial para revisarlo con negocio y tecno
 | S-33 | La trazabilidad que ve el cliente usa `status_orders` (los mismos estados de radical), la guía y la transportadora, consultada en la API de la transportadora. No se guarda un historial de cambios de estado. Si negocio lo pide, se añadiría `order_status_history`. | Derivado | Radical `CarrierController` y `ServientregaTrackingService`. |
 | S-34 | `adjustments.agent_id` y `audit_logs.agent_id` registran al agente que hizo la operación. `audit_logs.user_id` registra las acciones del cliente o del entrenador. | Derivado | Decisión de diseño a partir de S-31. |
 | S-35 | `docs/casos-de-uso-y-actores.md` ya incluye al agente del call center (ACT-03) y los casos de uso CU-16 a CU-19 de procesamiento, envío y seguimiento del pedido. | Confirmado | Spec `specs/documentacion/01-casos-de-uso-pedidos-y-envios.md`. |
-| S-36 | `product_groups` y `product_group_map` se reutilizan tal cual: agrupan las presentaciones de un mismo producto (por ejemplo, 225 g y 900 g) en una relación N:M. | Confirmado | Indicación del usuario; radical. |
+| S-36 | Las presentaciones de un mismo producto (por ejemplo, 225 g y 900 g) son las que comparten `grupo` en la tabla de la intranet. Antes decía: se reutilizan `product_groups` y `product_group_map` de radical (salen en v0.15). | Derivado | Spec `catalogo/01`. |
 | S-37 | `orders_coupons` se reutiliza de radical y se le añade `trainer_id`; guarda el cupón del entrenador en cada pedido de un cliente asociado. Antes decía: se reutiliza tal cual: un cupón por pedido (`order_id` único), con código, porcentaje y monto; el mismo código puede repetirse en muchos pedidos. El descuento se reparte en `orders_items.discount_percentage`. No se usa en el MVP. | Derivado | Radical, checkout retail. Para promociones reales faltaría un maestro `coupons` (vigencia, límites y a quién aplica), y definir si el cupón se combina con el 10% o el 25% y si reduce la base de puntos y comisión (PD-12). |
 | S-38 | Los valores por defecto son variables de entorno (antes: `rule_versions.parameters`, eliminada en v0.9). `product_discount_rules` define excepciones por producto con vigencia: descuento con cupón, descuento del entrenador y comisión (NULL = valor por defecto). Al comprar, cada línea copia los porcentajes vigentes y el pedido copia el de puntos (`orders.reward_percentage`). | Confirmado; descuento del entrenador por producto derivado | Regla 15; spec negocio/02. |
 | S-39 | Comisión por línea: `commission_amount = tax_base × commission_percentage`; `commission_movements.amount` suma las líneas. Puntos por pedido: `orders.reward_points = round(Σ line_total de productos × porcentaje de puntos)`, al entero más cercano y sin el envío. | Confirmado | Reglas 1 y 7 (9 nov 2026). |
@@ -164,7 +171,9 @@ Proponer el modelo de datos del MVP comercial para revisarlo con negocio y tecno
 | S-44 | `refresh_tokens` guarda solo el hash del token. Cada renovación crea una fila nueva y enlaza la anterior (`replaced_by_id`); reutilizar una fila ya reemplazada revoca toda la `family_id`. | Confirmado | Spec `seguridad/01`; skill `jwt-security`. |
 | S-45 | `users.token_push_notification` de radical se conserva sin usar: los tokens viven en `push_devices`, porque un usuario puede tener varios dispositivos y apps. | Derivado | Spec `integraciones/01`. |
 | S-46 | El acceso a dietas se guarda por mes en `diet_access_periods` (único por entrenador, período y origen). El canje descuenta los puntos con `point_movements` enlazados al período. | Confirmado | Spec `integraciones/02`. |
-| S-30 | `products.discount_list` (tramos por cantidad con su `sap_code`) se conserva por la integración, aunque los descuentos de PremiumFitness (10% y 25%) dependen del rol y no de la cantidad. | Derivado | Radical. Falta confirmar si los tramos aplican. |
+| S-30 | No se usan los tramos por cantidad de radical (`products.discount_list`): los descuentos de PremiumFitness dependen del rol y de `product_discount_rules`. Antes decía: se conserva por la integración. | Derivado | Spec `catalogo/01`. |
+| S-47 | El catálogo es `crisenri_intranet.tb_productos_megaplexstars`, externa y de solo lectura. Entran los productos con `activo = 1` y `promo` distinto de 1; no se leen `descuento` ni `old_price`. El nombre es `producto`. La app la lee por la interfaz `ProductCatalog`. | Confirmado (15 nov 2026) | Spec `catalogo/01`. |
+| S-48 | `orders_items.product_sku` y `product_discount_rules.product_sku` guardan el `codigo` de la intranet sin FK, porque la tabla vive en otra base. Al comprar, la línea copia `product_name`, `product_full_price` (el `valor`) y `sap_code`. | Derivado | Spec `catalogo/01`; mismo criterio que `tb_empleados` (S-31). |
 
 ## Plan
 
@@ -197,13 +206,11 @@ Diagrama editable: [diagrama-entidad-relacion.drawio](../../docs/img/diagrama-en
 | Identidad y referidos | `trainers` | Nueva | Subtipo de `users` para el entrenador, con su cupón único. |
 | Identidad y referidos | `client_referrals` | Nueva | Único entrenador del cliente y origen del vínculo (enlace o cupón). |
 | Identidad y referidos | `trainer_referrals` | Nueva | Relación A → B, los 50.000 puntos pendientes y el pedido que los activó. |
-| Pedidos y catálogo | `products` | Adaptada | Añade `tax_rate`. El precio ya incluye IVA. Conserva `discount_list` con los códigos SAP por tramo. |
-| Pedidos y catálogo | `categories` | Existente | Categorías del catálogo. |
-| Pedidos y catálogo | `product_groups`, `product_group_map` | Existente | Grupos de presentaciones de un mismo producto. |
+| Pedidos y catálogo | `tb_productos_megaplexstars` | Externa | Catálogo de la intranet (`crisenri_intranet`), el mismo de la web: nombre, precio con IVA, categoría, grupo y artículo SAP. No se migra. |
 | Pedidos y catálogo | `orders_coupons` | Adaptada | Cupón y entrenador de cada pedido de un cliente asociado. Es la atribución de la venta. |
-| Pedidos y catálogo | `product_discount_rules` | Nueva | Estrategias por producto: descuento con cupón, descuento del entrenador y comisión, con vigencia. |
+| Pedidos y catálogo | `product_discount_rules` | Nueva | Estrategias por producto (por `codigo` de la intranet): descuento con cupón, descuento del entrenador y comisión, con vigencia. |
 | Pedidos y catálogo | `orders` | Adaptada | Conserva `agent_id` y `sap_order_code`. Añade tipo de pedido, totales de descuento e IVA, puntos ganados por el pedido (`reward_points`), puntos del canje, referencia de pago y versión de regla. El entrenador se toma de `orders_coupons`. |
-| Pedidos y catálogo | `orders_items` | Adaptada | Conserva `sap_code`. Usa `discount_percentage` para el descuento vigente del producto. Añade tasa, base e IVA; porcentaje y monto de comisión, y puntos del canje. |
+| Pedidos y catálogo | `orders_items` | Adaptada | Copia del catálogo el código, el nombre (`product_name`), el precio y `sap_code`, sin FK. Usa `discount_percentage` para el descuento vigente del producto. Añade tasa, base e IVA; porcentaje y monto de comisión, y puntos del canje. |
 | Pedidos y catálogo | `status_orders` | Existente | Estados del pedido. |
 | Pedidos y catálogo | `payment_event_jobs` | Existente | Reintento de webhooks que llegan antes que el pedido. |
 | Recompensas y operación | `commission_movements` | Nueva | Abono de comisión del pedido (suma de líneas), débitos por conversión y ajustes. |
@@ -214,8 +221,6 @@ Diagrama editable: [diagrama-entidad-relacion.drawio](../../docs/img/diagrama-en
 | Recompensas y operación | `point_movements` | Nueva | Abono, consumo FIFO, caducidad y ajuste por lote. |
 | Recompensas y operación | `adjustments` | Nueva | Cancelaciones, devoluciones y restituciones ligadas al pedido original y al agente que las registra. |
 | Recompensas y operación | `audit_logs` | Nueva | Agente o usuario, acción, entidad y datos de cada operación sensible. |
-| SAP y bodegas | `sap_products` | Existente | Maestro de artículos SAP (`sap_code` único). |
-| SAP y bodegas | `product_sap_map` | Existente | Relación N:M entre producto web y artículos SAP. |
 | SAP y bodegas | `city_warehouses` | Existente | Tres bodegas SAP por ciudad, en orden de prioridad. |
 | Call center | `tb_empleados` | Externa | Agentes del call center en la intranet (`crisenri_intranet`). No se migra. |
 
@@ -236,6 +241,7 @@ Diagrama editable: [diagrama-entidad-relacion.drawio](../../docs/img/diagrama-en
 - **FIFO:** el consumo sigue `point_lots.accrued_at` con desempate por `id` (PRD §7.3). El saldo canjeable es la suma de `remaining_points` de los lotes `available` no caducados.
 - **Asignación del agente:** `orders.agent_id` solo se asigna si está vacío, y se libera solo si el pedido es del agente y no tiene `sap_order_code`.
 - **Canje:** `orders.order_type = redemption`, sin pasarela, con `points_total` igual a la suma de `orders_items.points`.
+- **Catálogo externo:** no hay FK hacia `tb_productos_megaplexstars`. El checkout valida cada código contra el catálogo antes de crear el pedido, y la línea guarda la copia de lo que se vendió.
 
 ## Checklist
 
@@ -268,4 +274,5 @@ Diagrama editable: [diagrama-entidad-relacion.drawio](../../docs/img/diagrama-en
 - [x] Añadir `refresh_tokens`, ajustar `verification_codes` y hacer único `users.num_cell` (v0.12)
 - [x] Añadir push (`push_devices`, `push_notifications`) y acceso a dietas (`diet_access_periods`) (v0.13)
 - [x] Registrar el pago de la liquidación con comprobante (v0.14)
+- [x] Leer el catálogo de la intranet: quitar las tablas de catálogo de radical, copiar el producto en `orders_items` y sacar el IVA del catálogo (v0.15)
 - [ ] Revisión y aprobación del modelo por negocio y tecnología
