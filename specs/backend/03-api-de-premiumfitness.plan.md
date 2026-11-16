@@ -138,7 +138,7 @@ interface CheckoutResult {
         integrity_signature: string; description: string; redirection_url: string } }
     | { gateway: 'addi' | 'sistecredito'; redirect_url: string };
 }
-type OrderStatus = 'pendiente' | 'aprobado' | 'en_proceso' | 'enviado' | 'entregado' | 'rechazado' | 'cancelado';
+type OrderStatus = 'pendiente' | 'aprobado' | 'en_proceso' | 'en_camino' | 'rechazado' | 'cancelado';
 interface OrderSummary {
   id: number; created_at: string; status: OrderStatus; total: number; items_count: number; first_item: string;
   is_redemption: boolean; redemption_points: number | null;

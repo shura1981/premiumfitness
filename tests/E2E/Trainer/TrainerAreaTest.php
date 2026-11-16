@@ -264,7 +264,7 @@ it('canjea a precio completo, por FIFO, y deja el pedido aprobado sin pasarela',
 
     // Un canje no pasa por la pasarela: su línea de tiempo no habla de pagos.
     $timeline = AppFactory::json(AppFactory::dispatch(AppFactory::request('GET', '/api/orders/' . $orderId, headers: JwtFactory::authHeader($trainer))))['timeline'];
-    expect(array_column($timeline, 'status'))->toBe(['aprobado', 'en_proceso', 'enviado', 'entregado'])
+    expect(array_column($timeline, 'status'))->toBe(['aprobado', 'en_proceso', 'en_camino'])
         ->and($timeline[0])->toMatchArray(['label' => 'Canje confirmado', 'done' => true]);
 });
 

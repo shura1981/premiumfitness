@@ -290,9 +290,9 @@ it('el detalle trae líneas, totales, dirección y la línea de tiempo según el
 
     Seed::pdo()->prepare("UPDATE orders SET tracking_number = 'GUIA123', carrier_name = 'SERVIENTREGA' WHERE order_id = ?")->execute([$orderId]);
     $shipped = $detail();
-    expect($shipped['status'])->toBe('enviado')
+    expect($shipped['status'])->toBe('en_camino')
         ->and($shipped['tracking'])->toMatchArray(['carrier' => 'SERVIENTREGA', 'number' => 'GUIA123'])
-        ->and($done($shipped))->toBe(['pendiente', 'aprobado', 'en_proceso', 'enviado']);
+        ->and($done($shipped))->toBe(['pendiente', 'aprobado', 'en_proceso', 'en_camino']);
 });
 
 it('un pago rechazado se ve rechazado', function (): void {

@@ -651,43 +651,6 @@ class OrderRepository extends AbstractRepository
     }
 
     /**
-     * Contadores globales del portal minorista.
-     *
-     * Estos valores no dependen de los filtros ni de la página activa, de modo
-     * que las tarjetas de resumen siempre describen todo el historial.
-     *
-     * @return array{total: int, pending: int, shipped: int}
-     */
-    public function countSummaryByUser(int $userId): array
-    {
-        $statement = $this->pdo->prepare(
-            <<<'SQL'
-            SELECT
-                COUNT(*) AS total,
-                COALESCE(SUM(CASE
-                    WHEN s.value = 'INICIADA'
-                      OR s.value LIKE 'PENDIENTE%'
-                      OR s.value IN ('ANTIFRAUDE', 'RETENIDA', 'DESCONOCIDO')
-                    THEN 1 ELSE 0
-                END), 0) AS pending,
-                COALESCE(SUM(CASE WHEN s.value = 'ENVIADO' THEN 1 ELSE 0 END), 0) AS shipped
-            FROM orders o
-            LEFT JOIN status_orders s ON s.status_id = o.status_id
-            WHERE o.user_id = ?
-            SQL
-        );
-        $statement->execute([$userId]);
-        /** @var array{total?: int|string, pending?: int|string, shipped?: int|string}|false $row */
-        $row = $statement->fetch(PDO::FETCH_ASSOC);
-
-        return [
-            'total' => (int) ($row['total'] ?? 0),
-            'pending' => (int) ($row['pending'] ?? 0),
-            'shipped' => (int) ($row['shipped'] ?? 0),
-        ];
-    }
-
-    /**
      * Detalle completo de una orden de un usuario específico.
      * Incluye los items con nombre del producto.
      */

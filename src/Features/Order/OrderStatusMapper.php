@@ -13,8 +13,7 @@ final class OrderStatusMapper
     public const string PENDING    = 'pendiente';
     public const string APPROVED   = 'aprobado';
     public const string PROCESSING = 'en_proceso';
-    public const string SHIPPED    = 'enviado';
-    public const string DELIVERED  = 'entregado';
+    public const string ON_THE_WAY = 'en_camino';
     public const string REJECTED   = 'rechazado';
     public const string CANCELLED  = 'cancelado';
 
@@ -22,27 +21,30 @@ final class OrderStatusMapper
         self::PENDING    => 'Esperando el pago',
         self::APPROVED   => 'Pago aprobado',
         self::PROCESSING => 'Preparando tu pedido',
-        self::SHIPPED    => 'En camino',
-        self::DELIVERED  => 'Entregado',
+        self::ON_THE_WAY => 'En camino',
         self::REJECTED   => 'Pago rechazado',
         self::CANCELLED  => 'Cancelado',
     ];
 
-    /** Camino normal de un pedido, en orden. */
-    private const array PATH = [self::PENDING, self::APPROVED, self::PROCESSING, self::SHIPPED, self::DELIVERED];
+    /**
+     * Camino normal de un pedido, en orden. La logística la lleva el call center: «Preparando» al registrar
+     * el pedido de SAP y «En camino» al registrar la guía, que es el último paso (no hay «Entregado»).
+     * Los estados de `status_orders` son los del pago: `ENVIADO` es un pago enviado a la pasarela que
+     * aún no tiene respuesta, no un pedido despachado.
+     */
+    private const array PATH = [self::PENDING, self::APPROVED, self::PROCESSING, self::ON_THE_WAY];
 
     public static function forUser(?string $statusValue, bool $isApproved, bool $hasSapOrder, bool $hasTracking): string
     {
         $value = mb_strtoupper(trim((string) $statusValue));
 
         return match (true) {
-            str_contains($value, 'ENTREGAD')                                 => self::DELIVERED,
             // Una devolución total se muestra como un pedido cancelado.
             str_contains($value, 'CANCELAD'), str_contains($value, 'ABANDONAD'), str_contains($value, 'DEVOLUCI') => self::CANCELLED,
             str_contains($value, 'RECHAZAD'), str_contains($value, 'ERROR'), str_contains($value, 'REVERSAD'),
             str_contains($value, 'EXPIRAD'), str_contains($value, 'ANTIFRAUDE') => self::REJECTED,
             !$isApproved                                                      => self::PENDING,
-            $hasTracking                                                      => self::SHIPPED,
+            $hasTracking                                                      => self::ON_THE_WAY,
             $hasSapOrder                                                      => self::PROCESSING,
             default                                                           => self::APPROVED,
         };
