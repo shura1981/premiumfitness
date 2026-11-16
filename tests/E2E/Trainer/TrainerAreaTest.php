@@ -299,6 +299,23 @@ it('repetir el canje con la misma clave no descuenta dos veces', function (): vo
         ->and(AppFactory::json(trainerGet($trainer, 'points'))['available'])->toBe(200000);
 });
 
+it('el canje guarda las notas para la entrega, como una compra', function (): void {
+    $trainer = Seed::trainer();
+    Seed::pointLot($trainer, 300000);
+    $body = ['items' => [['code' => Seed::catalogProduct(['valor' => 100000]), 'quantity' => 1]], 'address_id' => Shop::address($trainer)];
+
+    $withNotes = trainerPost($trainer, 'redemptions', $body + ['notes' => '  Dejar en portería  ', 'idempotency_key' => idempotencyKey()]);
+    $blank     = trainerPost($trainer, 'redemptions', $body + ['notes' => '   ', 'idempotency_key' => idempotencyKey()]);
+    $tooLong   = trainerPost($trainer, 'redemptions', $body + ['notes' => str_repeat('a', 501), 'idempotency_key' => idempotencyKey()]);
+
+    expect(Shop::orderRow(AppFactory::json($withNotes)['order_id'])['order_notes'])->toBe('Dejar en portería')
+        ->and(Shop::orderRow(AppFactory::json($blank)['order_id'])['order_notes'])->toBeNull()
+        ->and($tooLong->getStatusCode())->toBe(422)
+        ->and(AppFactory::json($tooLong)['errors'])->toHaveKey('notes')
+        // La nota larga no canjeó nada: solo se descontaron los dos canjes válidos.
+        ->and(AppFactory::json(trainerGet($trainer, 'points'))['available'])->toBe(100000);
+});
+
 it('no canjea productos agotados o en promoción', function (): void {
     $trainer = Seed::trainer();
     Seed::pointLot($trainer, 900000);

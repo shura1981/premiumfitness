@@ -134,9 +134,11 @@ it('un producto vendido que ya no está en el catálogo sale sin categoría y no
          VALUES (?, ?, 'Producto retirado', 1000, 1, 1000, 999999999)"
     )->execute([$orderId, $sku]);
 
-    $top = new ReportsRepository()->topProducts(date('Y-m-d'), date('Y-m-d'), 1);
+    // Las pruebas no limpian la base: se busca el producto entre los de hoy, sin depender de su lugar.
+    $top     = new ReportsRepository()->topProducts(date('Y-m-d'), date('Y-m-d'), 10000);
+    $retired = array_values(array_filter($top, static fn ($row): bool => (int) $row->product_sku === $sku));
 
-    expect($top[0]->product_sku)->toBe($sku)
-        ->and($top[0]->category_name)->toBe('');
+    expect($retired)->toHaveCount(1)
+        ->and($retired[0]->category_name)->toBe('');
 });
 

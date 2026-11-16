@@ -179,7 +179,7 @@ interface OrderDetail extends OrderSummary {
 | `GET /trainer/diet-access` | — | `DietAccess` |
 | `POST /trainer/diet-access/redeem` | — | `DietAccess`. Hay un solo canje por mes: repetirlo no cobra de nuevo. 409 `not_enough_points` o `already_active`. |
 | `POST /trainer/redemptions/preview` | `{ items: [{ code, quantity }] }` | `RedemptionPreview` |
-| `POST /trainer/redemptions` | `{ items, address_id, idempotency_key }` | 201 `{ order_id }`. 409 `not_enough_points` u `out_of_stock`. |
+| `POST /trainer/redemptions` | `{ items, address_id, idempotency_key, notes? }` | 201 `{ order_id }`. Las notas para la entrega, como en `POST /checkout` (hasta 500 caracteres; 422 si pasan). 409 `not_enough_points` u `out_of_stock`. |
 
 `TrainerDashboard`, `TrainerReferrals`, `TrainerPoints`, `TrainerCommission`, `ConversionPreview` y `DietAccess` son los de `premiumfitness-web/src/app/core/api/models.ts` y no cambian.
 

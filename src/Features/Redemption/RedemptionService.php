@@ -30,6 +30,8 @@ use Throwable;
  */
 class RedemptionService
 {
+    private const int NOTES_MAX_LENGTH = 500;
+
     private readonly ProductCatalog $catalog;
     private readonly PointLotRepository $lots;
     private readonly AddressBook $addresses;
@@ -54,13 +56,18 @@ class RedemptionService
      * @return int El id del pedido de canje.
      * @throws ApiException
      */
-    public function redeem(int $trainerId, mixed $items, int $addressId, string $idempotencyKey): int
+    public function redeem(int $trainerId, mixed $items, int $addressId, string $idempotencyKey, ?string $notes = null): int
     {
         $items     = CartInput::normalize($items);
         $reference = 'redeem:' . $idempotencyKey;
 
         if ($this->addresses->find($trainerId, $addressId) === null) {
             throw ApiException::invalid('Elige una dirección de entrega.', errors: ['address_id' => 'Elige una de tus direcciones.']);
+        }
+
+        // Las mismas notas para la entrega que en una compra (`CheckoutValidator`).
+        if ($notes !== null && mb_strlen($notes) > self::NOTES_MAX_LENGTH) {
+            throw ApiException::invalid('La nota puede tener hasta 500 caracteres.', errors: ['notes' => 'La nota puede tener hasta 500 caracteres.']);
         }
 
         $pdo = DB::getInstance();
@@ -88,7 +95,7 @@ class RedemptionService
                 throw ApiException::conflict('out_of_stock', 'Hay productos que ya no están disponibles. Quítalos para continuar.');
             }
 
-            $orderId = $this->createOrder($pdo, $trainerId, $addressId, $reference, $quote['lines']);
+            $orderId = $this->createOrder($pdo, $trainerId, $addressId, $reference, $quote['lines'], $notes);
 
             try {
                 PointSpender::spend($trainerId, $quote['preview']['points_total'], 'redemption', "redemption:{$orderId}", ['order_id' => $orderId]);
@@ -171,7 +178,7 @@ class RedemptionService
     }
 
     /** @param list<array{product:CatalogProduct, quantity:int}> $lines */
-    private function createOrder(PDO $pdo, int $trainerId, int $addressId, string $reference, array $lines): int
+    private function createOrder(PDO $pdo, int $trainerId, int $addressId, string $reference, array $lines, ?string $notes): int
     {
         $points = 0;
         $base   = 0.0;
@@ -190,10 +197,10 @@ class RedemptionService
         $pdo->prepare(
             "INSERT INTO orders
                 (user_id, order_type, amount, subtotal_full, discount_amount, tax_base, tax_amount, shipping_amount,
-                 redemption_points, payment_gateway, payment_reference, address_id, status_id, approved_at)
-             VALUES (?, 'redemption', 0, ?, 0, ?, ?, 0, ?, NULL, ?, ?, ?, NOW())"
+                 redemption_points, payment_gateway, payment_reference, address_id, order_notes, status_id, approved_at)
+             VALUES (?, 'redemption', 0, ?, 0, ?, ?, 0, ?, NULL, ?, ?, ?, ?, NOW())"
         )->execute([
-            $trainerId, $points, round($base, 2), round($tax, 2), $points, $reference, $addressId,
+            $trainerId, $points, round($base, 2), round($tax, 2), $points, $reference, $addressId, $notes,
             new StatusOrderRepository()->findOrCreateIdByValue(PaymentStatus::TEXT_APROBADA),
         ]);
         $orderId = (int) $pdo->lastInsertId();

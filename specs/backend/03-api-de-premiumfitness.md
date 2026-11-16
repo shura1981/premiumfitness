@@ -54,6 +54,7 @@ Las reglas de negocio no se repiten aquí: están en `docs/reglas-de-negocio.md`
 | P-19 | Un pedido pendiente se puede volver a pagar durante un día, con el valor guardado al crearlo. Después hay que hacer la compra de nuevo. Los pedidos que nunca se pagan quedan como pendientes. | Derivado |
 | P-21 | Los cargos que gestionan entrenadores, estrategias, cierre y ajustes son ROOT, GERENTE COMERCIAL y ADMINISTRADOR (`ADMIN_MANAGER_ROLES`), los mismos que ya ven el dashboard y los reportes en el admin. El resto de agentes ve pedidos y reportes como en radical. | Derivado: confirmar qué cargo tiene financiero (PD-22) |
 | P-22 | En el admin no se puede marcar un pedido como «APROBADA» a mano: lo aprueba el aviso de la pasarela, que es el que acredita comisión y puntos. | Derivado: confirmar si el call center recibe pagos por fuera de la pasarela |
+| P-23 | **Quién marca un pedido como entregado.** El seguimiento del pedido (compra o canje) muestra «Entregado» cuando su estado contiene `ENTREGAD`, pero `status_orders` no tiene ese estado y el admin no tiene un botón que lo ponga: hoy ningún pedido llega a «Entregado». Lo mismo pasa con «Preparando» y «En camino», que avanzan con el código SAP y la guía, pero sin avisar por push. | Pendiente: decidir quién lo marca (el call center en Envíos, la transportadora o el mismo usuario) |
 | P-20 | La lista de festivos de `NON_BUSINESS_DAYS` la carga quien despliega y se actualiza cada año; el cierre avisa (`holidays_missing_<año>`) si faltan los del año en que se paga. | Derivado |
 | P-08 | Proveedor de SMS: el de radical (Relax Global), con sus variables. | Pendiente (D-10) |
 | P-09 | En desarrollo, `SMS_DRIVER=log` escribe el SMS en `logs/sms-dev.log` en vez de enviarlo; en producción solo se admite el envío real. | Derivado |
@@ -128,6 +129,8 @@ Resultado de la fase (15 nov 2026): 293 pruebas pasan, 62 de ellas nuevas de ses
 ### Canje, dietas y push
 
 - [x] Canje de productos con puntos (CU-12)
+  - Guarda las notas para la entrega en el pedido, como una compra (`notes?`, hasta 500 caracteres; 16 nov 2026).
+- [ ] Marcar un pedido como entregado y avisar por push cuando avanza (preparando, en camino, entregado). Depende de P-23
 - [x] Acceso a dietas: estado, canje y endpoint por documento (spec `integraciones/02`)
 - [x] Dispositivos y outbox de push con FCM HTTP v1 (spec `integraciones/01`)
   - La cola, los reintentos y el borrado de tokens inválidos tienen pruebas con un canal simulado. El envío real a Firebase no se ha probado: falta la cuenta de servicio en `storage/private/`.

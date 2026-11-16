@@ -209,11 +209,13 @@ class TrainerController
     public function redeem(Request $request, Response $response): Response
     {
         $body    = (array) ($request->getParsedBody() ?? []);
+        $notes   = is_string($body['notes'] ?? null) ? trim($body['notes']) : '';
         $orderId = new RedemptionService()->redeem(
             self::trainerId($request),
             $body['items'] ?? null,
             (int) ($body['address_id'] ?? 0),
             self::idempotencyKey($request),
+            $notes === '' ? null : $notes,
         );
 
         return $this->json($response, ['order_id' => $orderId], 201);

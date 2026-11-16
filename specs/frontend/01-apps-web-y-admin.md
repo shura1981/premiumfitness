@@ -120,6 +120,7 @@ Plan técnico: [01-apps-web-y-admin.plan.md](01-apps-web-y-admin.plan.md).
 - [x] Icono de la app: el de Nutramerican en SVG (`public/brand/icono-app.svg`) como favicon y en los iconos de la PWA (normales, maskable e iOS); `npm run pwa-icons` los genera desde el SVG (16 nov 2026)
 - [x] Tienda: el encabezado (título y carrito) queda fijo arriba al desplazarse, con una sombra que aparece al bajar (16 nov 2026)
 - [x] Los estilos que solo usan Inicio, Puntos, Comisión y Ventas van en el CSS de cada pantalla, no en el paquete inicial (497 kB, por debajo del aviso de 500 kB)
+- [x] El canje sigue el mismo camino que una compra (16 nov 2026, pedido de Steven): `/coach/canje` es la lista, como el carrito, y «Continuar» lleva a `/coach/canje/confirmar`, como `/pagar`, con los productos, la dirección de entrega, las notas para la entrega, el resumen en puntos y el botón «Canjear N pts». El backend guarda las notas en el pedido (`POST /trainer/redemptions` con `notes?`)
 - [ ] Bandeja de notificaciones del entrenador. La campana ya está en el Inicio (arriba a la derecha) y por ahora abre Cuenta → Notificaciones; al tener el módulo solo cambia su destino
 - [ ] Pantalla para canjear el acceso del mes a la app de dietas (`POST /trainer/diet-access/redeem`): Inicio solo muestra el estado
 - [ ] Pruebas unitarias de las pantallas de `features/` (hoy se verifican en el navegador; `core/` y `shared/` sí tienen)
