@@ -67,6 +67,7 @@ Que el entrenador vea en `/coach/comision` lo mismo que hoy ve un distribuidor e
 - [x] Contrato en `specs/backend/03-api-de-premiumfitness.plan.md`
 - [x] Modelos y API simulada en la app web
 - [x] Componente de gráfico `pf-bar-chart` (una o varias series) con tooltip, etiqueta para lector de pantalla y pruebas
+- [x] La leyenda filtra por año: tocar un año deja solo esas barras (la escala se ajusta) y filtra también la lista; tocarlo otra vez muestra todos. Las marcas del eje van dentro del gráfico para que use todo el ancho
 - [x] Fichas y últimas ventas en `/coach/comision`
 - [x] Pantalla `/coach/comision/ventas`: Días, Ciudades, Productos e Histórico
 - [x] Revisión en el navegador con el entrenador demo, en tema claro y oscuro, con `php scripts/dev-sembrar-demo.php --historial` para tener 12 meses y 8 ciudades
