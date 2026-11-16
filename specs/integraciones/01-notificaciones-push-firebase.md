@@ -8,7 +8,7 @@
 
 ## Objetivo
 
-Enviar notificaciones push a la app web (PWA Angular para clientes y entrenadores) y a la app de dietas (Flutter) cuando ocurre un evento de negocio. El envío no debe frenar la operación que lo origina ni duplicarse en el hosting compartido.
+Enviar notificaciones push a la app web (PWA Angular para clientes y entrenadores) cuando ocurre un evento de negocio. La app de dietas tiene su propio backend y no recibe push de PremiumFitness (revisión del 15 nov 2026, spec `integraciones/02`). El envío no debe frenar la operación que lo origina ni duplicarse en el hosting compartido.
 
 ## Contexto encontrado
 
@@ -39,10 +39,10 @@ Enviar notificaciones push a la app web (PWA Angular para clientes y entrenadore
    - Si falla, reintenta hasta `PUSH_MAX_ATTEMPTS` veces con espera creciente.
    - `source_key`, que es único, evita duplicar una notificación por el mismo evento.
 4. **Dispositivos:**
-   - Cada app registra su token después del login (`POST /api/push-devices` en la web, `POST /api/diets/push-devices` en dietas) y lo borra al cerrar sesión.
+   - La app web registra su token después del login (`POST /api/push-devices`) y lo borra al cerrar sesión.
    - Un usuario puede tener varios dispositivos y apps.
    - Si FCM responde `UNREGISTERED` o `INVALID_ARGUMENT` para un token, se borra el dispositivo.
-5. **Destino:** cada notificación indica la app destino (`web` o `diets`), y solo se envía a los dispositivos de esa app.
+5. **Destino:** todas las notificaciones van a la app web. Antes decía: cada notificación indicaba la app destino (`web` o `diets`).
 6. **Contenido:** título y texto cortos, sin datos sensibles (no montos de otros usuarios ni datos de clientes). El campo `data` lleva la ruta a abrir en la app (`route`) y el id del recurso.
 7. **Web push en iPhone:** tiene restricciones propias. Ver la sección «iPhone y Safari».
 
@@ -71,7 +71,7 @@ En iPhone y iPad las notificaciones web tienen más restricciones que en Android
 5. **Payload:** usar el bloque `webpush` del mensaje de FCM HTTP v1, con `notification` (título y texto) y `fcm_options.link` hacia la ruta de la app. Así la notificación se ve aunque el service worker no alcance a procesarla.
 6. **Badge:** se puede usar la Badging API (`navigator.setAppBadge`), disponible en la app instalada, para mostrar pendientes en el icono.
 7. **Pruebas:** en un iPhone real, con iOS 16.4 o posterior, con la app instalada. El simulador y una pestaña de Safari no sirven para probar push.
-8. **Plan B:** las notificaciones son un complemento. El estado de los pedidos, los puntos y el acceso a dietas siempre se ven al abrir la app. Para avisos críticos en iPhone, la app de dietas (Flutter, nativa) usa APNs a través de FCM, sin estas restricciones.
+8. **Plan B:** las notificaciones son un complemento. El estado de los pedidos, los puntos y el acceso a dietas siempre se ven al abrir la app.
 
 ### Pendiente de verificar
 
@@ -88,7 +88,7 @@ En iPhone y iPad las notificaciones web tienen más restricciones que en Android
 | Entrenador | Puntos que vencen en `PUSH_EXPIRY_NOTICE_DAYS` días | Proceso nocturno de vencimiento |
 | Entrenador | Cierre del mes: comisión liquidada | CU-21 |
 | Entrenador | Comisión pagada: «Te pagamos $100.000 de la comisión de octubre», con enlace al comprobante | CU-21, spec `negocio/04` |
-| Entrenador (app de dietas) | El acceso a dietas vence en 3 días o se desactivó | Spec `integraciones/02` |
+| Entrenador | El acceso a la app de dietas vence en 3 días o se desactivó | Spec `integraciones/02` |
 | Cliente | Pedido aprobado | CU-04 |
 | Cliente | Pedido enviado, con la guía | CU-18 |
 
@@ -121,8 +121,6 @@ Tareas de este proyecto que requieren acceso o datos que el agente no tiene. Las
 | --- | --- | --- |
 | Copiar `firebase-fcm-sender.json` al hosting en `storage/private/` del proyecto (permisos 600) y configurar `FIREBASE_PROJECT_ID` y `FIREBASE_CREDENTIALS_PATH` en el `.env` del servidor | No tiene acceso al hosting (cPanel) | Al desplegar el fork |
 | Restringir la `apiKey` web por dominio en Google Cloud → Credenciales («Browser key (auto created by Firebase)»): `https://<subdominio-app>/*` y `http://localhost:4200/*` | Falta definir el subdominio de la app web | Cuando se defina el subdominio. El agente puede hacerlo si se le da |
-| Registrar las apps Android e iOS de dietas en el proyecto | Faltan el `applicationId` y el bundle ID definitivos de la app Flutter | Al integrar la app de dietas |
-| Crear la clave APNs (.p8) en Apple Developer (Keys, con «Apple Push Notifications service») y subirla en Cloud Messaging → Configuración de apps de Apple | Requiere la cuenta de Apple Developer de la empresa | Antes de probar push en iOS en la app de dietas |
 | Probar el flujo de instalación y push en un iPhone real (S-06) | Requiere un dispositivo físico | Con la app web desplegada en HTTPS |
 
 ## Criterios de aceptación
@@ -139,7 +137,7 @@ Tareas de este proyecto que requieren acceso o datos que el agente no tiene. Las
 | ID | Supuesto | Clase |
 | --- | --- | --- |
 | S-01 | No hay un servidor de push aparte: el backend PHP envía con FCM HTTP v1 desde un cron. | Derivado |
-| S-02 | Proyecto de Firebase dedicado **PremiumFitness**, con una app web (clientes y entrenadores) y, más adelante, las apps Android e iOS de dietas. El admin no recibe push. No se reutiliza `elitenutritiongroup-9385a` porque tiene datos de otros sistemas y otra marca. | Confirmado (9 nov 2026) |
+| S-02 | Proyecto de Firebase dedicado **PremiumFitness**, con una app web (clientes y entrenadores). El admin y la app de dietas no reciben push de PremiumFitness. Antes decía: y, más adelante, las apps Android e iOS de dietas (descartado el 15 nov 2026). No se reutiliza `elitenutritiongroup-9385a` porque tiene datos de otros sistemas y otra marca. | Confirmado (9 nov 2026) |
 | S-03 | `users.token_push_notification` de radical se conserva sin usar: los tokens viven en `push_devices`, porque un usuario puede tener varios dispositivos y apps. | Derivado |
 | S-04 | La lista de eventos de la tabla. | Derivado: requiere validación |
 | S-05 | El cron de envío corre cada minuto. Si el hosting no lo permite, la latencia de la notificación será la del intervalo mínimo del cron. | Derivado |
@@ -148,7 +146,7 @@ Tareas de este proyecto que requieren acceso o datos que el agente no tiene. Las
 ## Plan
 
 - **Modelo de datos:**
-  - `push_devices`: `id`, `user_id`, `app` (`web` o `diets`), `platform` (`web`, `android` o `ios`), `token` (único), `created_at` y `last_seen_at`.
+  - `push_devices`: `id`, `user_id`, `app` (`web`), `platform` (`web`, `android` o `ios`), `token` (único), `created_at` y `last_seen_at`.
   - `push_notifications`: `id`, `user_id`, `app`, `type`, `title`, `body`, `data` (JSON), `status` (`pending`, `sent` o `failed`), `attempts`, `last_error`, `source_key` (único), `created_at`, `sent_at`.
   - Índice `(status, created_at)` para el cron.
 - **Código:**
@@ -157,7 +155,6 @@ Tareas de este proyecto que requieren acceso o datos que el agente no tiene. Las
 - **Variables de entorno:** `FIREBASE_PROJECT_ID`, `FIREBASE_CREDENTIALS_PATH`, `PUSH_MAX_ATTEMPTS=5` y `PUSH_EXPIRY_NOTICE_DAYS=7`.
 - **Frontends:**
   - Angular usa el SDK web de Firebase con `firebase-messaging-sw.js` y la VAPID key del proyecto.
-  - Flutter usa `firebase_messaging`.
 
 ## Checklist
 
@@ -173,4 +170,4 @@ Tareas de este proyecto que requieren acceso o datos que el agente no tiene. Las
 - [x] Generar la clave JSON de la cuenta de servicio (9 nov 2026). Está en la máquina de desarrollo, en `~/.config/premiumfitness/firebase-fcm-sender.json` (permisos 600, fuera del repo).
 - [ ] Copiar la clave al hosting en `storage/private/` y apuntar `FIREBASE_CREDENTIALS_PATH` a ella (al desplegar el fork)
 - [ ] Restringir la `apiKey` web por dominio
-- [ ] Registrar las apps Android e iOS de dietas y subir la clave APNs (.p8) de Apple
+- [~] Registrar las apps Android e iOS de dietas y subir la clave APNs (.p8) de Apple: descartado el 15 nov 2026, la app de dietas no recibe push de PremiumFitness

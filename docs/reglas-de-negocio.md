@@ -44,9 +44,9 @@ El entrenador A rifiere al entrenador B (entrenador A obtiene 50 mil pero en est
 
     Precisiones (9 nov 2026; spec `specs/integraciones/02-acceso-app-de-dietas.md`). **La lógica de la meta puede cambiar.**
     - El acceso es por mes calendario. Da acceso en el mes `M` haber ganado en `M − 1` al menos `DIET_ACCESS_POINTS_GOAL` puntos por compras de sus clientes. El valor provisional es 249.000 puntos.
-    - El mes gratis son 30 días desde el primer ingreso a la app de dietas.
+    - El mes gratis empieza en el primer ingreso a la app de dietas. *(15 nov 2026: el backend de dietas lo da como un mes de calendario desde la activación, no 30 días; pendiente de confirmar.)*
     - Sin meta ni mes gratis, el entrenador puede canjear 50.000 puntos (`DIET_ACCESS_POINTS_COST`) por el mes en curso. El canje es por FIFO y se hace una sola vez por mes.
-    - La app de dietas (Flutter) consulta el estado al abrir y al menos una vez al día (regla 8). Sin meta, sin mes gratis y sin canje, se desactiva solo dietas.
+    - La app de dietas (Nutrition & Fitness Plus) tiene su propio backend. PremiumFitness le concede el acceso de cada mes (por meta o por canje) por su puerta de integración, y la app lo consulta al abrirse. Sin meta, sin mes gratis y sin canje, se desactiva solo dietas. *(Revisión del 15 nov 2026; antes, la app consultaba el estado al backend de PremiumFitness.)*
 
 12. El QR es una forma de presentar el enlace del entrenador: un enlace con su id codificado en base64. El entrenador puede compartirlo por redes sociales, WhatsApp o en QR. Clientes y entrenadores usan la misma app web, con un área para cada rol. El enlace de clientes (`/r/c/<id>`) registra o asocia a un cliente, y el enlace para otros entrenadores (`/r/t/<id>`) registra a un entrenador. *(Cambio del 9 nov 2026: antes eran dos apps en subdominios distintos.)* El entrenador B solo queda referido por A si se registra desde el enlace (o el QR) de A; no hay un cupón para entrenadores.
 

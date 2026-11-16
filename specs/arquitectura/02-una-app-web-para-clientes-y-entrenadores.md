@@ -20,7 +20,7 @@ PremiumFitness tiene **tres apps**:
 | --- | --- | --- | --- |
 | **Web** | PWA Angular | Clientes y entrenadores, con un área por rol | `web` |
 | **Admin** | Angular | Agentes del call center (`tb_empleados`): pedidos, SAP, envíos y reportes | `admin` |
-| **Dietas** | Flutter (multiplataforma), externa | Entrenadores | `diets` |
+| **Dietas** (Nutrition & Fitness Plus) | Flutter (multiplataforma), externa, con su propio backend (`dietas.elitenutapp.com`) | Entrenadores | — (su propio login; PremiumFitness le concede el acceso por la puerta de integración, spec `integraciones/02`) |
 
 **Cambio respecto a lo confirmado antes:** el 9 nov 2026 se había confirmado que clientes y entrenadores usaban apps distintas, cada una en su subdominio (regla 12; S-01 del spec `negocio/01`). Esta decisión del mismo día lo reemplaza.
 
@@ -45,7 +45,7 @@ PremiumFitness tiene **tres apps**:
    - un **cliente** que abre `/r/c/<id>` sin entrenador queda asociado al iniciar sesión (regla 13);
    - un **cliente** que abre `/r/t/<id>` recibe un aviso de que su cuenta es de cliente y no se convierte en entrenador;
    - un **entrenador** que abre cualquiera de los dos enlaces ve el aviso de que el enlace no le aplica.
-7. **Sesión:** una cookie `pf_rt_web` para la app web y `pf_rt_admin` para el admin. La app de dietas guarda el refresh token en el almacenamiento seguro del dispositivo.
+7. **Sesión:** una cookie `pf_rt_web` para la app web y `pf_rt_admin` para el admin. La app de dietas no tiene sesión en PremiumFitness.
 
 ## Estructura de la app web
 
@@ -80,7 +80,7 @@ src/app/
 1. **Enlaces:** un cliente y un entrenador entran a la misma URL y cada uno ve el área de su rol.
 2. **Seguridad:** un cliente no puede llamar a un endpoint de entrenador aunque fuerce la ruta en el navegador (403).
 3. **Referido de entrenador:** `/r/t/<id>` registra a B como entrenador referido por A, y `/r/c/<id>` registra o asocia a un cliente.
-4. **Tokens:** un token `web` no sirve en `/api/admin/*` ni en `/api/diets/*`.
+4. **Tokens:** un token `web` no sirve en `/api/admin/*`, y al revés.
 5. **Carga:** un cliente no descarga el archivo JavaScript del área `trainer/`. Se comprueba en la pestaña Red del navegador.
 6. **Lint:** un import de `features/trainer` dentro de `features/client`, o al revés, hace fallar el lint.
 

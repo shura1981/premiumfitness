@@ -242,7 +242,7 @@ Las fuentes no fijan la política completa de devoluciones. Se conserva esta pro
 | RF-12 | MVP | Conversión total | Consume todo el saldo de comisión y acredita comisión + mín(50% × puntos vigentes, comisión) una sola vez; si falla, no deja saldos a medias. |
 | RF-13 | MVP | Caducidad | Cada lote vence a seis meses según el corte definido; no queda canjeable ni vuelve a descontarse. |
 | RF-14 | MVP | Canje | Precio completo, sin pago mixto, FIFO y remanentes; concurrencia no provoca sobregiro; IVA persistido. |
-| RF-15 | Posterior | Dietas | La app de dietas (Flutter, aparte) consulta `GET /api/diets/access`. Acceso por mes gratis (30 días desde el primer ingreso), meta del mes anterior (249.000 puntos por clientes, provisional) o canje de 50.000 puntos por el mes; validación diaria; desactivación limitada a dietas (spec `integraciones/02`). |
+| RF-15 | Posterior | Dietas | La app de dietas (Nutrition & Fitness Plus, aparte, con su propio backend) recibe de PremiumFitness, por su puerta de integración, el acceso de cada entrenador: mes gratis desde la activación, meta del mes anterior (249.000 puntos por clientes, provisional) o canje de 50.000 puntos por el mes. El estado y el canje están en la app web; la desactivación se limita a dietas (spec `integraciones/02`). |
 | RF-16 | MVP | Operación mínima | Acceso autorizado para gestionar/consultar datos necesarios de catálogo, pedidos, canjes y movimientos; ajustes auditados. |
 | RF-17 | MVP | Ajustes | Cancelaciones/devoluciones generan ajustes según la política acordada, ligados al original y sin duplicados. |
 | RF-18 | MVP | Notificaciones push | FCM HTTP v1 desde el backend con outbox y cron; los fallos de envío no revierten compras, conversiones ni canjes (spec `integraciones/01`). |
@@ -271,7 +271,7 @@ Se conservan los identificadores del PRD anterior para facilitar revisión: RF-0
 
 **Referencias:** backend-radical-nutrition para datos, SMS, pagos, administración y envíos; join.nutramerican.com para onboarding, comisiones e instalación PWA por dispositivo; gifts.nutramerican.com para catálogo y compra. Las rutas y tareas completas permanecen en [fases de desarrollo](fases-de-desarrollo.md).
 
-**Dietas:** base Flutter en dietas_automaticas_flutter, backend SaaS por construir y evaluación de Angular como candidato de adaptación. No se decide una migración de interfaz antes de revisar los proyectos.
+**Dietas:** la app es Nutrition & Fitness Plus (Flutter, repositorio `dietas.nutramerican.com`), con su backend SaaS multiorganización ya construido (`dietas.elitenutapp.com`, Node). PremiumFitness se integra con ella por la credencial de servicio de ese backend (spec `integraciones/02`). *(Actualizado el 15 nov 2026; antes decía: base Flutter en dietas_automaticas_flutter, backend SaaS por construir.)*
 
 ## 10. Datos y estados del dominio
 

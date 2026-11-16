@@ -20,7 +20,7 @@ Definir cómo se registran, inician sesión, mantienen la sesión y recuperan el
 ## Alcance
 
 - Registro con verificación del celular por SMS.
-- Login con celular y contraseña en la app web (clientes y entrenadores) y en la app de dietas.
+- Login con celular y contraseña en la app web (clientes y entrenadores). La app de dietas tiene su propio login (spec `integraciones/02`).
 - Sesión con access token en memoria y refresh token rotativo en cookie.
 - Recuperación de la contraseña por SMS.
 - Logout, revocación y cuenta suspendida.
@@ -46,7 +46,7 @@ Definir cómo se registran, inician sesión, mantienen la sesión y recuperan el
    - el enlace de referido (id del entrenador en base64) se procesa al terminar el registro o el login (reglas 12 y 13).
 3. **Login:**
    - con celular y contraseña;
-   - la app web acepta los dos roles y muestra el área de cada uno; la app de dietas solo acepta cuentas `trainer`; el admin solo acepta agentes de `tb_empleados`;
+   - la app web acepta los dos roles y muestra el área de cada uno; el admin solo acepta agentes de `tb_empleados`;
    - una cuenta `pending` recibe la opción de verificar el celular;
    - una cuenta `suspended` no entra.
 4. **Contraseña:**
@@ -64,7 +64,7 @@ Definir cómo se registran, inician sesión, mantienen la sesión y recuperan el
    | Web (clientes y entrenadores) | `pf_rt_web` | `/api/auth` |
    | Admin | `pf_rt_admin` | `/api/admin/auth` |
 
-   La app de dietas (Flutter, app `diets`) es nativa: no usa cookie, guarda el refresh token en `flutter_secure_storage` y lo envía en el cuerpo de `/api/diets/auth/refresh` (spec `integraciones/02`).
+   La app de dietas no inicia sesión en PremiumFitness: usa su propio backend, y PremiumFitness le concede el acceso por una credencial de servicio (spec `integraciones/02`, revisión del 15 nov 2026). Antes decía: era una tercera app `diets` con refresh token en `flutter_secure_storage`.
 
    La app web y el admin están en subdominios del mismo dominio, así que `SameSite=Strict` funciona. CORS solo acepta los orígenes de `CORS_ALLOWED_ORIGINS`, con credenciales.
 7. **Recuperación:** se pide un código SMS para recuperar la contraseña. Al verificarlo se emite un token de un solo uso de 10 minutos (`password_reset_tokens`) para fijar la nueva contraseña. Al cambiarla se revocan todas las sesiones.
@@ -100,7 +100,7 @@ Definir cómo se registran, inician sesión, mantienen la sesión y recuperan el
 
 ## Criterios de aceptación
 
-1. **Login y app correcta:** un cliente y un entrenador entran a la app web con celular y contraseña y ven el área de su rol. Un token `web` de cliente recibe 403 en los endpoints de entrenador, y un token `web` no sirve en `/api/admin/*` ni en `/api/diets/*`.
+1. **Login y app correcta:** un cliente y un entrenador entran a la app web con celular y contraseña y ven el área de su rol. Un token `web` de cliente recibe 403 en los endpoints de entrenador, y un token `web` no sirve en `/api/admin/*`.
 2. **Registro duplicado:** no se puede registrar dos cuentas con el mismo celular.
 3. **Cuenta sin verificar:** una cuenta `pending` no accede al dashboard hasta verificar el celular.
 4. **Recarga de la app:** al recargar se recupera la sesión con el refresh token sin pedir login. Después de 30 días sin uso se pide login.
@@ -128,12 +128,12 @@ Definir cómo se registran, inician sesión, mantienen la sesión y recuperan el
   - `verification_codes` cambia `code` a `char(64)` (el hash) y añade `purpose` (`phone_verification` o `password_reset`), `destination` y `attempts`.
   - `password_reset_tokens` guarda el token de un solo uso que sale de verificar el código (como hash).
   - **Nueva tabla `refresh_tokens`:**
-    - `user_id` o `agent_id`, y `app` (`web`, `admin` o `diets`);
+    - `user_id` o `agent_id`, y `app` (`web` o `admin`);
     - `family_id` y `token_hash`, que es único;
     - `expires_at`, `revoked_at` y `replaced_by_id`;
     - `ip`, `user_agent` y `created_at`.
 - **Código:** se parte de `Auth` de radical y de las plantillas PHP de las skills `jwt-security` y `sms-account-verification`. El rate limiting usa `RateLimitMiddleware`, con límites por IP y por celular.
-- **Rutas:** se agrupan por app (`/api/auth/*` para la web, `/api/admin/auth/*` y `/api/diets/auth/*`) para limitar la cookie a su ruta. Los endpoints del entrenador exigen `role = trainer`.
+- **Rutas:** se agrupan por app (`/api/auth/*` para la web y `/api/admin/auth/*`) para limitar la cookie a su ruta. Los endpoints del entrenador exigen `role = trainer`.
 - **Limpieza:** un proceso nocturno, disparado por el cron del hosting, borra los refresh tokens vencidos hace más de 30 días y los códigos usados o vencidos.
 
 ## Checklist

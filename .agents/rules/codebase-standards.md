@@ -39,7 +39,7 @@ When generating code for this repository:
 
 4. **Base de datos y frontend**:
    - MariaDB 11.8, `utf8mb4_unicode_ci`.
-   - Tres apps (spec `arquitectura/02`): la **web** (PWA Angular para clientes y entrenadores, con un área por rol cargada aparte), el **admin** (Angular: call center, SAP, envíos y reportes) y **dietas** (Flutter, externa).
+   - Tres apps (spec `arquitectura/02`): la **web** (PWA Angular para clientes y entrenadores, con un área por rol cargada aparte), el **admin** (Angular: call center, SAP, envíos y reportes) y **dietas** (Nutrition & Fitness Plus: Flutter, externa, con su propio backend en `dietas.elitenutapp.com`; spec `integraciones/02`).
    - Angular **22** (estable al 9 nov 2026: 22.2.x) con el builder `@angular/build:application`: esbuild para compilar y Vite como servidor de desarrollo (`ng serve`). No se usa el builder de Webpack (`@angular-devkit/build-angular`), que está obsoleto, ni un `vite.config` propio.
    - **Subdominios separados:** backend (`api.`), app web (`app.`) y admin (`admin.`). El backend no sirve las apps Angular.
 
@@ -64,7 +64,7 @@ Cada feature vive en `src/Features/<FeatureName>/`: Controller, Model, Repositor
 | `Point` | Lotes, movimientos, consumo FIFO y vencimiento | `negocio/03` |
 | `Redemption` | Canje de productos con puntos a precio completo | CU-12 |
 | `Notification` | Dispositivos y outbox de push con FCM HTTP v1 | `integraciones/01` |
-| `DietAccess` | Estado y canje de acceso a la app de dietas (Flutter) | `integraciones/02` |
+| `DietAccess` | Activación, estado, canje y concesión mensual del acceso a la app de dietas, por la puerta de integración de su backend | `integraciones/02` |
 
 ## Codebase Scanning Instructions
 
@@ -117,9 +117,9 @@ Cada feature vive en `src/Features/<FeatureName>/`: Controller, Model, Repositor
 Spec: `specs/seguridad/01-autenticacion-y-sesiones.md`.
 
 - Login con celular (`users.num_cell`, único) y contraseña. Un rol por cuenta: `client` o `trainer`.
-- Access token JWT de 15 min, solo en memoria del frontend, con `sub`, `role` y `app` (`web`, `admin` o `diets`). Una API rechaza los tokens de otra app, y los endpoints del entrenador exigen `role = trainer`.
+- Access token JWT de 15 min, solo en memoria del frontend, con `sub`, `role` y `app` (`web` o `admin`). Una API rechaza los tokens de otra app, y los endpoints del entrenador exigen `role = trainer`.
 - Refresh token de 30 días en cookie `httpOnly`, `Secure`, `SameSite=Strict`, rotado en cada uso y guardado como hash en `refresh_tokens`. Reutilizar uno ya rotado revoca toda la familia.
-- Una cookie por app web (`pf_rt_web` en `/api/auth`, `pf_rt_admin` en `/api/admin/auth`). La app de dietas (Flutter, app `diets`) no usa cookie: guarda el refresh token en `flutter_secure_storage` y lo envía en el cuerpo.
+- Una cookie por app web (`pf_rt_web` en `/api/auth`, `pf_rt_admin` en `/api/admin/auth`). La app de dietas no inicia sesión en PremiumFitness: tiene su propio backend, y PremiumFitness le concede el acceso con `DIETS_API_KEY` desde el servidor (spec `integraciones/02`).
 - Admin: login con `tb_empleados` (externa, **no se toca**: solo lectura), sesión de 12 horas.
 
 ## Verification Code Flow
@@ -143,7 +143,7 @@ En PremiumFitness el «QR» es un enlace con el id del entrenador en base64 (reg
 - **Nunca** se programan tareas dentro de la aplicación. LiteSpeed levanta varios procesos y cada uno ejecutaría la tarea (incidente de api-comisiones, spec `negocio/05`).
 - El cron de cPanel llama al endpoint con el header `X-Cron-Job-Token`, que valida `CronJobTokenMiddleware` contra `CRON_JOB_TOKEN`.
 - Cada job es idempotente: el cierre mensual responde 409 si el período ya existe.
-- Jobs: envío de push pendientes (cada minuto), cierre mensual de comisión (día 1, 01:00), vencimiento de lotes de puntos y avisos de vencimiento de puntos y de dietas (diario), limpieza de refresh tokens y códigos vencidos (diaria), procesamiento de eventos de pago (radical).
+- Jobs: envío de push pendientes y de concesiones de dietas pendientes (cada minuto), cierre mensual de comisión y concesión del acceso a dietas por meta (día 1, 01:00), vencimiento de lotes de puntos y avisos de vencimiento de puntos y de dietas (diario), limpieza de refresh tokens y códigos vencidos (diaria), procesamiento de eventos de pago (radical).
 
 ## Email Templates
 
@@ -250,7 +250,9 @@ VAT_EXEMPT_PRODUCT_CODES=103040   # Nutra C
 # Acceso a dietas (spec integraciones/02; la meta es provisional y su lógica puede cambiar)
 DIET_ACCESS_POINTS_GOAL=249000
 DIET_ACCESS_POINTS_COST=50000
-DIET_FREE_DAYS=30
+# El mes gratis lo da el backend de dietas al activar la cuenta (antes DIET_FREE_DAYS=30)
+DIETS_API_URL=https://dietas.elitenutapp.com/api/v1
+DIETS_API_KEY=<INTEGRACION_API_KEY del backend de dietas>
 
 # Cierre mensual de comisión (spec negocio/05)
 COMMISSION_REPORT_RECIPIENTS=financiero1@dominio.com,financiero2@dominio.com

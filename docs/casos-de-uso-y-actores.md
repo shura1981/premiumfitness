@@ -507,40 +507,41 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 
 ### CU-14. Acceder a la app de dietas
 
-- **Objetivo:** que el entrenador use la app de dietas (Flutter, aparte) mientras tenga acceso.
+- **Objetivo:** que el entrenador use la app de dietas (Nutrition & Fitness Plus, con su propio backend) mientras tenga acceso.
 - **Actor:** ACT-01.
-- **Disparador:** el entrenador abre la app de dietas, o la app hace su validación diaria.
-- **Reglas:** RN-08, reglas 8 y 11 de `reglas-de-negocio.md`, y spec `specs/integraciones/02-acceso-app-de-dietas.md`.
-- **Clasificación:** Confirmado por producto (9 nov 2026). El valor de la meta es provisional y la lógica puede cambiar.
+- **Disparador:** el entrenador activa la app desde su área en la app web, o empieza un mes nuevo.
+- **Reglas:** RN-08, regla 11 de `reglas-de-negocio.md`, y spec `specs/integraciones/02-acceso-app-de-dietas.md` (revisado el 15 nov 2026).
+- **Clasificación:** Confirmado por producto (9 nov 2026). El valor de la meta es provisional y la lógica puede cambiar. La integración por el backend de dietas es Derivada.
 
 **Flujo principal:**
 
-1. El entrenador inicia sesión en la app de dietas con su celular y su contraseña de PremiumFitness.
-2. La primera vez, la app registra el primer ingreso, que inicia 30 días gratis (`POST /api/diets/access/first-use`).
-3. La app consulta `GET /api/diets/access`. El backend calcula el estado en ese momento: mes gratis, meta del mes anterior (249.000 puntos por clientes, provisional) o canje del mes.
-4. Si tiene acceso, la app habilita sus funciones hasta `valid_until`.
+1. En la app web, el entrenador pulsa «Activar app de dietas». PremiumFitness lo inscribe en el backend de dietas y le entrega un enlace (`POST /api/trainer/diet-access/activate`).
+2. El entrenador abre el enlace, pone su contraseña de la app de dietas y entra. Empieza su mes gratis.
+3. El día 1 de cada mes, PremiumFitness revisa la meta del mes anterior (249.000 puntos por clientes, provisional). Si la cumplió, le concede los módulos de la app de dietas hasta fin de mes.
+4. La app de dietas pregunta su acceso al abrirse y habilita los módulos concedidos.
 
 **Alternativas y errores:**
 
-- **Sin acceso pero con saldo:** la app ofrece canjear 50.000 puntos por el mes en curso (`POST /api/diets/access/redeem`). El canje es por FIFO, una sola vez por mes.
-- **Sin conexión:** la app usa el último estado guardado hasta `valid_until`.
+- **Sin acceso pero con saldo:** en la app web, el entrenador canjea 50.000 puntos por el mes en curso (`POST /api/trainer/diet-access/redeem`). El canje es por FIFO, una sola vez por mes, y concede los módulos hasta fin de mes.
+- **El backend de dietas no responde:** la concesión queda pendiente y se reintenta. Los puntos no se devuelven ni se pierde el acceso.
+- **Su correo ya tiene cuenta en la app de dietas:** PremiumFitness enlaza esa cuenta (pendiente de definir con el backend de dietas).
 
-**Criterio de aceptación:** los casos del spec `integraciones/02`: mes gratis, meta, canje, saldo insuficiente y separación de tokens.
+**Criterio de aceptación:** los casos del spec `integraciones/02`: activación, meta, canje, saldo insuficiente, fin de mes sin acceso y falla del backend de dietas.
 
 ### CU-15. Desactivar acceso a dietas por incumplimiento
 
-- **Objetivo:** cortar el acceso a dietas cuando el entrenador no tiene mes gratis, no cumplió la meta del mes anterior y no canjeó puntos por el mes.
+- **Objetivo:** que el entrenador pierda el acceso a dietas cuando no tiene mes gratis, no cumplió la meta del mes anterior y no canjeó puntos por el mes.
 - **Actor afectado:** ACT-01.
-- **Disparador:** la consulta de estado de la app de dietas o el proceso nocturno.
+- **Disparador:** termina el mes gratis o el último mes concedido.
 - **Clasificación:** Confirmado por producto (9 nov 2026).
 
 **Flujo principal:**
 
-1. El backend responde `has_access = false` con el motivo y las opciones para recuperar el acceso: canjear puntos si alcanza, o cumplir la meta este mes para tener acceso el siguiente.
-2. La app de dietas bloquea sus funciones y muestra ese mensaje.
-3. Tres días antes de que venza el acceso, y al desactivarse, el entrenador recibe un push en la app de dietas (spec `integraciones/01`).
+1. Al vencer la prueba o el mes concedido, el backend de dietas deja de conceder los módulos. PremiumFitness no tiene que quitar nada.
+2. La app de dietas muestra los módulos deshabilitados.
+3. Tres días antes de que venza el acceso, y al desactivarse, el entrenador recibe un push en la app web con las opciones para recuperarlo: canjear puntos si alcanza, o cumplir la meta este mes para tener acceso el siguiente (spec `integraciones/01`).
 
-**Alternativas y errores:** la desactivación solo afecta a dietas, no a la cuenta, las comisiones ni los puntos. Una falla técnica de la consulta no se trata como incumplimiento: la app usa el último estado válido.
+**Alternativas y errores:** la desactivación solo afecta a dietas, no a la cuenta, las comisiones ni los puntos. Una falla técnica no se trata como incumplimiento: una concesión ganada se reintenta hasta aplicarse.
 
 **Resultado:** acceso a dietas desactivado hasta que el entrenador canjee puntos o cumpla la meta.
 
@@ -759,8 +760,8 @@ Las recompensas de CU-05 dependen de la aprobación del pago (paso 1), no del en
 | PD-05 | Puntos por referido | **Resuelta (9 nov 2026):** son 50.000 puntos, definidos en la variable de entorno `TRAINER_REFERRAL_POINTS`. | — | CU-08. |
 | PD-06 | Compra que activa el referido | **Resuelta (9 nov 2026):** la primera compra aprobada de cualquier cliente de B, una sola vez y sin monto mínimo; la compra propia de B no cuenta. Si se cancela o devuelve y A no ha usado los puntos, vuelven a quedar pendientes. | — | CU-07, CU-08. |
 | PD-07 | Conversión de comisión | **Resuelta (9 nov 2026):** total de la comisión; puntos recibidos = comisión + mín(50% × puntos vigentes, comisión). | — | CU-10, CU-11. |
-| PD-08 | Permanencia en dietas | **Resuelta (9 nov 2026):** meta en puntos por clientes del mes anterior (249.000, provisional), mes gratis de 30 días desde el primer ingreso, canje de 50.000 puntos por mes y validación diaria. La lógica de la meta puede cambiar. | Valor definitivo de la meta. | CU-14, CU-15. |
-| PD-09 | Suscripción de dietas | **Resuelta (9 nov 2026):** no hay pago en dinero; el acceso se gana con la meta o se compra con 50.000 puntos al mes. La app de dietas es aparte (Flutter) y consulta el estado al backend. | Integración del login en Flutter. | CU-14, CU-15. |
+| PD-08 | Permanencia en dietas | **Resuelta (9 nov 2026):** meta en puntos por clientes del mes anterior (249.000, provisional), mes gratis desde el primer ingreso (un mes de calendario, pendiente de confirmar), canje de 50.000 puntos por mes. La lógica de la meta puede cambiar. | Valor definitivo de la meta. | CU-14, CU-15. |
+| PD-09 | Suscripción de dietas | **Resuelta (9 nov 2026):** no hay pago en dinero; el acceso se gana con la meta o se compra con 50.000 puntos al mes. La app de dietas es aparte (Nutrition & Fitness Plus, con su propio backend); PremiumFitness le concede el acceso por su puerta de integración (15 nov 2026). | Consulta de la organización en el backend de dietas (D-01 y D-02 del spec `integraciones/02`). | CU-14, CU-15. |
 | PD-10 | Enlace y asociación | Resuelto en parte el 9 nov 2026: la asociación se guarda en la cuenta y no se cambia por el cliente. Falta definir cuánto tiempo guarda la app el id del enlace antes del registro. | Definir el almacenamiento temporal del id. | CU-02, CU-03. |
 | PD-11 | Continuidad del descuento | Resuelto el 9 nov 2026: el descuento aplica a todo el catálogo mientras el cliente esté asociado. | Ninguna. | CU-04. |
 | PD-12 | Acumulación y valoración | No se indica si descuentos, promociones y puntos se combinan ni cuál es el precio de canje. | Definir compatibilidad, base del descuento y valor de productos en puntos. | CU-04, CU-12, CU-13. |

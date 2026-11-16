@@ -200,21 +200,22 @@ Elegir motor de base de datos, migraciones, índices y restricciones. Diseñar t
 
 ## Fase 8. Desarrollar la app de dietas como SaaS — posterior al MVP
 
-**Base:** `/home/steven/Proyectos/flutter/dietas_automaticas_flutter`.
+**Estado (15 nov 2026):** la app y su backend SaaS ya existen fuera de este repositorio. La app es Nutrition & Fitness Plus (`/home/steven/Proyectos/flutter/dietas.nutramerican.com`: escritorio, móvil y PWA) y su backend es `/home/steven/Proyectos/node/express/dietas.elitenutapp.com` (organizaciones, módulos, sincronización e IA). Lo que queda en esta fase es la integración con PremiumFitness: activación, concesión mensual del acceso y canje (spec `integraciones/02`).
 
-El proyecto de referencia aporta la base de la app; falta construir el backend para que pueda servir a múltiples entrenadores. También se evaluará la alternativa de adaptación a Angular mencionada en el documento original.
+**Base original:** `/home/steven/Proyectos/flutter/dietas_automaticas_flutter`.
+
+El proyecto de referencia aportó la base de la app; el backend para servir a múltiples entrenadores ya se construyó. La alternativa de adaptación a Angular ya no aplica.
 
 ### Trabajo
 
-1. Revisar funciones y modelos de la app Flutter y los componentes Angular aprovechables; decidir qué reutilizar, adaptar o desarrollar.
-2. Definir las funciones de dietas que tendrá la primera entrega, sin asumir capacidades no documentadas.
-3. Diseñar backend SaaS con separación de datos por entrenador e integración de identidad.
-4. Definir meta mensual de ventas, rango de puntos, costo exacto del acceso y período de renovación. Resolver la referencia a 50.000 frente a 49.800 puntos.
-5. Implementar primer mes gratis y acceso por cumplimiento de meta o canje de puntos.
-6. Ejecutar validación diaria de la condición mensual; la revisión diaria no debe repetir el débito de un mismo período.
-7. Desactivar dietas si no cumple la meta ni canjea puntos; reactivar conforme a la condición definida. Mantener separados los permisos de dietas y los de la cuenta comercial.
-8. Mostrar estado de acceso, vigencia, motivo de desactivación y alternativa para recuperar el servicio.
+1. ~~Revisar la app Flutter y decidir qué reutilizar~~: hecho en Nutrition & Fitness Plus.
+2. ~~Definir las funciones de dietas de la primera entrega~~: hecho en Nutrition & Fitness Plus (12 módulos).
+3. ~~Diseñar el backend SaaS con separación por organización~~: hecho en `dietas.elitenutapp.com`. Falta desplegarlo.
+4. Fijar el valor definitivo de la meta mensual. La referencia a 50.000 frente a 49.800 puntos ya está resuelta: el costo es 50.000.
+5. Integrar PremiumFitness con el backend de dietas: activación del entrenador, concesión del acceso por meta el día 1, canje de puntos y reintentos (spec `integraciones/02`).
+6. Acordar con el backend de dietas la consulta de la organización por inscripción y por correo (D-01 y D-02 del spec).
+7. Mostrar en la app web el estado del acceso, su vigencia, el motivo y cómo recuperarlo.
 
-**Entregables:** app adaptada, backend SaaS, integración de puntos y gestión del acceso.
+**Entregables:** feature `DietAccess` de PremiumFitness con su job de concesión, y la consulta de organización en el backend de dietas.
 
-**Aceptación:** aislamiento entre entrenadores; mes gratis; acceso por meta; acceso por puntos; falta de saldo; evaluación diaria sin doble cobro; desactivación y reactivación verificadas. **Cobertura:** CU-14 y CU-15, reglas 8 y 11.
+**Aceptación:** activación; mes gratis; acceso por meta; acceso por puntos; falta de saldo; un solo canje por mes; fin de mes sin acceso; reintento si el backend de dietas falla. **Cobertura:** CU-14 y CU-15, regla 11.

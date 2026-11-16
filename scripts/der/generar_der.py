@@ -288,17 +288,17 @@ db.table("prt", "password_reset_tokens", "E", 40, db.B("vc") + 40,
 db.table("rt", "refresh_tokens", "N", 40, db.B("prt") + 40, [
     r("PK", "id", "bigint(20) (AI)"), r("FK", "user_id", "bigint(20) NULL · cliente o entrenador"),
     r("FK", "agent_id", "int(11) NULL · agente del admin"),
-    r("", "app", "enum('web','admin','diets')"), r("", "family_id", "char(36) · sesión"),
+    r("", "app", "enum('web','admin')"), r("", "family_id", "char(36) · sesión"),
     r("UQ", "token_hash", "char(64)"), r("", "expires_at", "timestamp · 30 días (admin 12 h)"),
     r("", "revoked_at", "timestamp NULL"), r("FK", "replaced_by_id", "bigint(20) NULL · rotación"),
     r("", "ip / user_agent", "varchar(45) / varchar(255)"), r("", "created_at", "timestamp")])
 db.table("pd", "push_devices", "N", 40, db.B("rt") + 40, [
     r("PK", "id", "bigint(20) (AI)"), r("FK", "user_id", "bigint(20)"),
-    r("", "app", "enum('web','diets')"), r("", "platform", "enum('web','android','ios')"),
+    r("", "app", "enum('web')"), r("", "platform", "enum('web','android','ios')"),
     r("UQ", "token", "varchar(255) · token FCM"), r("", "created_at / last_seen_at", "timestamp")])
 db.table("pn", "push_notifications", "N", 40, db.B("pd") + 40, [
     r("PK", "id", "bigint(20) (AI)"), r("FK", "user_id", "bigint(20)"),
-    r("", "app", "enum('web','diets')"), r("", "type", "varchar(50)"),
+    r("", "app", "enum('web')"), r("", "type", "varchar(50)"),
     r("", "title / body", "varchar(100) / varchar(255)"), r("", "data", "json · route e id"),
     r("", "status", "enum('pending','sent','failed') · outbox"), r("", "attempts", "tinyint(4)"),
     r("", "last_error", "varchar(255) NULL"), r("UQ", "source_key", "varchar(64)"),
@@ -344,7 +344,9 @@ Y1 = db.B("users") + 130
 db.table("tr", "trainers", "N", UX, Y1, [
     r("PK FK", "user_id", "bigint(20)"), r("UQ", "coupon_code", "varchar(30) · cupón del entrenador"),
     r("", "joined_at", "timestamp"), r("", "updated_at", "timestamp"),
-    r("", "diet_first_access_at", "timestamp NULL · inicia el mes gratis")], w=380)
+    r("", "diet_enrollment_id", "bigint(20) NULL · en dietas"),
+    r("UQ", "diet_organization_id", "bigint(20) NULL · en dietas"),
+    r("", "diet_trial_until", "timestamp NULL · fin del mes gratis")], w=380)
 db.table("cr", "client_referrals", "N", AX, Y1, [
     r("PK", "id", "bigint(20) (AI)"), r("FK UQ", "client_id", "bigint(20) · un entrenador por cliente"),
     r("FK", "trainer_id", "bigint(20)"), r("", "source", "enum('link','coupon')"), r("", "linked_at", "timestamp")])
@@ -486,10 +488,13 @@ db.table("pm", "point_movements", "N", PMX, Y3, [
 db.table("dap", "diet_access_periods", "N", db.R("pm") + 120, Y3, [
     r("PK", "id", "bigint(20) (AI)"), r("FK", "trainer_id", "bigint(20)"),
     r("UQ", "trainer_id + period + source", "char(7) · '2026-11'"),
-    r("", "source", "enum('free','sales_goal','points')"),
+    r("", "source", "enum('sales_goal','points')"),
     r("", "points_goal", "int(11) NULL · 249.000 (env)"), r("", "points_earned", "int(11) NULL · mes anterior"),
     r("", "points_spent", "int(11) NULL · 50.000 (env)"),
-    r("", "valid_from / valid_to", "timestamp"), r("", "created_at", "timestamp")])
+    r("", "valid_from / valid_to", "timestamp"),
+    r("", "sync_status", "enum('pending','applied') · backend de dietas"),
+    r("", "sync_attempts / last_sync_error", "tinyint(4) / varchar(255) NULL"),
+    r("", "synced_at / created_at", "timestamp NULL / timestamp")])
 YB = db.B("pl") + 90
 db.table("adj", "adjustments", "N", CMX + 120, YB, [
     r("PK", "id", "bigint(20) (AI)"), r("FK", "order_id", "bigint(20)"), r("FK", "agent_id", "int(11) · agente"),

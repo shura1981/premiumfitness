@@ -1,6 +1,6 @@
 # 01 — Diagrama entidad relación (DER)
 
-**Estado:** propuesta v0.15 lista para revisión · **Creado:** 7 de noviembre de 2026
+**Estado:** propuesta v0.16 lista para revisión · **Creado:** 7 de noviembre de 2026
 
 ## Petición original
 
@@ -62,6 +62,12 @@
 - **Sin FK al catálogo:** `orders_items.product_sku` y `product_discount_rules.product_sku` guardan el `codigo` de la intranet, sin FK. `orders_items` añade `product_name` y copia al comprar el nombre, el precio y el `sap_code`.
 - **IVA:** ya no hay tasa por producto. Cada línea toma `VAT_PERCENTAGE` (19), salvo los códigos de `VAT_EXEMPT_PRODUCT_CODES` (Nutra C, código 103040), y guarda tasa, base e IVA.
 - **Tipos:** la tabla externa se dibuja con los tipos reales (`SHOW COLUMNS`, 15 nov 2026).
+
+**Revisión v0.16, 15 de noviembre de 2026:** la app de dietas es Nutrition & Fitness Plus, con su propio backend; PremiumFitness le concede el acceso por su puerta de integración (spec `integraciones/02`, revisado).
+
+- **Sin app `diets`:** `refresh_tokens.app` queda en `web` y `admin`; `push_devices.app` y `push_notifications.app` quedan solo en `web`.
+- **Entrenador en dietas:** `trainers` reemplaza `diet_first_access_at` por `diet_enrollment_id`, `diet_organization_id` (único) y `diet_trial_until`.
+- **Concesión:** `diet_access_periods.source` queda en `sales_goal` y `points` (la prueba la lleva el backend de dietas) y añade `sync_status`, `sync_attempts`, `last_sync_error` y `synced_at` para reintentar el envío.
 
 ## Objetivo
 
@@ -171,7 +177,7 @@ Proponer el modelo de datos del MVP comercial para revisarlo con negocio y tecno
 | S-43 | Un período cerrado no se recalcula: `force` solo regenera el Excel y el correo. Las correcciones posteriores entran como ajustes del mes siguiente. El Excel se guarda fuera de la carpeta pública. | Derivado | Spec `negocio/05`: en api-comisiones `force` sobrescribe meses cerrados y el Excel se descarga sin autenticación. |
 | S-44 | `refresh_tokens` guarda solo el hash del token. Cada renovación crea una fila nueva y enlaza la anterior (`replaced_by_id`); reutilizar una fila ya reemplazada revoca toda la `family_id`. | Confirmado | Spec `seguridad/01`; skill `jwt-security`. |
 | S-45 | `users.token_push_notification` de radical se conserva sin usar: los tokens viven en `push_devices`, porque un usuario puede tener varios dispositivos y apps. | Derivado | Spec `integraciones/01`. |
-| S-46 | El acceso a dietas se guarda por mes en `diet_access_periods` (único por entrenador, período y origen). El canje descuenta los puntos con `point_movements` enlazados al período. | Confirmado | Spec `integraciones/02`. |
+| S-46 | El acceso a dietas se guarda por mes en `diet_access_periods` (único por entrenador, período y origen: meta o canje). El canje descuenta los puntos con `point_movements` enlazados al período. Cada período se envía al backend de dietas y guarda si ya se aplicó. El mes gratis lo lleva el backend de dietas; PremiumFitness guarda su fin en `trainers.diet_trial_until`. Antes decía: también el origen `free` y `trainers.diet_first_access_at`. | Confirmado (por mes y canje); envío al backend de dietas Derivado | Spec `integraciones/02` (revisado el 15 nov 2026). |
 | S-30 | No se usan los tramos por cantidad de radical (`products.discount_list`): los descuentos de PremiumFitness dependen del rol y de `product_discount_rules`. Antes decía: se conserva por la integración. | Derivado | Spec `catalogo/01`. |
 | S-47 | El catálogo es `crisenri_intranet.tb_productos_megaplexstars`, externa y de solo lectura. Entran los productos con `activo = 1` y `promo = 0`; no se leen `descuento` ni `old_price`. Los combos son productos con su propio artículo SAP; si tienen `promo = 1`, no entran. El nombre es `producto`. La app la lee por la interfaz `ProductCatalog`. | Confirmado (15 nov 2026) | Spec `catalogo/01`. |
 | S-48 | `orders_items.product_sku` y `product_discount_rules.product_sku` guardan el `codigo` de la intranet sin FK, porque la tabla vive en otra base. Al comprar, la línea copia `product_name`, `product_full_price` (el `valor`) y `sap_code`. | Derivado | Spec `catalogo/01`; mismo criterio que `tb_empleados` (S-31). |
@@ -197,14 +203,14 @@ Diagrama editable: [diagrama-entidad-relacion.drawio](../../docs/img/diagrama-en
 | Identidad y referidos | `users` | Adaptada | Identidad con `full_name`, documento, celular, email y contraseña. Añade verificación del teléfono, rol y estado. |
 | Identidad y referidos | `document_types` | Existente | Tipos de documento. |
 | Identidad y referidos | `verification_codes` | Adaptada | Códigos SMS de 6 dígitos (hash), propósito, destino e intentos. |
-| Identidad y referidos | `refresh_tokens` | Nueva | Sesiones de 30 días por app (admin, 12 h) con rotación y revocación. |
-| Identidad y referidos | `push_devices` | Nueva | Tokens FCM por usuario, app y plataforma. |
+| Identidad y referidos | `refresh_tokens` | Nueva | Sesiones de 30 días de la app web y de 12 horas del admin, con rotación y revocación. |
+| Identidad y referidos | `push_devices` | Nueva | Tokens FCM de la app web por usuario y plataforma. |
 | Identidad y referidos | `push_notifications` | Nueva | Outbox de notificaciones push con reintentos. |
-| Recompensas y operación | `diet_access_periods` | Nueva | Acceso mensual a dietas: gratis, por meta o por canje de puntos. |
+| Recompensas y operación | `diet_access_periods` | Nueva | Acceso mensual a dietas por meta o por canje de puntos, y su envío al backend de dietas. |
 | Identidad y referidos | `password_reset_tokens` | Existente | Recuperación de contraseña. |
 | Identidad y referidos | `addresses`, `address_user_map` | Existente | Direcciones del usuario, con la principal marcada. |
 | Identidad y referidos | `cities`, `localities`, `address_locality_map` | Existente | Ciudad con código DANE y localidad opcional. |
-| Identidad y referidos | `trainers` | Nueva | Subtipo de `users` para el entrenador, con su cupón único. |
+| Identidad y referidos | `trainers` | Nueva | Subtipo de `users` para el entrenador, con su cupón único y su organización en la app de dietas. |
 | Identidad y referidos | `client_referrals` | Nueva | Único entrenador del cliente y origen del vínculo (enlace o cupón). |
 | Identidad y referidos | `trainer_referrals` | Nueva | Relación A → B, los 50.000 puntos pendientes y el pedido que los activó. |
 | Pedidos y catálogo | `tb_productos_megaplexstars` | Externa | Catálogo de la intranet (`crisenri_intranet`), el mismo de la web: nombre, precio con IVA, categoría, grupo y artículo SAP. No se migra. |
@@ -276,4 +282,5 @@ Diagrama editable: [diagrama-entidad-relacion.drawio](../../docs/img/diagrama-en
 - [x] Añadir push (`push_devices`, `push_notifications`) y acceso a dietas (`diet_access_periods`) (v0.13)
 - [x] Registrar el pago de la liquidación con comprobante (v0.14)
 - [x] Leer el catálogo de la intranet: quitar las tablas de catálogo de radical, copiar el producto en `orders_items` y sacar el IVA del catálogo (v0.15)
+- [x] Quitar la app `diets` y enlazar al entrenador con su organización en el backend de dietas (v0.16)
 - [ ] Revisión y aprobación del modelo por negocio y tecnología
