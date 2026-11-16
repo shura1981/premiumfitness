@@ -344,9 +344,7 @@ Y1 = db.B("users") + 130
 db.table("tr", "trainers", "N", UX, Y1, [
     r("PK FK", "user_id", "bigint(20)"), r("UQ", "coupon_code", "varchar(30) · cupón del entrenador"),
     r("", "joined_at", "timestamp"), r("", "updated_at", "timestamp"),
-    r("", "diet_enrollment_id", "bigint(20) NULL · en dietas"),
-    r("UQ", "diet_organization_id", "bigint(20) NULL · en dietas"),
-    r("", "diet_trial_until", "timestamp NULL · fin del mes gratis")], w=380)
+    r("", "diet_first_access_at", "timestamp NULL · inicia el mes gratis")], w=380)
 db.table("cr", "client_referrals", "N", AX, Y1, [
     r("PK", "id", "bigint(20) (AI)"), r("FK UQ", "client_id", "bigint(20) · un entrenador por cliente"),
     r("FK", "trainer_id", "bigint(20)"), r("", "source", "enum('link','coupon')"), r("", "linked_at", "timestamp")])
@@ -488,13 +486,10 @@ db.table("pm", "point_movements", "N", PMX, Y3, [
 db.table("dap", "diet_access_periods", "N", db.R("pm") + 120, Y3, [
     r("PK", "id", "bigint(20) (AI)"), r("FK", "trainer_id", "bigint(20)"),
     r("UQ", "trainer_id + period + source", "char(7) · '2026-11'"),
-    r("", "source", "enum('sales_goal','points')"),
+    r("", "source", "enum('free','sales_goal','points')"),
     r("", "points_goal", "int(11) NULL · 249.000 (env)"), r("", "points_earned", "int(11) NULL · mes anterior"),
     r("", "points_spent", "int(11) NULL · 50.000 (env)"),
-    r("", "valid_from / valid_to", "timestamp"),
-    r("", "sync_status", "enum('pending','applied') · backend de dietas"),
-    r("", "sync_attempts / last_sync_error", "tinyint(4) / varchar(255) NULL"),
-    r("", "synced_at / created_at", "timestamp NULL / timestamp")])
+    r("", "valid_from / valid_to", "timestamp"), r("", "created_at", "timestamp")])
 YB = db.B("pl") + 90
 db.table("adj", "adjustments", "N", CMX + 120, YB, [
     r("PK", "id", "bigint(20) (AI)"), r("FK", "order_id", "bigint(20)"), r("FK", "agent_id", "int(11) · agente"),

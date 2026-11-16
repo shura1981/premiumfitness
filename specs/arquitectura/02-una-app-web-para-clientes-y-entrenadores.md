@@ -20,7 +20,7 @@ PremiumFitness tiene **tres apps**:
 | --- | --- | --- | --- |
 | **Web** | PWA Angular | Clientes y entrenadores, con un área por rol | `web` |
 | **Admin** | Angular | Agentes del call center (`tb_empleados`): pedidos, SAP, envíos y reportes | `admin` |
-| **Dietas** (Nutrition & Fitness Plus) | Flutter (multiplataforma), externa, con su propio backend (`dietas.elitenutapp.com`) | Entrenadores | — (su propio login; PremiumFitness le concede el acceso por la puerta de integración, spec `integraciones/02`) |
+| **Dietas** (Nutrition & Fitness Plus) | Flutter (multiplataforma), externa y desacoplada, con su propio backend (`dietas.elitenutapp.com`) | Entrenadores | — (su propio login; su backend consulta el acceso a PremiumFitness por documento, spec `integraciones/02`) |
 
 **Cambio respecto a lo confirmado antes:** el 9 nov 2026 se había confirmado que clientes y entrenadores usaban apps distintas, cada una en su subdominio (regla 12; S-01 del spec `negocio/01`). Esta decisión del mismo día lo reemplaza.
 

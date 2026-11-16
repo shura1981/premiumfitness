@@ -64,7 +64,7 @@ Definir cómo se registran, inician sesión, mantienen la sesión y recuperan el
    | Web (clientes y entrenadores) | `pf_rt_web` | `/api/auth` |
    | Admin | `pf_rt_admin` | `/api/admin/auth` |
 
-   La app de dietas no inicia sesión en PremiumFitness: usa su propio backend, y PremiumFitness le concede el acceso por una credencial de servicio (spec `integraciones/02`, revisión del 15 nov 2026). Antes decía: era una tercera app `diets` con refresh token en `flutter_secure_storage`.
+   La app de dietas no inicia sesión en PremiumFitness: tiene su propio login y backend, y ese backend consulta el acceso por documento con una credencial de servicio (`DIET_ACCESS_API_KEY`), servidor a servidor (spec `integraciones/02`, revisión del 15 nov 2026). Antes decía: era una tercera app `diets` con refresh token en `flutter_secure_storage`.
 
    La app web y el admin están en subdominios del mismo dominio, así que `SameSite=Strict` funciona. CORS solo acepta los orígenes de `CORS_ALLOWED_ORIGINS`, con credenciales.
 7. **Recuperación:** se pide un código SMS para recuperar la contraseña. Al verificarlo se emite un token de un solo uso de 10 minutos (`password_reset_tokens`) para fijar la nueva contraseña. Al cambiarla se revocan todas las sesiones.
