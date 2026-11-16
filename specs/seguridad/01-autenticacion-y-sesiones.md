@@ -143,5 +143,7 @@ Definir cómo se registran, inician sesión, mantienen la sesión y recuperan el
 - [x] Añadir `refresh_tokens`, ajustar `verification_codes` y hacer único `users.num_cell` en `scripts/der/generar_der.py`, y regenerar el DER
 - [x] Actualizar `.agents/rules/codebase-standards.md` (30 días, cookies por app y variables de entorno)
 - [x] Actualizar el PRD (RF-01 y D-05), CU-01 y los supuestos del DER
+- [x] Implementar la sesión de la app web y del admin, el registro, los códigos y la recuperación (spec `backend/03`; pruebas en `tests/E2E/Auth/` y `tests/E2E/Admin/AdminSessionTest.php`)
+- [x] Cerrar las rutas heredadas sin sesión (`tests/E2E/Security/RoutesRequireCredentialsTest.php`)
 - [ ] Elegir el proveedor de SMS (D-10)
 - [~] Decidir qué hacer con las contraseñas en texto plano de `tb_empleados` (S-06): descartado, `tb_empleados` no se toca (9 nov 2026)

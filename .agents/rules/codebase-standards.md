@@ -5,7 +5,7 @@ applyTo: '**/*.php, **/*.js, **/*.css, **/*.html'
 
 # PremiumFitness — Estándares de código
 
-PremiumFitness es un **fork de `backend-radical-nutrition`** (spec `specs/arquitectura/01-stack-php-fork-de-radical.md`). Estas reglas parten de las de radical y añaden las propias del proyecto. Todavía no hay código de aplicación: la primera tarea de codificación es crear el fork.
+PremiumFitness es un **fork de `backend-radical-nutrition`** (spec `specs/arquitectura/01-stack-php-fork-de-radical.md`). Estas reglas parten de las de radical y añaden las propias del proyecto. El fork base ya está en este repo (spec `specs/backend/01-fork-base-del-backend.md`): el código heredado de radical convive con lo nuevo hasta que cada parte se adapte.
 
 ## Priority Guidelines
 
@@ -47,9 +47,9 @@ When generating code for this repository:
 
 Cada feature vive en `src/Features/<FeatureName>/`: Controller, Model, Repository, Validator (varios validadores en `Validators/`) y, cuando hay lógica de negocio, Service.
 
-**Heredadas de radical:** `Address`, `Admin`, `Auth`, `Carrier`, `City`, `CityWarehouse`, `CronJob`, `DocumentType`, `Locality`, `Order`, `PaymentGateway`, `Reports` y `User`.
+**Heredadas de radical:** `Address`, `Admin`, `Auth` (reescrita según el spec `seguridad/01`), `Carrier`, `City`, `CityWarehouse`, `CronJob`, `DocumentType`, `Locality`, `Order`, `PaymentGateway`, `Reports` y `User`.
 
-**De radical a revisar al hacer el fork:** `CreditBalance` (queda fuera del DER), y `PublicStore`, `RetailCheckout`, `RetailAccount` y `Checkout`, porque PremiumFitness no tiene tienda pública.
+**Retiradas (15 nov 2026):** `PublicStore`, `RetailCheckout` y `RetailAccount`: PremiumFitness no tiene tienda pública. **Por retirar al adaptar las compras:** `CreditBalance` (queda fuera del DER) y el `Checkout` de radical.
 
 **Catálogo (spec `catalogo/01`):** `Product` deja de administrar una tabla propia y lee `crisenri_intranet.tb_productos_megaplexstars` (solo lectura) detrás de la interfaz `ProductCatalog`, que devuelve siempre `CatalogProduct`. `Category`, `ProductGroup` y `SapProduct` de radical no se usan: la tabla de la intranet trae `category`, `grupo`, `sap_code` y `sap_name`.
 
@@ -64,6 +64,12 @@ Cada feature vive en `src/Features/<FeatureName>/`: Controller, Model, Repositor
 | `Point` | Lotes, movimientos, consumo FIFO y vencimiento | `negocio/03` |
 | `Redemption` | Canje de productos con puntos a precio completo | CU-12 |
 | `Notification` | Dispositivos y outbox de push con FCM HTTP v1 | `integraciones/01` |
+| `Account` | Perfil y direcciones de quien tiene la sesión | `backend/03` |
+| `Checkout` | Cálculo de la compra (`QuoteCalculator`), creación del pedido y pago firmado | `negocio/01`, `catalogo/01` |
+| `Reward` | Aprobación del pago: comisión, puntos y activación del referido en una transacción | `negocio/01`, `negocio/02` |
+| `Adjustment` | Ajustes por cancelación y devolución | RF-17 |
+| `Audit` | `audit_logs` de las operaciones sensibles | RF-16 |
+| `Reference` | Listas de los formularios: tipos de documento, ciudades y localidades | `backend/03` |
 | `DietAccess` | Estado y canje del acceso a la app de dietas, y el endpoint por documento que consulta su backend | `integraciones/02` |
 
 ## Codebase Scanning Instructions
@@ -71,8 +77,8 @@ Cada feature vive en `src/Features/<FeatureName>/`: Controller, Model, Repositor
 1. Analyze patterns for:
    - **Naming**: PascalCase para clases, camelCase para métodos/variables, SCREAMING_SNAKE para constantes. Tablas y columnas en inglés y `snake_case`.
    - **Organización**: `src/Features/<Feature>/` para Modelos, Repositorios, Controllers, Services y Validators; `src/Infrastructure/` para servicios transversales (Middlewares, Auth, Database, Http, Mail, Notification, Validation, Controllers, Handlers); `src/Shared/Exceptions/` para excepciones compartidas.
-   - **Error handling**: Lanzar excepciones tipadas desde `src/Shared/Exceptions/`. Los middlewares las capturan y responden HTTP. Usar `HttpRequestException` para errores de APIs externas.
-   - **Routing**: Rutas API en `ApiRoute.php`, admin en `AdminRoute.php`, vistas HTML y SPA en `WebRoute.php`, recursos estáticos en `ResourceRoute.php`.
+   - **Error handling**: Lanzar excepciones tipadas desde `src/Shared/Exceptions/`. Los middlewares las capturan y responden HTTP. Usar `HttpRequestException` para errores de APIs externas. Los errores de negocio de la API son `ApiException` (estado, `code` y un mensaje listo para mostrar) y responden `{ message, code, errors? }`; los controllers usan el trait `JsonResponder`.
+   - **Routing**: Rutas API en `ApiRoute.php`, admin en `AdminRoute.php`, páginas de respuesta de las pasarelas en `WebRoute.php`, recursos estáticos en `ResourceRoute.php`. El contrato está en `specs/backend/03-api-de-premiumfitness.plan.md`. Toda ruta de `/api` lleva su credencial (`JwtMiddleware`, `AdminMiddleware`, token de cron o firma de la pasarela) y los endpoints de la app web leen el usuario del token, nunca de la URL.
    - **Value Objects / readonly classes**: `readonly class` con constructor público o privado + factory estático `fromApiResponse()`/`fromEnv()`.
    - **Factories estáticas**: `fromEnv()` como único punto de acceso a `$_ENV`. Nunca leer `$_ENV` directamente fuera de estos métodos.
 
@@ -102,7 +108,9 @@ Cada feature vive en `src/Features/<FeatureName>/`: Controller, Model, Repositor
 - Ninguna constante de negocio se escribe en el código: se lee de las variables de entorno. Las estrategias por producto (`product_discount_rules`) son datos del catálogo y tienen prioridad sobre los valores por defecto.
 - Cada pedido, línea, referido y conversión guarda el valor que aplicó (porcentaje, IVA, puntos), para que un cambio en las variables no altere el histórico. Los reportes y el cierre **suman** lo guardado; nunca recalculan.
 - Las operaciones que mueven saldo (aprobación del pago, conversión, canje, vencimiento, cierre) van en una sola transacción, con la fila del entrenador bloqueada (`SELECT … FOR UPDATE`) y una clave única de idempotencia.
-- Los importes son `decimal(12,2)` y los puntos enteros, redondeados al entero más cercano (0,5 sube).
+- Los importes son `decimal(12,2)` y los puntos enteros, redondeados al entero más cercano (0,5 sube). El precio con descuento de una unidad se redondea al peso.
+- La app envía códigos y cantidades, nunca precios. El backend calcula, guarda y firma el valor del pago; el pedido lo aprueba el aviso firmado de la pasarela, solo si lo pagado cubre su valor.
+- Toda operación que el usuario puede repetir (convertir, canjear) lleva `idempotency_key`; toda acreditación lleva una `source_key` única.
 - El IVA se calcula al comprar, por línea: `VAT_PERCENTAGE` salvo los códigos de `VAT_EXEMPT_PRODUCT_CODES`. El catálogo no tiene tasa de IVA.
 
 ### Performance
@@ -143,7 +151,8 @@ En PremiumFitness el «QR» es un enlace con el id del entrenador en base64 (reg
 - **Nunca** se programan tareas dentro de la aplicación. LiteSpeed levanta varios procesos y cada uno ejecutaría la tarea (incidente de api-comisiones, spec `negocio/05`).
 - El cron de cPanel llama al endpoint con el header `X-Cron-Job-Token`, que valida `CronJobTokenMiddleware` contra `CRON_JOB_TOKEN`.
 - Cada job es idempotente: el cierre mensual responde 409 si el período ya existe.
-- Jobs: envío de push pendientes (cada minuto), cierre mensual de comisión (día 1, 01:00), vencimiento de lotes de puntos y avisos de vencimiento de puntos y de dietas (diario), limpieza de refresh tokens y códigos vencidos (diaria), procesamiento de eventos de pago (radical).
+- Jobs (todos `POST /api/cron-job/...`): `push/send` (cada minuto), `commission/close` (día 1, 01:00), `points/expire` (diario: vence lotes y avisa de los que están por vencer), `auth/cleanup` (diario) y `payment-event-jobs/process` (radical: correo y SMS de la compra aprobada).
+- El cierre no deshace nada si falla el Excel o el correo: responde con `warnings` y se repite con `force`, que nunca cambia un mes cerrado.
 
 ## Email Templates
 
@@ -164,7 +173,7 @@ interface NotificationChannelInterface
 ```
 
 - `EmailNotificationChannel` — envío por SMTP vía PHPMailer.
-- `SmsNotificationChannel` — envío por SMS vía Relax Global API (`SMS_API_URL`, `SMS_API_TOKEN`). Proveedor por confirmar (D-10).
+- `SmsNotificationChannel` — envío por SMS vía Relax Global API (`SMS_API_URL`, `SMS_API_TOKEN`). Proveedor por confirmar (D-10). Se obtiene con `SmsChannelFactory::fromEnv()`, que según `SMS_DRIVER` entrega el canal real (`relax`, el único admitido en producción), el de desarrollo (`log`) o el de pruebas (`memory`).
 - `FcmPushChannel` — push con **FCM HTTP v1** (cuenta de servicio, OAuth2 con JWT RS256). Nunca el API legacy `fcm/send` con server key, que Google retiró. Se envía desde la outbox `push_notifications`, nunca dentro de la petición del usuario.
 - Los canales se instancian con `SmsNotificationChannel::fromEnv()` o `EmailNotificationChannel::fromEnv()`.
 
@@ -213,6 +222,8 @@ MAIL_HOST, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD
 MAIL_FROM, MAIL_FROM_NAME, MAIL_ENCRYPTION=tls|ssl
 SAP_API_URL, SAP_API_KEY
 SMS_API_URL, SMS_API_TOKEN
+SMS_DRIVER=relax|log|memory   # relax en producción; log en desarrollo (logs/sms-dev.log)
+WEB_APP_URL=https://premiumfitness.nutramerican.com   # base de los enlaces del entrenador
 CRON_JOB_TOKEN=<mínimo 32 caracteres>
 
 # Autenticación (spec seguridad/01)
@@ -260,6 +271,12 @@ COMMISSION_PAYMENT_DAY=4
 COMMISSION_PAYMENT_SHIFT=next   # next|previous: si el día de pago no es hábil
 NON_BUSINESS_DAYS=2026-01-01,2026-01-12,...   # festivos AAAA-MM-DD; actualizar cada año
 REPORTS_STORAGE_PATH=storage/private/reports
+RECEIPTS_STORAGE_PATH=storage/private/receipts
+ADMIN_APP_URL=https://premiumfitness-admin.nutramerican.com   # enlaces de los correos a financiero
+
+# Envío (heredado de radical; por confirmar)
+SHIPPING_FEE=25000
+SHIPPING_FREE_THRESHOLD=500000
 ```
 
 ## Testing

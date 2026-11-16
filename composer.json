@@ -1,0 +1,60 @@
+{
+    "name": "nutramerican/premiumfitness-api",
+    "description": "API de PremiumFitness: referidos, compras, comisiones y puntos. Fork de backend-radical-nutrition (Slim 4, PHP 8.5).",
+    "type": "project",
+    "require": {
+        "php": ">=8.5",
+        "ext-curl": "*",
+        "ext-json": "*",
+        "ext-pdo": "*",
+        "firebase/php-jwt": "^7.0",
+        "openspout/openspout": "^5.14",
+        "phpmailer/phpmailer": "^6.9",
+        "psr/simple-cache": "^3.0",
+        "slim/psr7": "^1.7",
+        "slim/slim": "^4.15",
+        "slim/twig-view": "^3.4",
+        "symfony/cache": "^8.0",
+        "symfony/rate-limiter": "^8.0",
+        "vlucas/phpdotenv": "^5.6"
+    },
+    "require-dev": {
+        "pestphp/pest": "^4.6",
+        "phpstan/phpstan": "^2.0"
+    },
+    "license": "proprietary",
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Steven Realpe",
+            "email": "srealpe@elitenut.com"
+        }
+    ],
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "scripts": {
+        "start": "php -d upload_max_filesize=20M -d post_max_size=25M -S localhost:8000 server.php",
+        "lint": "vendor/bin/phpstan analyse src",
+        "test": "vendor/bin/pest",
+        "test:unit": "vendor/bin/pest --testsuite=Unit",
+        "test:integration": "vendor/bin/pest --testsuite=Integration",
+        "test:e2e": "vendor/bin/pest --testsuite=E2E",
+        "build": "composer install --no-dev --optimize-autoloader",
+        "install:dev": "composer install",
+        "dump": "composer dump-autoload -o"
+    }
+}

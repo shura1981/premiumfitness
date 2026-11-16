@@ -164,7 +164,7 @@ La clave única de `commission_periods.period` y de (`period_id`, `trainer_id`) 
 - [x] Actualizar PRD (§6.5, RF-12, RF-22, D-04, D-08), MVP y fases
 - [x] Corregir el spec `negocio/03` (decía que no había liquidación mensual)
 - [x] Registrar el pago con comprobante y avisar al entrenador (regla 10, S-05)
-- [ ] Leer y validar `COMMISSION_PAYMENT_SHIFT` y `NON_BUSINESS_DAYS` en `load/bootstrap.php` (S-11)
-- [ ] Calcular la fecha de pago con esas variables, con pruebas de 2026 y 2027 (4 oct 2026 → 5 oct; 4 dic 2027 → 6 dic) y del aviso cuando falta el año
-- [ ] Guardar `due_date` en `commission_settlements` al cerrar y usarla en la app, el admin y la marca de vencida
+- [x] Leer y validar `COMMISSION_PAYMENT_SHIFT` y `NON_BUSINESS_DAYS` en `load/bootstrap.php` (S-11)
+- [x] Calcular la fecha de pago con esas variables, con pruebas de 2026 y 2027 (4 oct 2026 → 5 oct; 4 dic 2027 → 6 dic) y del aviso cuando falta el año (`tests/Unit/Commission/CommissionCalendarTest.php`; el cierre devuelve `holidays_missing_<año>`)
+- [x] Guardar `due_date` en `commission_settlements` al cerrar y usarla en la app, el admin y la marca de vencida (`is_overdue`)
 - [ ] Redactar los términos y condiciones del pago de la comisión (S-06)

@@ -1,0 +1,145 @@
+@baseUrl = http://localhost:8000
+
+### JWT requerido para todos los endpoints de este archivo, excepto webhook
+@jwtToken = REEMPLAZAR_CON_JWT
+
+### Prerequisitos
+@userId = 1
+@statusId = 1
+@productSku = 100507
+
+### --------------------------------------------------------------------------
+### STATUS LOOKUP
+### --------------------------------------------------------------------------
+
+### 1. Listar estados de orden
+GET {{baseUrl}}/api/orders/statuses
+Authorization: Bearer {{jwtToken}}
+Accept: application/json
+
+### --------------------------------------------------------------------------
+### ORDERS CRUD + UPDATES
+### --------------------------------------------------------------------------
+
+### 2. Listar ordenes (paginado + filtros opcionales)
+GET {{baseUrl}}/api/orders?page=1&per_page=20
+Authorization: Bearer {{jwtToken}}
+Accept: application/json
+
+### 2b. Listar ordenes con filtro por estado
+GET {{baseUrl}}/api/orders?page=1&per_page=20&status=APROBADA
+Authorization: Bearer {{jwtToken}}
+Accept: application/json
+
+### 2c. Listar ordenes con rango de fecha
+GET {{baseUrl}}/api/orders?page=1&per_page=20&date_from=2024-01-01&date_to=2024-12-31&sort_order=DESC&sort_by=created_at
+Authorization: Bearer {{jwtToken}}
+Accept: application/json
+
+### 3. Crear orden valida
+# @name createOrder
+POST {{baseUrl}}/api/orders
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+
+{
+  "user_id": {{userId}},
+  "amount": 120000,
+  "status_value": "PENDING",
+  "items": [
+    {
+      "product_sku": {{productSku}},
+      "sap_code": null,
+      "quantity": 1,
+      "unit_price": 120000,
+      "discount_percentage": 0,
+      "line_total": 120000
+    }
+  ]
+}
+
+### 4. Crear orden - error 422 (items vacio)
+POST {{baseUrl}}/api/orders
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+
+{
+  "user_id": {{userId}},
+  "amount": 120000,
+  "items": []
+}
+
+### 5. Obtener orden por id
+GET {{baseUrl}}/api/orders/{{createOrder.response.body.$.order_id}}
+Authorization: Bearer {{jwtToken}}
+Accept: application/json
+
+### 6. Obtener orden - error 404
+GET {{baseUrl}}/api/orders/99999999
+Authorization: Bearer {{jwtToken}}
+Accept: application/json
+
+### 7. Listar ordenes por usuario
+GET {{baseUrl}}/api/users/{{userId}}/orders?page=1&per_page=20
+Authorization: Bearer {{jwtToken}}
+Accept: application/json
+
+### 8. Actualizar status por status_id
+PATCH {{baseUrl}}/api/orders/{{createOrder.response.body.$.order_id}}/status
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+
+{
+  "status_id": {{statusId}}
+}
+
+### 9. Actualizar codigo SAP
+PATCH {{baseUrl}}/api/orders/{{createOrder.response.body.$.order_id}}/sap-order-code
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+
+{
+  "sap_order_code": 700001
+}
+
+### 10. Actualizar tracking number + carrier (ambos obligatorios)
+PATCH {{baseUrl}}/api/orders/{{createOrder.response.body.$.order_id}}/tracking-number
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+
+{
+  "tracking_number": "TRK-TEST-0001",
+  "carrier_name": "MELONN"
+}
+
+### --------------------------------------------------------------------------
+### WEBHOOK PUBLICO (SIN JWT)
+### --------------------------------------------------------------------------
+
+### 11. Webhook de pago (publico)
+POST {{baseUrl}}/api/webhooks/orders
+Content-Type: application/json
+
+{
+  "order_id": {{createOrder.response.body.$.order_id}},
+  "status_value": "APPROVED",
+  "payment_state": {
+    "provider": "wompi",
+    "event": "payment.updated",
+    "status": "APPROVED"
+  }
+}
+
+### --------------------------------------------------------------------------
+### DELETE
+### --------------------------------------------------------------------------
+
+### 12. Eliminar orden recien creada
+DELETE {{baseUrl}}/api/orders/{{createOrder.response.body.$.order_id}}
+Authorization: Bearer {{jwtToken}}
+Accept: application/json
+
+### 13. Eliminar orden - error 404
+DELETE {{baseUrl}}/api/orders/99999999
+Authorization: Bearer {{jwtToken}}
+Accept: application/json

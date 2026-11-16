@@ -163,6 +163,8 @@ Tareas de este proyecto que requieren acceso o datos que el agente no tiene. Las
 - [x] Añadir `push_devices` y `push_notifications` al DER
 - [x] Añadir las variables de entorno a `.agents/rules/codebase-standards.md`
 - [x] Documentar las restricciones y recomendaciones para iPhone y Safari
+- [x] Implementar la outbox, los dispositivos y el envío con FCM HTTP v1 (spec `backend/03`; `src/Features/Notification/`, pruebas en `tests/E2E/Jobs/ScheduledJobsTest.php` con un canal simulado)
+- [ ] Probar un envío real a Firebase desde el backend (falta apuntar `FIREBASE_CREDENTIALS_PATH` a la clave y tener un dispositivo registrado)
 - [ ] Probar el flujo de instalación y push en un iPhone real (S-06)
 - [ ] Validar la lista de eventos con producto (S-04)
 - [x] Crear el proyecto de Firebase PremiumFitness, la app web y el certificado VAPID (S-02)

@@ -56,7 +56,7 @@ Dejar la documentación y las reglas de los agentes alineadas con la decisión d
 - [x] Traer `agent-skills.md` de radical, ajustado a `.agents/skills/`
 - [x] Corregir las menciones a Node en AGENTS.md, el PRD, las fases, el spec del DER y los specs de seguridad y negocio
 - [x] Borrar `.nvmrc`
-- [ ] Crear el fork y desactivar `login-with-credential` y el autologin por QR (primera tarea de codificación)
-- [ ] Al crear el fork, añadir `storage` a las carpetas bloqueadas del `.htaccess` y al `.gitignore` (`storage/private/`)
-- [ ] Al crear el fork, quitar `SpaController`, las rutas `/user` y `/summary` y las reglas de `dist/` y `dist-admin/` del `.htaccess`: las apps Angular van en sus propios subdominios
+- [x] Crear el fork y desactivar `login-with-credential` y el autologin por QR (15 nov 2026; spec `backend/01`)
+- [x] Al crear el fork, añadir `storage` a las carpetas bloqueadas del `.htaccess` y al `.gitignore` (`storage/private/`)
+- [x] Al crear el fork, quitar `SpaController`, las rutas `/user` y `/summary` y las reglas de `dist/` y `dist-admin/` del `.htaccess`: las apps Angular van en sus propios subdominios
 - [ ] Confirmar el proveedor de SMS (S-07)

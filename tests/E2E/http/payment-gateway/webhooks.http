@@ -1,0 +1,238 @@
+@baseUrl = http://localhost:8000
+
+### Prerrequisitos
+### Estos endpoints son PÚBLICOS (sin JWT). Solo rate limit 60/min.
+@orderId = 1
+@amount = 120000
+
+### --------------------------------------------------------------------------
+### ADDI WEBHOOKS
+### Payload JSON. Campos obligatorios: orderId, status.
+### status válidos: APPROVED | REJECTED | PENDING | INTERNAL_ERROR | ABANDONED | DECLINED
+### --------------------------------------------------------------------------
+
+### 1. Addi - webhook APROBADA
+POST {{baseUrl}}/api/payment-gateway/webhook/addi
+Content-Type: application/json
+
+{
+  "orderId": {{orderId}},
+  "applicationId": "ADDI-APP-100001",
+  "status": "APPROVED",
+  "approvedAmount": {{amount}}
+}
+
+### 2. Addi - webhook RECHAZADA
+POST {{baseUrl}}/api/payment-gateway/webhook/addi
+Content-Type: application/json
+
+{
+  "orderId": {{orderId}},
+  "applicationId": "ADDI-APP-100002",
+  "status": "REJECTED",
+  "approvedAmount": 0
+}
+
+### 3. Addi - webhook PENDIENTE
+POST {{baseUrl}}/api/payment-gateway/webhook/addi
+Content-Type: application/json
+
+{
+  "orderId": {{orderId}},
+  "applicationId": "ADDI-APP-100003",
+  "status": "PENDING",
+  "approvedAmount": 0
+}
+
+### 4. Addi - webhook ABANDONADA (ABANDONED)
+POST {{baseUrl}}/api/payment-gateway/webhook/addi
+Content-Type: application/json
+
+{
+  "orderId": {{orderId}},
+  "applicationId": "ADDI-APP-100004",
+  "status": "ABANDONED",
+  "approvedAmount": 0
+}
+
+### 5. Addi - webhook con orderId inválido → ok: false
+POST {{baseUrl}}/api/payment-gateway/webhook/addi
+Content-Type: application/json
+
+{
+  "applicationId": "ADDI-APP-XXXXX",
+  "status": "APPROVED",
+  "approvedAmount": {{amount}}
+}
+
+### 6. Addi - webhook sin status → ok: false
+POST {{baseUrl}}/api/payment-gateway/webhook/addi
+Content-Type: application/json
+
+{
+  "orderId": {{orderId}},
+  "applicationId": "ADDI-APP-XXXXX",
+  "approvedAmount": {{amount}}
+}
+
+### --------------------------------------------------------------------------
+### SISTECRÉDITO WEBHOOKS
+### Payload JSON. Campos obligatorios: Invoice, PaymentMethodResponse.StatusResponse.
+### StatusResponse válidos: Approved | Rejected | Pending | Failed | PendingForPaymentMethod | Cancelled
+### Nota: Sistecrédito puede enviar pings de prueba con PaymentMethodResponse vacío
+###       → el controller responde 200 con ok: false (sin disparar handlers).
+### --------------------------------------------------------------------------
+
+### 7. Sistecrédito - webhook APROBADA
+POST {{baseUrl}}/api/payment-gateway/webhook/sistecredito
+Content-Type: application/json
+
+{
+  "Invoice": "{{orderId}}",
+  "Value": {{amount}},
+  "Currency": "COP",
+  "PaymentMethodResponse": {
+    "TransactionId": "SC-123456",
+    "StatusResponse": "Approved"
+  }
+}
+
+### 8. Sistecrédito - webhook RECHAZADA
+POST {{baseUrl}}/api/payment-gateway/webhook/sistecredito
+Content-Type: application/json
+
+{
+  "Invoice": "{{orderId}}",
+  "Value": {{amount}},
+  "Currency": "COP",
+  "PaymentMethodResponse": {
+    "TransactionId": "SC-123457",
+    "StatusResponse": "Rejected"
+  }
+}
+
+### 9. Sistecrédito - webhook PENDIENTE
+POST {{baseUrl}}/api/payment-gateway/webhook/sistecredito
+Content-Type: application/json
+
+{
+  "Invoice": "{{orderId}}",
+  "Value": {{amount}},
+  "Currency": "COP",
+  "PaymentMethodResponse": {
+    "TransactionId": "SC-123458",
+    "StatusResponse": "Pending"
+  }
+}
+
+### 10. Sistecrédito - ping de prueba (PaymentMethodResponse vacío) → ok: false
+POST {{baseUrl}}/api/payment-gateway/webhook/sistecredito
+Content-Type: application/json
+
+{
+  "Invoice": "{{orderId}}",
+  "Value": {{amount}},
+  "Currency": "COP",
+  "PaymentMethodResponse": {}
+}
+
+### 11. Sistecrédito - webhook sin Invoice → ok: false
+POST {{baseUrl}}/api/payment-gateway/webhook/sistecredito
+Content-Type: application/json
+
+{
+  "Value": {{amount}},
+  "Currency": "COP",
+  "PaymentMethodResponse": {
+    "TransactionId": "SC-XXXXX",
+    "StatusResponse": "Approved"
+  }
+}
+
+### --------------------------------------------------------------------------
+### BOLD WEBHOOKS
+### Payload JSON.
+### type válidos: SALE_APPROVED | SALE_REJECTED | VOID_APPROVED | VOID_REJECTED
+###
+### FIRMA: header x-bold-signature = HMAC-SHA256(base64_encode(rawBody), BOLD_SECRET_KEY)
+###
+### ⚠ Para probar en local reemplazar x-bold-signature con el HMAC-SHA256 real
+###   calculado sobre los bytes exactos en Base64 del body usando BOLD_SECRET_KEY.
+###   Sin firma válida el endpoint responde: {"ok":false,"error":"invalid_signature"}
+### --------------------------------------------------------------------------
+
+### 12. Bold - webhook SALE_APPROVED — con x-bold-signature real
+POST {{baseUrl}}/api/payment-gateway/webhook/bold
+Content-Type: application/json
+x-bold-signature: REEMPLAZAR_CON_HMAC_SHA256_BASE64_BODY
+
+{
+  "type": "SALE_APPROVED",
+  "data": {
+    "payment_id": "BOLD-PAY-100001",
+    "amount": {
+      "total": {{amount}},
+      "currency": "COP"
+    },
+    "metadata": {
+      "reference": "{{orderId}}"
+    }
+  }
+}
+
+### 13. Bold - webhook SALE_REJECTED
+POST {{baseUrl}}/api/payment-gateway/webhook/bold
+Content-Type: application/json
+x-bold-signature: REEMPLAZAR_CON_HMAC_SHA256_BASE64_BODY
+
+{
+  "type": "SALE_REJECTED",
+  "data": {
+    "payment_id": "BOLD-PAY-100002",
+    "amount": {
+      "total": {{amount}},
+      "currency": "COP"
+    },
+    "metadata": {
+      "reference": "{{orderId}}"
+    }
+  }
+}
+
+### 14. Bold - webhook VOID_REJECTED (no-op, conserva estado previo)
+POST {{baseUrl}}/api/payment-gateway/webhook/bold
+Content-Type: application/json
+x-bold-signature: REEMPLAZAR_CON_HMAC_SHA256_BASE64_BODY
+
+{
+  "type": "VOID_REJECTED",
+  "data": {
+    "payment_id": "BOLD-PAY-100003",
+    "amount": {
+      "total": {{amount}},
+      "currency": "COP"
+    },
+    "metadata": {
+      "reference": "{{orderId}}"
+    }
+  }
+}
+
+### 15. Bold - firma inválida → ok: false, error: invalid_signature
+POST {{baseUrl}}/api/payment-gateway/webhook/bold
+Content-Type: application/json
+x-bold-signature: firma_invalida_para_verificar_rechazo
+
+{
+  "type": "SALE_APPROVED",
+  "data": {
+    "payment_id": "BOLD-PAY-XXXXX",
+    "amount": {
+      "total": {{amount}},
+      "currency": "COP"
+    },
+    "metadata": {
+      "reference": "{{orderId}}"
+    }
+  }
+}

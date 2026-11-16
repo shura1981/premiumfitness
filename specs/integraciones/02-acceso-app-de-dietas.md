@@ -172,3 +172,6 @@ La respuesta no incluye nombre, puntos ni saldos. Los detalles los ve el entrena
 - [x] Actualizar el DER, la autenticación, la arquitectura, los estándares, las reglas, los casos de uso, el PRD y las fases
 - [x] Dejar el valor de la meta en una variable de entorno, fácil de cambiar (S-02): `DIET_ACCESS_POINTS_GOAL`, 249.000 para empezar
 - [~] Acordar con el equipo de Flutter la integración del login (S-07 anterior): descartado el 15 nov 2026, la app de dietas conserva su propio login
+- [x] Implementar el endpoint por documento, el estado y el canje del mes (spec `backend/03`; pruebas en `tests/E2E/Trainer/DietAccessTest.php`)
+- [x] Avisar al entrenador cuando su acceso vence en 3 días o se desactivó (`POST /cron-job/diet-access/notify`, diario)
+- [ ] Entregar al backend de dietas la URL del endpoint y su `DIET_ACCESS_API_KEY` al desplegar

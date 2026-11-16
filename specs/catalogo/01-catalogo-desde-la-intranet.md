@@ -82,12 +82,14 @@ No hay contradicción con `docs/requerimientos.md`, que no dice de dónde sale e
 - [x] Confirmar la estructura de la tabla en la base (C-12)
 - [x] Obtener el código de Nutra C: 103040 (C-11)
 - [ ] Crear el usuario de base de datos con `SELECT` sobre `tb_productos_megaplexstars`
-- [ ] Validar `INTRANET_DB_NAME`, `PRODUCT_CATALOG_CACHE_SECONDS`, `VAT_PERCENTAGE` y `VAT_EXEMPT_PRODUCT_CODES` en `load/bootstrap.php`
-- [ ] Implementar `CatalogProduct`, `ProductImages` y `ProductContent`
-- [ ] Implementar `IntranetProductCatalog`
-- [ ] Implementar `CachedProductCatalog`
-- [ ] Implementar `VatPolicy` con las pruebas de 119.000 y de Nutra C
-- [ ] Crear la tabla en la base de pruebas con los tipos reales y probar los filtros (`promo = 1`, `activo = 0` o NULL, `valor` NULL), las columnas `bit(1)` leídas como número, `sap_code = 0` y los campos ocultos
-- [ ] Endpoints del catálogo: listado, ficha y presentaciones
-- [ ] Copiar en `orders_items` código, nombre, precio, `sap_code` e IVA al comprar (spec de compras)
-- [ ] Retirar o adaptar al hacer el fork las features `Product`, `Category`, `ProductGroup` y `SapProduct` de radical
+  - Hecho en local (`scripts/reset-db.sh`), con una prueba de que la app no puede escribir en la tabla. Falta crearlo en el hosting al desplegar.
+- [x] Validar `INTRANET_DB_NAME`, `PRODUCT_CATALOG_CACHE_SECONDS`, `VAT_PERCENTAGE` y `VAT_EXEMPT_PRODUCT_CODES` en `load/bootstrap.php`
+- [x] Implementar `CatalogProduct`, `ProductImages` y `ProductContent`
+  - `imageswebp` y `tablasjpg` son un JSON con una URL por tamaño (`small`, `medium`, `semiMedium`, `big`, `bigger` y `seo`), confirmado en el código de la web (`api_MegaplexStar`). La galería de la ficha son la imagen del producto y su tabla nutricional.
+- [x] Implementar `IntranetProductCatalog`
+- [x] Implementar `CachedProductCatalog`
+- [x] Implementar `VatPolicy` con las pruebas de 119.000 y de Nutra C (`tests/Unit/DiscountRule/PricingTest.php`)
+- [x] Crear la tabla en la base de pruebas con los tipos reales y probar los filtros (`promo = 1`, `activo = 0` o NULL, `valor` 0), las columnas `bit(1)` leídas como número, `sap_code = 0` y los campos ocultos (`tests/E2E/Product/CatalogApiTest.php`)
+- [x] Endpoints del catálogo: listado, ficha y presentaciones
+- [x] Copiar en `orders_items` código, nombre, precio, `sap_code` e IVA al comprar (`tests/E2E/Checkout/CheckoutTest.php`)
+- [x] Retirar o adaptar al hacer el fork las features `Product`, `Category`, `ProductGroup` y `SapProduct` de radical

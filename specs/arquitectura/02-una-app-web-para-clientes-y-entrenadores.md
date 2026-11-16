@@ -101,4 +101,4 @@ src/app/
 - [x] Cambiar los enums `app` del DER (`refresh_tokens`, `push_devices` y `push_notifications`)
 - [x] Actualizar AGENTS.md, `codebase-standards.md`, el PRD y el spec `arquitectura/01`
 - [x] Definir la estructura de la app web y las reglas de aislamiento entre features
-- [ ] Configurar `eslint-plugin-boundaries` al crear el proyecto Angular
+- [x] Configurar `eslint-plugin-boundaries` al crear el proyecto Angular (`premiumfitness-web/eslint.config.js`)

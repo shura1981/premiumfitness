@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>{{subject}}</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,Helvetica,sans-serif;color:#333;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:32px 0;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                    <tr>
+                        <td style="background:#000000;padding:24px;text-align:center;">
+                            <h1 style="color:#ffffff;margin:0;font-size:22px;letter-spacing:1px;">PREMIUMFITNESS</h1>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:32px;">
+                            <h2 style="color:#1f9d55;margin:0 0 16px;font-size:20px;">¡Tu compra fue aprobada!</h2>
+                            <p style="margin:0 0 16px;line-height:1.5;">
+                                Hola <strong>{{customer_name}}</strong>, gracias por confiar en PremiumFitness.
+                            </p>
+                            <p style="margin:0 0 24px;line-height:1.5;">
+                                Hemos recibido la confirmación de tu pago. A continuación el detalle:
+                            </p>
+                            <table role="presentation" width="100%" cellpadding="8" cellspacing="0" style="border-collapse:collapse;background:#fafafa;border:1px solid #e5e5e5;border-radius:4px;">
+                                <tr>
+                                    <td style="border-bottom:1px solid #e5e5e5;width:40%;color:#666;">N° de orden</td>
+                                    <td style="border-bottom:1px solid #e5e5e5;font-weight:bold;">#{{order_id}}</td>
+                                </tr>
+                                <tr>
+                                    <td style="border-bottom:1px solid #e5e5e5;color:#666;">Total pagado</td>
+                                    <td style="border-bottom:1px solid #e5e5e5;font-weight:bold;">{{amount}}</td>
+                                </tr>
+                                <tr>
+                                    <td style="border-bottom:1px solid #e5e5e5;color:#666;">Pasarela</td>
+                                    <td style="border-bottom:1px solid #e5e5e5;">{{gateway}}</td>
+                                </tr>
+                                <tr>
+                                    <td style="border-bottom:1px solid #e5e5e5;color:#666;">N° transacción</td>
+                                    <td style="border-bottom:1px solid #e5e5e5;font-family:monospace;font-size:13px;">{{transaction_id}}</td>
+                                </tr>
+                                <tr>
+                                    <td style="color:#666;">Fecha</td>
+                                    <td>{{date}}</td>
+                                </tr>
+                            </table>
+                            <p style="margin:24px 0 0;line-height:1.5;color:#555;font-size:14px;">
+                                En breve recibirás más información sobre el envío de tu pedido.
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background:#fafafa;padding:16px;text-align:center;color:#999;font-size:12px;">
+                            © {{year}} PremiumFitness — Todos los derechos reservados.
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

@@ -1,0 +1,134 @@
+@baseUrl = http://localhost:8000
+
+### JWT requerido para todos los endpoints consume
+@jwtToken = REEMPLAZAR_CON_JWT
+
+### Prerequisitos
+@orderId = 1
+@invoice = 1
+@amount = 120000
+@currency = COP
+@customerEmail = cliente.prueba@example.com
+@customerPhone = 3001234567
+@customerName = Cliente Prueba
+@customerDocument = 1234567890
+
+### --------------------------------------------------------------------------
+### ADDI CONSUME
+### --------------------------------------------------------------------------
+
+### 1. Addi - crear checkout y obtener redirect_url
+POST {{baseUrl}}/api/payment-gateway/consume/addi
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "orderId": {{orderId}},
+  "totalAmount": {{amount}},
+  "allyTransactionDate": "2026-04-27T10:00:00-05:00",
+  "currency": "{{currency}}",
+  "buyer": {
+    "fullName": "{{customerName}}",
+    "email": "{{customerEmail}}",
+    "phone": "{{customerPhone}}",
+    "documentNumber": "{{customerDocument}}",
+    "documentType": "CC"
+  },
+  "shippingAddress": {
+    "lineOne": "Calle 123 #45-67",
+    "city": "Bogota",
+    "country": "CO"
+  },
+  "items": [
+    {
+      "sku": "100507",
+      "name": "Radical Nutrition Test",
+      "quantity": 1,
+      "unitPrice": {{amount}}
+    }
+  ]
+}
+
+### 2. Addi - error 422 por falta de orderId
+POST {{baseUrl}}/api/payment-gateway/consume/addi
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "totalAmount": {{amount}},
+  "allyTransactionDate": "2026-04-27T10:00:00-05:00"
+}
+
+### --------------------------------------------------------------------------
+### SISTECREDITO CONSUME
+### --------------------------------------------------------------------------
+
+### 3. Sistecredito - crear checkout y obtener redirect_url
+POST {{baseUrl}}/api/payment-gateway/consume/sistecredito
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "Invoice": "{{invoice}}",
+  "Value": {{amount}},
+  "Currency": "{{currency}}",
+  "Reference": "{{orderId}}",
+  "Description": "Orden Radical Nutrition #{{orderId}}",
+  "Customer": {
+    "Name": "{{customerName}}",
+    "Email": "{{customerEmail}}",
+    "Phone": "{{customerPhone}}",
+    "DocumentType": "CC",
+    "Document": "{{customerDocument}}"
+  }
+}
+
+### 4. Sistecredito - error 422 por falta de Invoice
+POST {{baseUrl}}/api/payment-gateway/consume/sistecredito
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "Value": {{amount}},
+  "Currency": "{{currency}}"
+}
+
+### --------------------------------------------------------------------------
+### BOLD CONSUME
+### --------------------------------------------------------------------------
+
+### 5. Bold - generar integritySignature y configuración BoldCheckout
+POST {{baseUrl}}/api/payment-gateway/consume/bold
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "order_id": {{orderId}},
+  "amount": {{amount}},
+  "currency": "{{currency}}",
+  "description": "Orden Radical Nutrition #{{orderId}}",
+  "customer": {
+    "email": "{{customerEmail}}",
+    "fullName": "{{customerName}}",
+    "phone": "{{customerPhone}}",
+    "dialCode": "+57",
+    "documentNumber": "{{customerDocument}}",
+    "documentType": "CC"
+  }
+}
+
+### 6. Bold - error 422 por falta de amount
+POST {{baseUrl}}/api/payment-gateway/consume/bold
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "order_id": {{orderId}},
+  "currency": "{{currency}}"
+}

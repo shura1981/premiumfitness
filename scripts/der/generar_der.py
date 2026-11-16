@@ -422,7 +422,7 @@ db.table("pdr", "product_discount_rules", "N", RCX, Y0, [
     r("", "trainer_discount_percentage", "decimal(5,2) NULL"),
     r("", "commission_percentage", "decimal(5,2) NULL"),
     r("", "valid_from", "timestamp"), r("", "valid_to", "timestamp NULL"),
-    r("", "is_active", "bit(1)"), r("", "created_at / updated_at", "timestamp")])
+    r("", "is_active", "tinyint(1)"), r("", "created_at / updated_at", "timestamp")])
 yoid = ry("ord", "order_id")
 xo = db.R("ord") + 40
 for t in ("oi", "oc", "pej"):

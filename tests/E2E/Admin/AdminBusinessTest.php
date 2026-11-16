@@ -1,0 +1,460 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Features\Commission\MonthlyCloseService;
+use Slim\Psr7\Factory\StreamFactory;
+use Slim\Psr7\UploadedFile;
+use Tests\Support\AppFactory;
+use Tests\Support\JwtFactory;
+use Tests\Support\Seed;
+use Tests\Support\Shop;
+
+/*
+ | Admin: entrenadores, estrategias por producto, pago de la comisión con comprobante y ajustes
+ | (specs negocio/01, negocio/04, negocio/05 y RF-17).
+ */
+
+function admin(string $method, string $path, ?array $body = null): Psr\Http\Message\ResponseInterface
+{
+    return AppFactory::dispatch(AppFactory::request($method, '/api/admin/' . $path, $body, JwtFactory::adminHeader()));
+}
+
+/** Liquidación cerrada de un entrenador, en un mes pasado libre. Devuelve [entrenador, liquidación, período]. */
+function closedSettlement(float $commission = 80000): array
+{
+    Seed::pdo()->exec('DELETE FROM commission_movements WHERE settlement_id IS NULL AND created_at < DATE_FORMAT(NOW(), "%Y-%m-01")');
+    $used = array_flip(array_column(Shop::rows('SELECT period FROM commission_periods'), 'period'));
+    for ($date = new DateTimeImmutable('1971-01-01'); isset($used[$date->format('Y-m')]); $date = $date->modify('+1 month'));
+    $period  = $date->format('Y-m');
+    $trainer = Seed::trainer();
+    Seed::commission($trainer, $commission, $period . '-10 10:00:00');
+    $result = new MonthlyCloseService()->close($period);
+    $id     = (int) Shop::rows('SELECT id FROM commission_settlements WHERE trainer_id = ?', [$trainer])[0]['id'];
+
+    return [$trainer, $id, $result['period_id']];
+}
+
+/** Petición multipart del pago, con un archivo de verdad. */
+function payRequest(int $settlementId, string $contents, string $clientName, string $path = 'pay', array $fields = []): Psr\Http\Message\ResponseInterface
+{
+    $request = AppFactory::request('POST', "/api/admin/commission/settlements/{$settlementId}/{$path}", null, JwtFactory::adminHeader())
+        ->withParsedBody($fields + ['payment_reference' => 'TRF-123456', 'paid_at' => date('Y-m-d')]);
+
+    if ($contents !== '') {
+        $request = $request->withUploadedFiles([
+            'receipt' => new UploadedFile((new StreamFactory())->createStream($contents), $clientName, 'application/pdf', strlen($contents), UPLOAD_ERR_OK),
+        ]);
+    }
+
+    return AppFactory::dispatch($request);
+}
+
+const PDF_BYTES = "%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n";
+// PNG de 1 × 1.
+const PNG_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+
+// ── Entrenadores ──────────────────────────────────────────────────────────
+
+it('lista entrenadores con búsqueda, estado y paginación, y muestra el detalle', function (): void {
+    $trainer  = Seed::trainer();
+    [$client] = Seed::clientWithTrainer($trainer);
+    Seed::pointLot($trainer, 12345);
+    Seed::commission($trainer, 6789);
+    $phone = Seed::phoneOf($trainer);
+
+    $list   = AppFactory::json(admin('GET', 'trainers?search=' . $phone . '&status=active&page=1&per_page=5'));
+    $none   = AppFactory::json(admin('GET', 'trainers?search=' . $phone . '&status=suspended'));
+    $detail = AppFactory::json(admin('GET', 'trainers/' . $trainer));
+
+    expect($list)->toMatchArray(['total' => 1, 'page' => 1, 'per_page' => 5])
+        ->and($list['data'][0])->toMatchArray(['id' => $trainer, 'phone' => $phone, 'status' => 'active', 'clients_count' => 1, 'points_available' => 12345, 'commission_balance' => 6789])
+        ->and($none['total'])->toBe(0)
+        ->and($detail['points'])->toMatchArray(['available' => 12345])
+        ->and($detail['clients'][0])->toMatchArray(['id' => $client, 'orders_count' => 0])
+        ->and($detail)->toHaveKeys(['referrer', 'referred_trainers', 'movements', 'settlements', 'status_reason'])
+        ->and(json_encode($detail))->not->toContain('argon2');
+});
+
+it('suspende a un entrenador con motivo: cierra sus sesiones, no puede entrar y queda auditado', function (): void {
+    $trainer = Seed::trainer();
+    $phone   = Seed::phoneOf($trainer);
+    $session = AppFactory::cookie(\Tests\Support\Auth::login($phone), 'pf_rt_web');
+
+    $noReason = admin('PATCH', "trainers/{$trainer}/status", ['status' => 'suspended', 'reason' => '']);
+    $suspend  = admin('PATCH', "trainers/{$trainer}/status", ['status' => 'suspended', 'reason' => 'Fraude reportado por el call center']);
+    $audit    = Shop::rows("SELECT agent_id, data FROM audit_logs WHERE entity = 'trainer' AND entity_id = ?", [$trainer]);
+
+    expect($noReason->getStatusCode())->toBe(422)
+        ->and($suspend->getStatusCode())->toBe(200)
+        ->and(AppFactory::json($suspend)['status'])->toBe('suspended')
+        ->and(\Tests\Support\Auth::post('/api/auth/refresh', refreshToken: $session)->getStatusCode())->toBe(401)
+        ->and(\Tests\Support\Auth::login($phone)->getStatusCode())->toBe(403)
+        ->and($audit)->toHaveCount(1)
+        ->and($audit[0]['agent_id'])->toBe(9001)
+        ->and(json_decode($audit[0]['data'], true))->toMatchArray(['from' => 'active', 'to' => 'suspended', 'reason' => 'Fraude reportado por el call center'])
+        ->and(AppFactory::json(admin('GET', 'trainers/' . $trainer))['status_reason'])->toBe('Fraude reportado por el call center');
+
+    admin('PATCH', "trainers/{$trainer}/status", ['status' => 'active', 'reason' => 'Caso revisado y cerrado']);
+    expect(\Tests\Support\Auth::login($phone)->getStatusCode())->toBe(200);
+});
+
+it('el admin no activa una cuenta que no ha verificado su celular', function (): void {
+    $trainer = Seed::trainer();
+    Seed::pdo()->prepare("UPDATE users SET status = 'pending' WHERE id = ?")->execute([$trainer]);
+
+    $response = admin('PATCH', "trainers/{$trainer}/status", ['status' => 'active', 'reason' => 'Activar a mano']);
+
+    expect($response->getStatusCode())->toBe(409)
+        ->and(Shop::rows('SELECT status FROM users WHERE id = ?', [$trainer])[0]['status'])->toBe('pending');
+});
+
+// ── Estrategias por producto ──────────────────────────────────────────────
+
+it('crea, edita y desactiva una estrategia, y la tienda la aplica de inmediato', function (): void {
+    $code     = Seed::catalogProduct(['valor' => 100000, 'producto' => 'PRODUCTO CON ESTRATEGIA']);
+    [$client] = Seed::clientWithTrainer();
+    $price    = fn (): int => array_column(AppFactory::json(AppFactory::dispatch(AppFactory::request('GET', '/api/products?category=PRUEBAS', headers: JwtFactory::authHeader($client))))['data'], 'final_price', 'code')[$code];
+
+    $create = admin('POST', 'discount-rules', ['product_sku' => $code, 'client_discount_percentage' => 30, 'trainer_discount_percentage' => null, 'commission_percentage' => '', 'valid_from' => date('Y-m-d', strtotime('-1 day')), 'valid_to' => null]);
+    $rule   = AppFactory::json($create);
+
+    expect($create->getStatusCode())->toBe(201)
+        ->and($rule)->toMatchArray(['product_sku' => $code, 'product_name' => 'PRODUCTO CON ESTRATEGIA', 'client_discount_percentage' => 30, 'trainer_discount_percentage' => null, 'commission_percentage' => null, 'is_active' => true])
+        ->and($price())->toBe(70000);
+
+    admin('PUT', 'discount-rules/' . $rule['id'], ['product_sku' => $code, 'client_discount_percentage' => 40, 'valid_from' => date('Y-m-d', strtotime('-1 day'))]);
+    expect($price())->toBe(60000);
+
+    $delete = admin('DELETE', 'discount-rules/' . $rule['id']);
+    $listed = array_column(AppFactory::json(admin('GET', 'discount-rules?active=0'))['data'], 'is_active', 'id');
+
+    expect($delete->getStatusCode())->toBe(204)
+        ->and($price())->toBe(90000)
+        // Desactivar no borra el histórico.
+        ->and($listed[$rule['id']])->toBeFalse()
+        ->and(admin('PUT', 'discount-rules/' . $rule['id'], ['product_sku' => $code, 'client_discount_percentage' => 5, 'valid_from' => date('Y-m-d')])->getStatusCode())->toBe(409)
+        ->and(Shop::rows("SELECT action FROM audit_logs WHERE entity = 'product_discount_rule' AND entity_id = ? ORDER BY id", [$rule['id']]))
+        ->toBe([['action' => 'discount_rule.create'], ['action' => 'discount_rule.update'], ['action' => 'discount_rule.deactivate']]);
+});
+
+it('rechaza una estrategia inválida', function (array $changes, string $field): void {
+    $code     = Seed::catalogProduct();
+    $response = admin('POST', 'discount-rules', $changes + ['product_sku' => $code, 'client_discount_percentage' => 10, 'valid_from' => date('Y-m-d')]);
+
+    expect($response->getStatusCode())->toBe(422)
+        ->and(AppFactory::json($response)['errors'])->toHaveKey($field);
+})->with([
+    'porcentaje mayor que 100'   => [['client_discount_percentage' => 101], 'client_discount_percentage'],
+    'porcentaje negativo'        => [['commission_percentage' => -1], 'commission_percentage'],
+    'ningún porcentaje'          => [['client_discount_percentage' => null], 'client_discount_percentage'],
+    'producto que no se vende'   => [['product_sku' => 999999999], 'product_sku'],
+    'fin antes del inicio'       => [['valid_to' => '2000-01-01'], 'valid_to'],
+]);
+
+it('busca productos del catálogo y da los valores por defecto', function (): void {
+    $code     = Seed::catalogProduct(['producto' => 'BUSCABLE ' . random_int(10000, 99999)]);
+    $products = AppFactory::json(admin('GET', 'products?search=' . $code))['data'];
+    $settings = AppFactory::json(admin('GET', 'settings/business'));
+
+    expect(array_column($products, 'code'))->toBe([$code])
+        ->and(array_keys($products[0]))->toBe(['code', 'name', 'presentation', 'price'])
+        ->and($settings)->toEqual([
+            'client_discount_percentage' => (float) $_ENV['CLIENT_DISCOUNT_PERCENTAGE'], 'trainer_discount_percentage' => (float) $_ENV['TRAINER_DISCOUNT_PERCENTAGE'],
+            'commission_percentage' => (float) $_ENV['TRAINER_COMMISSION_PERCENTAGE'], 'client_purchase_points_percentage' => (float) $_ENV['CLIENT_PURCHASE_POINTS_PERCENTAGE'],
+        ]);
+});
+
+// ── Cierre mensual y pago ─────────────────────────────────────────────────
+
+it('muestra el cierre con sus liquidaciones y descarga el Excel solo con sesión del admin', function (): void {
+    [$trainer, $settlementId, $periodId] = closedSettlement(80000);
+
+    $detail = AppFactory::json(admin('GET', 'commission/periods/' . $periodId));
+    $report = admin('GET', "commission/periods/{$periodId}/report");
+
+    expect(array_column(AppFactory::json(admin('GET', 'commission/periods'))['data'], 'id'))->toContain($periodId)
+        ->and($detail)->toMatchArray(['trainers_count' => 1, 'total_amount' => 80000, 'paid_count' => 0, 'paid_amount' => 0])
+        ->and($detail['settlements'][0])->toMatchArray(['id' => $settlementId, 'trainer_id' => $trainer, 'total_amount' => 80000, 'status' => 'closed', 'is_overdue' => true, 'has_receipt' => false, 'paid_at' => null])
+        ->and($report->getStatusCode())->toBe(200)
+        ->and($report->getHeaderLine('Content-Type'))->toContain('spreadsheetml')
+        ->and(substr((string) $report->getBody(), 0, 2))->toBe('PK')
+        ->and(AppFactory::dispatch(AppFactory::request('GET', "/api/admin/commission/periods/{$periodId}/report", headers: JwtFactory::authHeader($trainer)))->getStatusCode())->toBe(403);
+});
+
+it('registra el pago con su comprobante: queda pagada, auditada y el entrenador ve el comprobante', function (): void {
+    [$trainer, $settlementId] = closedSettlement(80000);
+
+    $pay   = payRequest($settlementId, PDF_BYTES, 'comprobante.pdf');
+    $body  = AppFactory::json($pay);
+    $again = payRequest($settlementId, PDF_BYTES, 'otro.pdf');
+
+    $adminReceipt   = admin('GET', "commission/settlements/{$settlementId}/receipt");
+    $trainerReceipt = AppFactory::dispatch(AppFactory::request('GET', "/api/trainer/commission/settlements/{$settlementId}/receipt", headers: JwtFactory::authHeader($trainer)));
+    $otherTrainer   = AppFactory::dispatch(AppFactory::request('GET', "/api/trainer/commission/settlements/{$settlementId}/receipt", headers: JwtFactory::authHeader(Seed::trainer())));
+    $view           = AppFactory::json(AppFactory::dispatch(AppFactory::request('GET', '/api/trainer/commission', headers: JwtFactory::authHeader($trainer))))['settlements'][0];
+
+    expect($pay->getStatusCode())->toBe(200)
+        ->and($body)->toMatchArray(['status' => 'paid', 'paid_at' => date('Y-m-d'), 'payment_reference' => 'TRF-123456', 'has_receipt' => true, 'is_overdue' => false])
+        ->and($body['paid_by'])->not->toBeNull()
+        ->and($again->getStatusCode())->toBe(409)
+        ->and(AppFactory::json($again)['code'])->toBe('already_paid')
+        ->and((string) $adminReceipt->getBody())->toBe(PDF_BYTES)
+        ->and($adminReceipt->getHeaderLine('Content-Type'))->toBe('application/pdf')
+        ->and($adminReceipt->getHeaderLine('X-Content-Type-Options'))->toBe('nosniff')
+        ->and((string) $trainerReceipt->getBody())->toBe(PDF_BYTES)
+        // El comprobante de otro entrenador «no existe».
+        ->and($otherTrainer->getStatusCode())->toBe(404)
+        ->and($view)->toMatchArray(['status' => 'pagada', 'receipt_url' => "/trainer/commission/settlements/{$settlementId}/receipt"])
+        ->and(Shop::rows("SELECT action FROM audit_logs WHERE entity = 'commission_settlement' AND entity_id = ?", [$settlementId]))->toBe([['action' => 'commission.paid']])
+        ->and(Shop::rows("SELECT COUNT(*) n FROM push_notifications WHERE user_id = ? AND type = 'commission_paid'", [$trainer])[0]['n'])->toBe(1);
+
+    // El archivo queda fuera de la carpeta pública, con un nombre que pone el servidor.
+    $stored = (string) Shop::rows('SELECT receipt_path FROM commission_settlements WHERE id = ?', [$settlementId])[0]['receipt_path'];
+    expect($stored)->toMatch('/^liquidacion-\d+-[a-f0-9]{16}\.pdf$/')
+        ->and(is_file(__DIR__ . '/../../../storage/private/receipts/' . $stored))->toBeTrue();
+});
+
+it('decide el tipo del comprobante por su contenido, no por el nombre', function (string $contents, string $name, int $status): void {
+    [, $settlementId] = closedSettlement();
+
+    $response = payRequest($settlementId, $contents, $name);
+
+    expect($response->getStatusCode())->toBe($status)
+        ->and(Shop::rows('SELECT status FROM commission_settlements WHERE id = ?', [$settlementId])[0]['status'])->toBe($status === 200 ? 'paid' : 'closed');
+})->with([
+    'PNG con nombre .pdf: se acepta como imagen'  => [fn (): string => base64_decode(PNG_BASE64), 'captura.pdf', 200],
+    'PHP con nombre .pdf'                        => ["<?php system(\$_GET['c']); ?>", 'comprobante.pdf', 422],
+    'HTML con nombre .png'                       => ['<html><script>alert(1)</script></html>', 'foto.png', 422],
+    'ejecutable con nombre .jpg'                 => ["MZ\x90\x00\x03\x00\x00\x00\x04\x00", 'foto.jpg', 422],
+    'más de 5 MB'                                => [fn (): string => PDF_BYTES . str_repeat('0', 5 * 1024 * 1024), 'grande.pdf', 422],
+    'sin archivo'                                => ['', 'nada.pdf', 422],
+]);
+
+it('exige referencia y una fecha que no sea futura', function (array $fields, string $field): void {
+    [, $settlementId] = closedSettlement();
+
+    $response = payRequest($settlementId, PDF_BYTES, 'c.pdf', fields: $fields);
+
+    expect($response->getStatusCode())->toBe(422)
+        ->and(AppFactory::json($response)['errors'])->toHaveKey($field);
+})->with([
+    [['payment_reference' => ''], 'payment_reference'],
+    [['paid_at' => '2999-01-01'], 'paid_at'],
+    [['paid_at' => 'ayer no sé'], 'paid_at'],
+]);
+
+it('corrige un pago mal registrado sin borrar el anterior, y lo deja auditado', function (): void {
+    [, $settlementId] = closedSettlement();
+    payRequest($settlementId, PDF_BYTES, 'a.pdf');
+    $firstFile = (string) Shop::rows('SELECT receipt_path FROM commission_settlements WHERE id = ?', [$settlementId])[0]['receipt_path'];
+
+    $notPaid    = payRequest(closedSettlement()[1], PDF_BYTES, 'a.pdf', 'payment');
+    $onlyFields = payRequest($settlementId, '', '', 'payment', ['payment_reference' => 'TRF-CORREGIDA', 'paid_at' => date('Y-m-d', strtotime('-2 days'))]);
+    $newFile    = payRequest($settlementId, base64_decode(PNG_BASE64), 'b.png', 'payment', ['payment_reference' => 'TRF-CORREGIDA']);
+    $audit      = Shop::rows("SELECT action, data FROM audit_logs WHERE entity = 'commission_settlement' AND entity_id = ? ORDER BY id", [$settlementId]);
+
+    expect($notPaid->getStatusCode())->toBe(409)
+        ->and(AppFactory::json($onlyFields))->toMatchArray(['payment_reference' => 'TRF-CORREGIDA', 'paid_at' => date('Y-m-d', strtotime('-2 days')), 'has_receipt' => true])
+        ->and($newFile->getStatusCode())->toBe(200)
+        ->and(admin('GET', "commission/settlements/{$settlementId}/receipt")->getHeaderLine('Content-Type'))->toBe('image/png')
+        ->and(array_column($audit, 'action'))->toBe(['commission.paid', 'commission.payment_corrected', 'commission.payment_corrected'])
+        ->and(json_decode($audit[1]['data'], true)['previous']['payment_reference'])->toBe('TRF-123456')
+        ->and(is_file(__DIR__ . '/../../../storage/private/receipts/' . $firstFile))->toBeTrue();
+});
+
+// ── Ajustes ───────────────────────────────────────────────────────────────
+
+/** Compra aprobada de un cliente con entrenador: 2 unidades de 100.000. Devuelve [pedido, entrenador]. */
+function approvedPurchase(): array
+{
+    [$client, $trainer] = Seed::clientWithTrainer();
+    $orderId            = Shop::order($client, [['code' => Seed::catalogProduct(['valor' => 100000]), 'quantity' => 2]]);
+    Shop::pay($orderId);
+
+    return [$orderId, $trainer];
+}
+
+function trainerBalances(int $trainerId): array
+{
+    return [
+        (int) Shop::rows("SELECT COALESCE(SUM(remaining_points), 0) p FROM point_lots WHERE trainer_id = ? AND status = 'available'", [$trainerId])[0]['p'],
+        (float) Shop::rows('SELECT COALESCE(SUM(amount), 0) c FROM commission_movements WHERE trainer_id = ?', [$trainerId])[0]['c'],
+    ];
+}
+
+it('una devolución total revierte la comisión y los puntos del pedido, una sola vez', function (): void {
+    [$orderId, $trainer] = approvedPurchase();
+    // 180.000 pagados: 9.000 puntos y 15 % de la base de 151.260,50.
+    expect(trainerBalances($trainer))->toBe([9000, 22689.08]);
+
+    $before = AppFactory::json(admin('GET', "orders/{$orderId}/adjustments"));
+    $create = admin('POST', "orders/{$orderId}/adjustments", ['type' => 'full_return', 'reason' => 'El cliente devolvió el pedido completo']);
+    $again  = admin('POST', "orders/{$orderId}/adjustments", ['type' => 'full_return', 'reason' => 'El cliente devolvió el pedido completo']);
+
+    expect($before)->toMatchArray(['data' => [], 'can_adjust' => true])
+        ->and($before['preview'])->toMatchArray(['commission_amount' => -22689.08, 'points' => -9000])
+        ->and($create->getStatusCode())->toBe(201)
+        ->and(AppFactory::json($create))->toMatchArray(['type' => 'full_return', 'effect' => ['commission_amount' => -22689.08, 'points' => -9000, 'trainer_name' => AppFactory::json($create)['effect']['trainer_name']]])
+        ->and(trainerBalances($trainer))->toBe([0, 0.0])
+        ->and($again->getStatusCode())->toBe(409)
+        ->and(AppFactory::json($again)['code'])->toBe('already_adjusted')
+        ->and(Shop::orderRow($orderId)['status_value'])->toBe('DEVOLUCIÓN')
+        // El cliente lo ve cancelado.
+        ->and(AppFactory::json(AppFactory::dispatch(AppFactory::request('GET', '/api/orders/' . $orderId, headers: JwtFactory::authHeader((int) Shop::orderRow($orderId)['user_id']))))['status'])->toBe('cancelado')
+        // Los movimientos originales siguen ahí: el ajuste no borra nada.
+        ->and(Shop::rows('SELECT type, amount FROM commission_movements WHERE trainer_id = ? ORDER BY id', [$trainer]))->toBe([
+            ['type' => 'sale_credit', 'amount' => '22689.08'], ['type' => 'adjustment', 'amount' => '-22689.08'],
+        ])
+        ->and(Shop::rows("SELECT action, agent_id FROM audit_logs WHERE entity = 'order' AND entity_id = ?", [$orderId]))->toBe([['action' => 'order.adjustment', 'agent_id' => 9001]]);
+});
+
+it('una devolución parcial revierte en proporción a lo devuelto', function (): void {
+    [$orderId, $trainer] = approvedPurchase();
+    $itemId              = (int) Shop::rows('SELECT item_id FROM orders_items WHERE order_id = ?', [$orderId])[0]['item_id'];
+    $items               = [['item_id' => $itemId, 'quantity' => 1]];
+
+    $preview = AppFactory::json(admin('POST', "orders/{$orderId}/adjustments/preview", ['type' => 'partial_return', 'items' => $items]));
+    $tooMany = admin('POST', "orders/{$orderId}/adjustments", ['type' => 'partial_return', 'reason' => 'Devolvió una unidad', 'items' => [['item_id' => $itemId, 'quantity' => 3]]]);
+    $create  = admin('POST', "orders/{$orderId}/adjustments", ['type' => 'partial_return', 'reason' => 'Devolvió una unidad', 'items' => $items]);
+
+    // La mitad del pedido: la mitad de la comisión y de los puntos.
+    expect($preview)->toMatchArray(['commission_amount' => -11344.54, 'points' => -4500])
+        ->and($tooMany->getStatusCode())->toBe(422)
+        ->and($create->getStatusCode())->toBe(201)
+        ->and(trainerBalances($trainer))->toBe([4500, 11344.54])
+        // El pedido sigue aprobado: solo se devolvió una parte.
+        ->and(Shop::orderRow($orderId)['status_value'])->toBe('APROBADA');
+});
+
+it('de los puntos solo retira lo que queda en el lote del pedido; lo ya usado no genera deuda', function (): void {
+    [$orderId, $trainer] = approvedPurchase();
+    Seed::pdo()->prepare('UPDATE point_lots SET remaining_points = 2000 WHERE order_id = ?')->execute([$orderId]);
+    Seed::pointLot($trainer, 50000);
+
+    $preview = AppFactory::json(admin('GET', "orders/{$orderId}/adjustments"))['preview'];
+    admin('POST', "orders/{$orderId}/adjustments", ['type' => 'cancellation', 'reason' => 'Pedido cancelado por el cliente']);
+
+    expect($preview['points'])->toBe(-2000)
+        // Los otros lotes del entrenador no se tocan.
+        ->and(trainerBalances($trainer)[0])->toBe(50000)
+        ->and(Shop::orderRow($orderId)['status_value'])->toBe('CANCELADA');
+});
+
+it('cancelar un canje devuelve los puntos en un lote nuevo', function (): void {
+    $trainer = Seed::trainer();
+    Seed::pointLot($trainer, 300000);
+    $orderId = AppFactory::json(AppFactory::dispatch(AppFactory::request('POST', '/api/trainer/redemptions', [
+        'items' => [['code' => Seed::catalogProduct(['valor' => 100000]), 'quantity' => 1]], 'address_id' => Shop::address($trainer), 'idempotency_key' => bin2hex(random_bytes(16)),
+    ], JwtFactory::authHeader($trainer))))['order_id'];
+
+    expect(trainerBalances($trainer)[0])->toBe(200000);
+
+    $create = admin('POST', "orders/{$orderId}/adjustments", ['type' => 'cancellation', 'reason' => 'Producto sin existencias en bodega']);
+
+    expect($create->getStatusCode())->toBe(201)
+        ->and(AppFactory::json($create)['effect'])->toMatchArray(['commission_amount' => 0, 'points' => 100000])
+        ->and(trainerBalances($trainer)[0])->toBe(300000)
+        ->and(Shop::rows("SELECT source, initial_points FROM point_lots WHERE trainer_id = ? AND source = 'restitution'", [$trainer]))->toBe([['source' => 'restitution', 'initial_points' => 100000]]);
+});
+
+it('no ajusta un pedido sin pagar ni sin motivo', function (): void {
+    $pending = Shop::order(Seed::user(), [['code' => Seed::catalogProduct(), 'quantity' => 1]]);
+    [$paid]  = approvedPurchase();
+
+    expect(admin('POST', "orders/{$pending}/adjustments", ['type' => 'cancellation', 'reason' => 'Motivo suficiente'])->getStatusCode())->toBe(409)
+        ->and(AppFactory::json(admin('GET', "orders/{$pending}/adjustments"))['can_adjust'])->toBeFalse()
+        ->and(admin('POST', "orders/{$paid}/adjustments", ['type' => 'cancellation', 'reason' => 'no'])->getStatusCode())->toBe(422)
+        ->and(admin('POST', "orders/{$paid}/adjustments", ['type' => 'regalo', 'reason' => 'Motivo suficiente'])->getStatusCode())->toBe(422);
+});
+
+// ── Volver a pagar ────────────────────────────────────────────────────────
+
+it('vuelve a dar el pago firmado de un pedido propio pendiente, con el valor guardado', function (): void {
+    $user    = Seed::user();
+    $code    = Seed::catalogProduct(['valor' => 100000]);
+    $orderId = Shop::order($user, [['code' => $code, 'quantity' => 1]]);
+    Seed::updateCatalogProduct($code, ['valor' => 999999]);
+    $path = "/api/orders/{$orderId}/pay";
+
+    $retry   = AppFactory::dispatch(AppFactory::request('POST', $path, [], JwtFactory::authHeader($user)));
+    $foreign = AppFactory::dispatch(AppFactory::request('POST', $path, [], JwtFactory::authHeader(Seed::user())));
+    Shop::pay($orderId);
+    $paid = AppFactory::dispatch(AppFactory::request('POST', $path, [], JwtFactory::authHeader($user)));
+
+    expect($retry->getStatusCode())->toBe(200)
+        ->and(AppFactory::json($retry)['payment']['bold']['amount'])->toBe(100000 + (int) $_ENV['SHIPPING_FEE'])
+        ->and($foreign->getStatusCode())->toBe(404)
+        ->and($paid->getStatusCode())->toBe(409);
+});
+
+// ── Hallados al conectar el admin al backend real (16 nov 2026) ────────────
+
+it('la lista y el detalle de pedidos del admin funcionan cuando hay un canje (sin pasarela)', function (): void {
+    $trainer = Seed::trainer();
+    Seed::pointLot($trainer, 300000);
+    $orderId = AppFactory::json(AppFactory::dispatch(AppFactory::request('POST', '/api/trainer/redemptions', [
+        'items' => [['code' => Seed::catalogProduct(['valor' => 100000]), 'quantity' => 1]], 'address_id' => Shop::address($trainer), 'idempotency_key' => bin2hex(random_bytes(16)),
+    ], JwtFactory::authHeader($trainer))))['order_id'];
+
+    $list   = admin('GET', 'orders?page=1&per_page=5');
+    $detail = admin('GET', 'orders/' . $orderId);
+    $take   = admin('PATCH', "orders/{$orderId}/take", ['agent_id' => 123456]);
+
+    expect($list->getStatusCode())->toBe(200)
+        ->and($detail->getStatusCode())->toBe(200)
+        ->and(AppFactory::json($detail)['payment_gateway'])->toBeNull()
+        ->and(AppFactory::json($detail)['items'][0]['redemption_points'])->toBe(100000)
+        // Tomar un pedido es siempre a nombre de quien tiene la sesión, no del `agent_id` enviado.
+        ->and(AppFactory::json($take)['agent_id'])->toBe(9001);
+});
+
+it('un agente del call center no entra a entrenadores, estrategias, cierre ni registra ajustes', function (): void {
+    $callCenter = JwtFactory::adminHeader(9001, 'CALL CENTER');
+    $denied     = [];
+
+    foreach ([
+        ['GET', 'trainers'], ['GET', 'trainers/1'], ['PATCH', 'trainers/1/status'],
+        ['GET', 'discount-rules'], ['POST', 'discount-rules'], ['PUT', 'discount-rules/1'], ['DELETE', 'discount-rules/1'],
+        ['GET', 'products'], ['GET', 'settings/business'],
+        ['GET', 'commission/periods'], ['GET', 'commission/periods/1'], ['GET', 'commission/periods/1/report'],
+        ['POST', 'commission/settlements/1/pay'], ['POST', 'commission/settlements/1/payment'], ['GET', 'commission/settlements/1/receipt'],
+        ['POST', 'orders/1/adjustments'], ['POST', 'orders/1/adjustments/preview'],
+    ] as [$method, $path]) {
+        $status = AppFactory::dispatch(AppFactory::request($method, '/api/admin/' . $path, $method === 'GET' ? null : [], $callCenter))->getStatusCode();
+
+        if ($status !== 403) {
+            $denied[] = "{$method} {$path} → {$status}";
+        }
+    }
+
+    [$orderId] = approvedPurchase();
+
+    expect($denied)->toBe([])
+        // Sí ve los pedidos y los ajustes que tengan.
+        ->and(AppFactory::dispatch(AppFactory::request('GET', '/api/admin/orders?page=1&per_page=1', headers: $callCenter))->getStatusCode())->toBe(200)
+        ->and(AppFactory::dispatch(AppFactory::request('GET', "/api/admin/orders/{$orderId}/adjustments", headers: $callCenter))->getStatusCode())->toBe(200);
+});
+
+it('no deja marcar un pedido como aprobado a mano: lo aprueba la pasarela', function (): void {
+    [$client, $trainer] = Seed::clientWithTrainer();
+    $orderId            = Shop::order($client, [['code' => Seed::catalogProduct(), 'quantity' => 1]]);
+    $approvedId         = (int) Shop::rows("SELECT status_id FROM status_orders WHERE value = 'APROBADA'")[0]['status_id'];
+    $otherId            = (int) Shop::rows("SELECT status_id FROM status_orders WHERE value = 'CANCELADA'")[0]['status_id'];
+
+    $manual = admin('PATCH', "orders/{$orderId}/status", ['status_id' => $approvedId]);
+
+    expect($manual->getStatusCode())->toBe(409)
+        ->and(Shop::orderRow($orderId)['approved_at'])->toBeNull()
+        ->and(trainerBalances($trainer))->toBe([0, 0.0])
+        ->and(admin('PATCH', "orders/{$orderId}/status", ['status_id' => $otherId])->getStatusCode())->toBe(200);
+});
+
+it('entrega el celular del agente como texto y expone Retry-After al navegador', function (): void {
+    $login = \Tests\Support\Auth::post('/api/admin/auth/login', ['email' => 'agente.prueba@premiumfitness.local', 'password' => 'admin-local-123']);
+    $cors  = AppFactory::dispatch(AppFactory::request('GET', '/api/health', headers: ['Origin' => explode(',', $_ENV['CORS_ALLOWED_ORIGINS'])[0]]));
+
+    expect(AppFactory::json($login)['user']['celular'])->toBeString()
+        ->and(AppFactory::json($login)['user']['cargo'])->toBe('CALL CENTER')
+        ->and($cors->getHeaderLine('Access-Control-Expose-Headers'))->toContain('Retry-After');
+});

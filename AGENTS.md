@@ -2,7 +2,27 @@
 
 Aplicación de referidos, compras, comisiones y puntos para los entrenadores y clientes de PremiumFitness. El backend es un **fork de `backend-radical-nutrition`** (PHP 8.5, Slim 4, MariaDB, Pest y PHPStan), desplegado en el mismo hosting. Hay tres apps: la **web** (PWA Angular para clientes y entrenadores, con un área por rol), el **admin** (Angular: call center, SAP, envíos y reportes) y **dietas** (Flutter, externa).
 
-**Estado actual:** documentación y diseño. Todavía no hay código de aplicación.
+**Estado actual (16 nov 2026):** el backend está en este repo, a partir del fork de radical (spec `specs/backend/01-fork-base-del-backend.md`), con las reglas de PremiumFitness implementadas y probadas: autenticación, catálogo de la intranet, referidos, compras con descuento e IVA, puntos, comisión y cierre mensual, canje, acceso a dietas, push y los endpoints del admin. Lo que falta y las decisiones pendientes están en el checklist de `specs/backend/03-api-de-premiumfitness.md`; el contrato de la API, en su `.plan.md`. Los frontends viven en otros repos: `/home/steven/Proyectos/node/angular/premiumfitness-web` y `premiumfitness-admin` (spec `specs/frontend/01-apps-web-y-admin.md`).
+
+## Cómo correr el backend en local
+
+```bash
+composer install
+scripts/reset-db.sh        # recrea la base local (contenedor Docker `premiumfitness-db`, puerto 3313)
+composer run start         # API en http://localhost:8000
+composer run lint          # PHPStan
+composer run test          # Pest, contra la base local
+```
+
+- El `.env` local no se versiona: parte de `.env.example`. La base local es propia de este proyecto; no uses credenciales de otros.
+- `scripts/reset-db.sh` borra y recrea la base: solo corre si `DB_HOST` es local.
+- `docker/intranet-local.sql` crea una copia mínima de `crisenri_intranet` (`tb_empleados` y `tb_productos_megaplexstars`) para desarrollo y pruebas. En el hosting esas tablas son de la intranet y solo se leen.
+- Agente de prueba del admin en local: `agente.prueba@premiumfitness.local` / `admin-local-123`.
+- En local los SMS no se envían: con `SMS_DRIVER=log` el código queda en `logs/sms-dev.log`. Las pruebas usan `SMS_DRIVER=memory`.
+- Para probar una compra sin pagar de verdad: `php scripts/dev-pagar-pedido.php <id del pedido>` envía al backend local el aviso de pago aprobado de Bold, firmado. Solo corre en local.
+- Las pruebas escriben en la base local y no la limpian. Si algo queda raro, `scripts/reset-db.sh` la recrea.
+- Las apps: `npm run start:api` en `premiumfitness-web` (puerto 4200) y en `premiumfitness-admin` (puerto 4201) usan este backend; `npm start` usa su API simulada.
+- Toda ruta nueva de `/api` lleva su credencial; si es pública a propósito, se añade a la lista de `tests/E2E/Security/RoutesRequireCredentialsTest.php`.
 
 ## Antes de cualquier tarea
 

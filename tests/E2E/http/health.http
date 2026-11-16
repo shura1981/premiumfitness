@@ -1,0 +1,5 @@
+@baseUrl = http://localhost:8000
+
+### Health check — debe responder { "status": "ok" }
+GET {{baseUrl}}/api/health
+Accept: application/json

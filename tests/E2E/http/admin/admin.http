@@ -1,0 +1,320 @@
+# ==============================================================================
+# Admin Endpoints — tests manuales con REST Client (VS Code)
+#
+# Prerrequisitos:
+#   - Servidor corriendo en localhost:8000 (composer run start)
+#   - El JWT se obtiene del endpoint POST /api/admin/auth/login
+#   - Credenciales válidas de tb_empleados (email + password)
+# ==============================================================================
+
+@baseUrl = http://localhost:8000
+
+### ============================================================================
+### AUTH
+### ============================================================================
+
+### 1. Login admin — credenciales de tb_empleados
+# @name adminLogin
+POST {{baseUrl}}/api/admin/auth/login
+Content-Type: application/json
+
+{
+  "email": "app@nutramerican.com",
+  "password": "123456*"
+}
+
+### Guardar token admin de la respuesta anterior
+@adminToken = {{adminLogin.response.body.$.token}}
+
+### ============================================================================
+### ORDERS
+### ============================================================================
+
+@adminOrderId = 1
+@today = {{$datetime "YYYY-MM-DD"}}
+@monthAgo = {{$datetime "YYYY-MM-DD" -30 d}}
+
+### --------------------------------------------------------------------------
+### 2. Listar todas las órdenes (paginado)
+GET {{baseUrl}}/api/admin/orders?page=1&per_page=20
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### 2b. Listar órdenes con filtro por estado
+GET {{baseUrl}}/api/admin/orders?page=1&per_page=20&status=APROBADA
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### 2c. Listar órdenes con filtro por rango de fecha
+GET {{baseUrl}}/api/admin/orders?page=1&per_page=20&date_from=2024-01-01&date_to=2024-12-31&sort_order=DESC&sort_by=created_at
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### 2d. Listar órdenes — combinado (fecha + estado)
+GET {{baseUrl}}/api/admin/orders?page=1&per_page=20&status=PENDIENTE&date_from=2024-06-01&date_to=2024-06-30&sort_order=ASC
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### --------------------------------------------------------------------------
+### 3. Obtener orden por ID (con items)
+GET {{baseUrl}}/api/admin/orders/{{adminOrderId}}
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### 4. Obtener orden — error 404
+GET {{baseUrl}}/api/admin/orders/99999999
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### --------------------------------------------------------------------------
+### 5. Actualizar estado de la orden
+PATCH {{baseUrl}}/api/admin/orders/{{adminOrderId}}/status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "status_id": 1 }
+
+### 6. Actualizar código SAP de la orden
+PATCH {{baseUrl}}/api/admin/orders/{{adminOrderId}}/sap-order-code
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "sap_order_code": 700001 }
+
+### 7. Actualizar tracking number + transportadora
+PATCH {{baseUrl}}/api/admin/orders/{{adminOrderId}}/tracking-number
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "tracking_number": "TRK-ADMIN-0001",
+  "carrier_name": "SERVIENTREGA"
+}
+
+### 8. Tracking number — error 422 sin carrier_name
+PATCH {{baseUrl}}/api/admin/orders/{{adminOrderId}}/tracking-number
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "tracking_number": "TRK-ADMIN-0002" }
+
+### 9. Tracking number — error 422 carrier_name inválido
+PATCH {{baseUrl}}/api/admin/orders/{{adminOrderId}}/tracking-number
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "tracking_number": "TRK-ADMIN-0003",
+  "carrier_name": "DHL"
+}
+
+### 9b. Actualizar agent_id de la orden
+PATCH {{baseUrl}}/api/admin/orders/{{adminOrderId}}/agent-id
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "agent_id": 5
+}
+
+### ============================================================================
+### AGENTS — tb_empleados
+### ============================================================================
+
+### 10. Listar todos los agentes activos
+GET {{baseUrl}}/api/admin/agents
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### 10b. Obtener agente por ID
+GET {{baseUrl}}/api/admin/agents/6
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### 10c. Agente no encontrado → 404
+GET {{baseUrl}}/api/admin/agents/99999
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### ============================================================================
+### AUTH ERRORS
+### ============================================================================
+
+### 11. Acceso sin token → 401
+GET {{baseUrl}}/api/admin/orders
+Accept: application/json
+
+### 12. Acceso con token de cliente (no admin) → 403
+GET {{baseUrl}}/api/admin/orders
+Authorization: Bearer REEMPLAZAR_CON_JWT_CLIENTE
+Accept: application/json
+
+### ============================================================================
+### REPORTS — DASHBOARD
+### ============================================================================
+
+### 13. Dashboard KPIs (tarjetas resumen)
+GET {{baseUrl}}/api/admin/reports/dashboard
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### ============================================================================
+### REPORTS — SALES (TIME SERIES)
+### ============================================================================
+
+### 14. Ventas mensuales (año completo)
+GET {{baseUrl}}/api/admin/reports/sales/monthly?year=2024
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### 15. Ventas diarias (rango personalizado)
+GET {{baseUrl}}/api/admin/reports/sales/daily?date_from=2024-06-01&date_to=2024-06-30
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### 16. Ventas diarias (últimos 30 días, default)
+GET {{baseUrl}}/api/admin/reports/sales/daily
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### 17. Ventas por hora (un día específico)
+GET {{baseUrl}}/api/admin/reports/sales/by-hour?date=2024-06-15
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### ============================================================================
+### REPORTS — SALES (GROUPED)
+### ============================================================================
+
+### 18. Ventas por gateway (pie/donut)
+GET {{baseUrl}}/api/admin/reports/sales/by-gateway?date_from=2024-01-01&date_to=2024-12-31
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### 19. Ventas por estado (funnel)
+GET {{baseUrl}}/api/admin/reports/sales/by-status?date_from=2024-01-01&date_to=2024-12-31
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### ============================================================================
+### REPORTS — RANKINGS
+### ============================================================================
+
+### 20. Top 10 productos más vendidos
+GET {{baseUrl}}/api/admin/reports/top-products?date_from=2024-01-01&date_to=2024-12-31&limit=10
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### 21. Top 10 clientes por gasto
+GET {{baseUrl}}/api/admin/reports/top-customers?date_from=2024-01-01&date_to=2024-12-31&limit=10
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### 22. Top categorías por revenue
+GET {{baseUrl}}/api/admin/reports/top-categories?date_from=2024-01-01&date_to=2024-12-31
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### ============================================================================
+### REPORTS — GEO
+### ============================================================================
+
+### 23. Ventas por ciudad (top 20)
+GET {{baseUrl}}/api/admin/reports/sales/by-city?date_from=2024-01-01&date_to=2024-12-31&limit=20
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### 24. Ventas por departamento
+GET {{baseUrl}}/api/admin/reports/sales/by-department?date_from=2024-01-01&date_to=2024-12-31
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### ============================================================================
+### REPORTS — CREDIT BALANCES
+### ============================================================================
+
+### 25. KPIs de saldos (totales activos, canjeados, expirados)
+GET {{baseUrl}}/api/admin/reports/credit-balances/kpis
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### 26. Saldos por vencer en 30 días
+GET {{baseUrl}}/api/admin/reports/credit-balances/expiring?days=30
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### ============================================================================
+### REPORTS — CUSTOMERS
+### ============================================================================
+
+### 27. Clientes nuevos vs recurrentes
+GET {{baseUrl}}/api/admin/reports/customers/new-vs-returning?date_from=2024-01-01&date_to=2024-12-31
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### 28. Frecuencia de compra (histograma)
+GET {{baseUrl}}/api/admin/reports/customers/frequency?date_from=2024-01-01&date_to=2024-12-31
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### 29. Listar usuarios registrados (paginado + búsqueda)
+GET {{baseUrl}}/api/admin/reports/users?page=1&per_page=20
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### 29b. Buscar usuarios por nombre, email o documento
+GET {{baseUrl}}/api/admin/reports/users?q=ste
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### ============================================================================
+### REPORTS — PRODUCTS
+### ============================================================================
+
+### 31. Performance de productos (tabla paginada)
+GET {{baseUrl}}/api/admin/reports/products/performance?date_from=2024-01-01&date_to=2024-12-31&page=1&per_page=20
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### 32. Estado de stock (in stock vs out of stock)
+GET {{baseUrl}}/api/admin/reports/products/stock-status
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### 33. Impacto de descuentos (con/sin descuento)
+GET {{baseUrl}}/api/admin/reports/products/discount-impact?date_from=2024-01-01&date_to=2024-12-31
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### ============================================================================
+### REPORTS — CARRIERS
+### ============================================================================
+
+### 34. Distribución por transportadora
+GET {{baseUrl}}/api/admin/reports/carriers/distribution?date_from=2024-01-01&date_to=2024-12-31
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### 35. Órdenes aprobadas con SAP + datos del agente (tb_empleados)
+GET {{baseUrl}}/api/admin/reports/approved-orders-with-agents?date_from=2024-01-01&date_to=2024-12-31
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### ============================================================================
+### REPORTS — DOWNLOADS (exportables a Excel)
+### ============================================================================
+
+### 36. Descargar órdenes (plano, hasta 5000 registros)
+GET {{baseUrl}}/api/admin/reports/orders/download?date_from=2024-01-01&date_to=2024-12-31&status=APROBADA&gateway=bold
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### 37. Descargar productos con métricas de venta
+GET {{baseUrl}}/api/admin/reports/products/download?date_from=2024-01-01&date_to=2024-12-31
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### 38. Descargar saldos (active, redeemed, expired)
+GET {{baseUrl}}/api/admin/reports/credit-balances/download?status=active
+Authorization: Bearer {{adminToken}}
+Accept: application/json

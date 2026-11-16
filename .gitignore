@@ -8,3 +8,16 @@ logs/
 firebase-*.json
 premiumfitness-12ca6-*.json
 storage/private/
+
+# Backend (fork de radical)
+/vendor/
+/cache/
+/temp/
+/.phpunit.cache/
+*.log
+.DS_Store
+build
+/storage/private/
+tests/E2E/http/products/images
+assets/productos
+assets/images/

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Respuesta de pago — Bold</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { margin:0; font-family:Arial,Helvetica,sans-serif; background:#f4f4f4; color:#333; }
+        .wrap { max-width:560px; margin:48px auto; background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.05); }
+        .header { background:#121e6c; color:#fff; padding:24px; text-align:center; }
+        .header h1 { margin:0; font-size:22px; letter-spacing:1px; }
+        .body { padding:32px; }
+        .badge { display:inline-block; padding:4px 12px; border-radius:999px; font-size:12px; font-weight:bold; }
+        .badge-pending { background:#fff3cd; color:#856404; }
+        .badge-ok { background:#d4edda; color:#155724; }
+        .badge-fail { background:#f8d7da; color:#721c24; }
+        table { width:100%; border-collapse:collapse; margin-top:24px; }
+        td { padding:10px; border-bottom:1px solid #eee; }
+        td:first-child { color:#666; width:40%; }
+        .actions { margin-top:24px; text-align:center; }
+        a.btn { display:inline-block; background:#121e6c; color:#fff; padding:12px 24px; border-radius:4px; text-decoration:none; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="header"><h1>PREMIUMFITNESS</h1></div>
+    <div class="body">
+        <h2>Resultado de pago — Bold</h2>
+        <p>Estado: <span id="badge" class="badge badge-pending">Consultando…</span></p>
+        <table>
+            <tr><td>N° orden</td><td id="referencia">{{query_value}}</td></tr>
+            <tr><td>Fecha</td><td id="fecha">—</td></tr>
+            <tr><td>Respuesta</td><td id="respuesta">—</td></tr>
+            <tr><td>Motivo</td><td id="motivo">—</td></tr>
+        </table>
+        <div class="actions">
+            <a id="return-link" href="{{spa_return_url}}?gateway={{gateway}}&order_id={{query_value}}" class="btn">Volver a la tienda</a>
+        </div>
+    </div>
+</div>
+<script>
+    (function () {
+        var params  = new URLSearchParams(window.location.search);
+        var orderId = params.get('{{query_param}}') || params.get('bold-order-id') || '{{query_value}}';
+        var status  = (params.get('bold-tx-status') || '{{tx_status}}').toLowerCase();
+        var spa     = '{{spa_return_url}}';
+
+        document.getElementById('referencia').textContent = orderId || '—';
+        document.getElementById('fecha').textContent      = new Date().toLocaleString('es-CO');
+
+        var badge     = document.getElementById('badge');
+        var respuesta = document.getElementById('respuesta');
+        var motivo    = document.getElementById('motivo');
+
+        if (status === 'approved') {
+            badge.textContent     = 'Aprobado';
+            badge.className       = 'badge badge-ok';
+            respuesta.textContent = 'Pago aprobado por Bold';
+            motivo.textContent    = 'Tu pedido quedó confirmado en PremiumFitness.';
+        } else if (status === 'rejected' || status === 'failed' || status === 'voided') {
+            badge.textContent     = 'Rechazado';
+            badge.className       = 'badge badge-fail';
+            respuesta.textContent = 'Pago no aprobado';
+            motivo.textContent    = 'Bold no aprobó la transacción. Puedes intentarlo nuevamente.';
+        } else if (status === 'pending' || status === 'processing') {
+            badge.textContent     = 'Pendiente';
+            badge.className       = 'badge badge-pending';
+            respuesta.textContent = 'Pago en validación';
+            motivo.textContent    = 'Estamos esperando la confirmación final de Bold.';
+        } else {
+            badge.textContent     = 'Procesado';
+            badge.className       = 'badge badge-ok';
+            respuesta.textContent = 'Notificación recibida en PremiumFitness.';
+            motivo.textContent    = 'El estado final de tu pedido se actualizará automáticamente.';
+        }
+
+        var returnUrl = spa + '?gateway=bold&order_id=' + encodeURIComponent(orderId)
+            + (status ? '&status=' + encodeURIComponent(status) : '');
+        document.getElementById('return-link').href = returnUrl;
+
+        setTimeout(function () {
+            window.location.replace(returnUrl);
+        }, 5000);
+    })();
+</script>
+</body>
+</html>
+

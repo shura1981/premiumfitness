@@ -1,0 +1,40 @@
+@baseUrl = http://localhost:8000
+@jwtToken = reemplazar-con-jwt
+@cronToken = reemplazar-con-cron-job-token
+@jobId = 1
+@orderId = 1
+
+### Listar jobs de eventos de pago
+GET {{baseUrl}}/api/cron-job/payment-event-jobs?status=pending&page=1&per_page=20
+Authorization: Bearer {{jwtToken}}
+Accept: application/json
+
+### Ver job por ID
+GET {{baseUrl}}/api/cron-job/payment-event-jobs/{{jobId}}
+Authorization: Bearer {{jwtToken}}
+Accept: application/json
+
+### Crear job manual para una orden APROBADA
+POST {{baseUrl}}/api/cron-job/payment-event-jobs
+Authorization: Bearer {{jwtToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "order_id": {{orderId}}
+}
+
+### Resetear job
+PATCH {{baseUrl}}/api/cron-job/payment-event-jobs/{{jobId}}/reset
+Authorization: Bearer {{jwtToken}}
+Accept: application/json
+
+### Procesar jobs pendientes (endpoint consumido por crontab)
+POST {{baseUrl}}/api/cron-job/payment-event-jobs/process?limit=50
+X-Cron-Job-Token: {{cronToken}}
+Accept: application/json
+
+### Eliminar job
+DELETE {{baseUrl}}/api/cron-job/payment-event-jobs/{{jobId}}
+Authorization: Bearer {{jwtToken}}
+Accept: application/json

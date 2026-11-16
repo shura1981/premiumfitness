@@ -136,4 +136,4 @@ El cierre lee un solo mes. Además de los índices del spec `negocio/03`, usa:
 - [x] Actualizar CU-21 en `docs/casos-de-uso-y-actores.md`, y RF-19 y D-03 en el PRD
 - [x] Añadir las variables del cierre a `.agents/rules/codebase-standards.md` (se usa `CRON_JOB_TOKEN` de radical en lugar de `COMMISSION_CLOSE_TOKEN`)
 - [x] Definir los destinatarios del correo mensual y si se registra el pago (S-04)
-- [ ] Diseñar el Excel con la skill `xlsx-report-generator` de api-comisiones como referencia (fase de codificación)
+- [x] Diseñar el Excel (fase de codificación): hojas Resumen, Liquidaciones, Detalle, Productos, IVA, Puntos y Canjes (`src/Features/Commission/CloseReport.php`, con OpenSpout, licencia MIT). No se usó la skill de api-comisiones: no está en este repo.
