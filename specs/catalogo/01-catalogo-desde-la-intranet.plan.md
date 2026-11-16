@@ -359,7 +359,7 @@ VAT_EXEMPT_PRODUCT_CODES=103040   # Nutra C
 | Un cambio de la web (precio, promoción, desactivación) cambia la app de inmediato. | Es lo que se busca: una sola fuente. El checkout vuelve a leer y rechaza lo que ya no se vende. El histórico vive en `orders_items`. |
 | Un producto pasa a `promo = 1` con unidades en un carrito. | `findByCodes` no lo devuelve y el checkout avisa que salió del catálogo. |
 | La conexión a otra base necesita permisos. | Usuario con `SELECT` solo sobre esa tabla; el nombre de la base se valida. |
-| Las pruebas necesitan la tabla. | La migración de pruebas crea `tb_productos_megaplexstars` con las columnas que se leen. |
+| Las pruebas necesitan la tabla. | Las pruebas crean `crisenri_intranet_pruebas` con la estructura de la tabla real (`CREATE TABLE … LIKE`) y sus propios productos; nunca escriben en `crisenri_intranet`. |
 
 ## Orden de trabajo
 

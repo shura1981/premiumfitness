@@ -8,6 +8,7 @@ use App\Features\Admin\AdminRequest;
 use App\Features\Audit\AuditLog;
 use App\Features\Notification\PushOutbox;
 use App\Infrastructure\Database\DB;
+use App\Infrastructure\Database\IntranetTables;
 use App\Infrastructure\Http\JsonResponder;
 use App\Shared\Exceptions\ApiException;
 use PDO;
@@ -246,7 +247,7 @@ class CommissionAdminController
         return 'SELECT s.*, u.full_name AS trainer_name, u.document_id, u.num_cell AS phone, e.usuario AS paid_by
                 FROM commission_settlements s
                 JOIN users u ON u.id = s.trainer_id
-                LEFT JOIN crisenri_intranet.tb_empleados e ON e.id_usuario = s.paid_by_agent_id';
+                LEFT JOIN ' . IntranetTables::fromEnv()->employees . ' e ON e.id_usuario = s.paid_by_agent_id';
     }
 
     /**

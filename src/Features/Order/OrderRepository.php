@@ -6,6 +6,7 @@ namespace App\Features\Order;
 
 use App\Infrastructure\Database\AbstractRepository;
 use App\Infrastructure\Database\DB;
+use App\Infrastructure\Database\IntranetTables;
 use PDO;
 use PDOException;
 
@@ -58,7 +59,11 @@ class OrderRepository extends AbstractRepository
         LEFT JOIN localities l ON l.id = alm.locality_id
         SQL;
 
-    private const string SELECT_DETAIL_BASE = <<<'SQL'
+    private static function selectDetailBase(): string
+    {
+        $employees = IntranetTables::fromEnv()->employees;
+
+        return <<<SQL
         SELECT o.order_id, o.user_id, o.agent_id, o.amount, o.payment_gateway, o.payment_state_json,
                o.sap_order_code, o.tracking_number, o.carrier_name,
                o.status_id, o.address_id, o.order_notes,
@@ -93,8 +98,9 @@ class OrderRepository extends AbstractRepository
         LEFT JOIN cities c ON c.id = a.city_id
         LEFT JOIN address_locality_map alm ON alm.address_id = a.id
         LEFT JOIN localities l ON l.id = alm.locality_id
-        LEFT JOIN crisenri_intranet.tb_empleados e ON e.id_usuario = o.agent_id
+        LEFT JOIN {$employees} e ON e.id_usuario = o.agent_id
         SQL;
+    }
 
     /**
      * Crea la orden + sus items en una sola transacción.
@@ -186,7 +192,7 @@ class OrderRepository extends AbstractRepository
     {
         /** @var OrderModel|false $order */
         $order = $this->fetchOne(
-            self::SELECT_DETAIL_BASE . ' WHERE o.order_id = ?',
+            self::selectDetailBase() . ' WHERE o.order_id = ?',
             OrderModel::class,
             [$orderId]
         );
@@ -380,7 +386,7 @@ class OrderRepository extends AbstractRepository
                 )
                 OR agent_id IN (
                     SELECT id_usuario
-                    FROM crisenri_intranet.tb_empleados
+                    FROM ' . IntranetTables::fromEnv()->employees . '
                     WHERE usuario LIKE ? OR email LIKE ?
                 )
             )';
@@ -408,7 +414,7 @@ class OrderRepository extends AbstractRepository
 
         $sortColumn = self::SORT_COLUMNS[$filters['sort_by'] ?? 'order_id'] ?? 'o.order_id';
 
-        $sql = self::SELECT_DETAIL_BASE . " {$where} ORDER BY {$sortColumn} {$sortOrder}";
+        $sql = self::selectDetailBase() . " {$where} ORDER BY {$sortColumn} {$sortOrder}";
 
         return $this->paginated($sql, $params, $page, $perPage, 'orders', $countWhere, $countParams);
     }
@@ -510,7 +516,7 @@ class OrderRepository extends AbstractRepository
                 LEFT JOIN users u ON u.id = o.user_id
                 LEFT JOIN addresses a ON a.id = o.address_id
                 LEFT JOIN cities c ON c.id = a.city_id
-                LEFT JOIN crisenri_intranet.tb_empleados e ON e.id_usuario = o.agent_id
+                LEFT JOIN " . IntranetTables::fromEnv()->employees . " e ON e.id_usuario = o.agent_id
                 LEFT JOIN orders_items oi ON oi.order_id = o.order_id
                 {$where}
                 ORDER BY o.order_id DESC, oi.item_id ASC";
@@ -631,7 +637,7 @@ class OrderRepository extends AbstractRepository
         // Columna de ordenamiento: validar contra whitelist
         $sortColumn = self::SORT_COLUMNS[$filters['sort_by'] ?? 'order_id'] ?? 'o.order_id';
 
-        $sql = self::SELECT_DETAIL_BASE . " {$where} ORDER BY {$sortColumn} {$sortOrder}";
+        $sql = self::selectDetailBase() . " {$where} ORDER BY {$sortColumn} {$sortOrder}";
 
         return $this->paginated(
             $sql,
@@ -689,7 +695,7 @@ class OrderRepository extends AbstractRepository
     {
         /** @var OrderModel|false $order */
         $order = $this->fetchOne(
-            self::SELECT_DETAIL_BASE . ' WHERE o.order_id = ? AND o.user_id = ?',
+            self::selectDetailBase() . ' WHERE o.order_id = ? AND o.user_id = ?',
             OrderModel::class,
             [$orderId, $userId]
         );
@@ -715,7 +721,7 @@ class OrderRepository extends AbstractRepository
                     p.ruta AS product_slug,
                     p.category AS product_category_name
              FROM orders_items i
-             LEFT JOIN crisenri_intranet.tb_productos_megaplexstars p ON p.codigo = i.product_sku
+             LEFT JOIN ' . IntranetTables::fromEnv()->products . ' p ON p.codigo = i.product_sku
              WHERE i.order_id = ?
              ORDER BY i.item_id',
             OrderItemModel::class,

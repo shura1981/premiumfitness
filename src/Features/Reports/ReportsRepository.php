@@ -6,6 +6,7 @@ namespace App\Features\Reports;
 
 use App\Infrastructure\Database\AbstractRepository;
 use App\Infrastructure\Database\DB;
+use App\Infrastructure\Database\IntranetTables;
 use PDO;
 
 class ReportsRepository extends AbstractRepository
@@ -14,9 +15,12 @@ class ReportsRepository extends AbstractRepository
      * El catálogo de la intranet (solo lectura) con los nombres de columna que usan los reportes.
      * Sin los productos en promoción, que no se venden en la app (spec catalogo/01).
      */
-    private const string CATALOG = '(SELECT codigo AS sku, producto AS name, category AS category_name, valor + 0 AS price,
+    private static function catalog(): string
+    {
+        return '(SELECT codigo AS sku, producto AS name, category AS category_name, valor + 0 AS price,
             agotado + 0 AS is_out_of_stock, COALESCE(activo, 0) + 0 AS is_active
-         FROM crisenri_intranet.tb_productos_megaplexstars WHERE promo = 0)';
+         FROM ' . IntranetTables::fromEnv()->products . ' WHERE promo = 0)';
+    }
 
     public function __construct()
     {
@@ -49,7 +53,7 @@ class ReportsRepository extends AbstractRepository
              FROM orders o
              JOIN status_orders s ON o.status_id = s.status_id
              WHERE s.value = \'APROBADA\') AS approved_orders,
-            (SELECT COUNT(*) FROM ' . self::CATALOG . ' p WHERE p.is_active = 1) AS total_products,
+            (SELECT COUNT(*) FROM ' . self::catalog() . ' p WHERE p.is_active = 1) AS total_products,
             (SELECT COUNT(*) FROM users WHERE created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)) AS new_users_this_month,
             (SELECT COUNT(*) FROM orders o
              JOIN status_orders s ON o.status_id = s.status_id
@@ -205,7 +209,7 @@ class ReportsRepository extends AbstractRepository
              FROM orders_items oi
              JOIN orders o ON oi.order_id = o.order_id
              JOIN status_orders s ON o.status_id = s.status_id
-             LEFT JOIN " . self::CATALOG . " p ON oi.product_sku = p.sku
+             LEFT JOIN " . self::catalog() . " p ON oi.product_sku = p.sku
              WHERE s.value = 'APROBADA'
                AND DATE(o.created_at) >= :date_from
                AND DATE(o.created_at) <= :date_to
@@ -264,7 +268,7 @@ class ReportsRepository extends AbstractRepository
              FROM orders_items oi
              JOIN orders o ON oi.order_id = o.order_id
              JOIN status_orders s ON o.status_id = s.status_id
-             JOIN " . self::CATALOG . " p ON oi.product_sku = p.sku
+             JOIN " . self::catalog() . " p ON oi.product_sku = p.sku
              WHERE s.value = 'APROBADA'
                AND DATE(o.created_at) >= :date_from
                AND DATE(o.created_at) <= :date_to
@@ -402,7 +406,7 @@ class ReportsRepository extends AbstractRepository
                        p.price, p.is_out_of_stock, p.is_active,
                        COALESCE(SUM(oi.quantity), 0) AS total_sold,
                        COALESCE(SUM(oi.line_total), 0) AS revenue';
-        $baseFrom = 'FROM ' . self::CATALOG . ' p
+        $baseFrom = 'FROM ' . self::catalog() . ' p
                      LEFT JOIN orders_items oi ON p.sku = oi.product_sku
                      LEFT JOIN orders o ON oi.order_id = o.order_id
                      LEFT JOIN status_orders s ON o.status_id = s.status_id
@@ -439,7 +443,7 @@ class ReportsRepository extends AbstractRepository
             "SELECT SUM(CASE WHEN is_out_of_stock = 0 AND is_active = 1 THEN 1 ELSE 0 END) AS in_stock,
                     SUM(CASE WHEN is_out_of_stock = 1 AND is_active = 1 THEN 1 ELSE 0 END) AS out_of_stock,
                     SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) AS total
-             FROM " . self::CATALOG . ' p'
+             FROM " . self::catalog() . ' p'
         );
 
         /** @var array{in_stock: int, out_of_stock: int, total: int} $result */
@@ -557,7 +561,7 @@ class ReportsRepository extends AbstractRepository
                        p.is_out_of_stock, p.is_active,
                        COALESCE(SUM(oi.quantity), 0) AS total_sold,
                        COALESCE(SUM(oi.line_total), 0) AS revenue
-                FROM " . self::CATALOG . " p
+                FROM " . self::catalog() . " p
                 LEFT JOIN orders_items oi ON p.sku = oi.product_sku
                 LEFT JOIN orders o ON oi.order_id = o.order_id
                 LEFT JOIN status_orders s ON o.status_id = s.status_id
@@ -643,7 +647,7 @@ class ReportsRepository extends AbstractRepository
                 FROM orders o
                 JOIN status_orders s ON o.status_id = s.status_id
                 JOIN users u ON o.user_id = u.id
-                LEFT JOIN crisenri_intranet.tb_empleados e ON o.agent_id = e.id_usuario
+                LEFT JOIN " . IntranetTables::fromEnv()->employees . " e ON o.agent_id = e.id_usuario
                 WHERE s.value = 'APROBADA'
                   AND o.sap_order_code IS NOT NULL
                   AND o.sap_order_code > 0

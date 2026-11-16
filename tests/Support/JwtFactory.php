@@ -25,7 +25,7 @@ final class JwtFactory
     }
 
     /**
-     * Access token del admin para un agente de prueba (`docker/intranet-local.sql`).
+     * Access token del admin para un agente de prueba (`tests/fixtures/intranet-pruebas.sql`).
      *
      * @return array<string, string>
      */

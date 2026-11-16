@@ -1,8 +1,8 @@
--- Copia mínima de `crisenri_intranet` para desarrollo y pruebas locales.
--- En el hosting estas tablas son de la intranet: PremiumFitness solo las lee (S-31 y S-47 del DER).
+-- Datos de prueba de la intranet para la base `crisenri_intranet_pruebas`, que crean las pruebas
+-- (tests/Support/TestIntranet.php). Nunca se cargan en `crisenri_intranet`: esa base solo se lee.
+-- Si `crisenri_intranet` existe, las tablas se crean antes con su misma estructura (CREATE TABLE ... LIKE)
+-- y los CREATE TABLE de este archivo no hacen nada; si no existe, son la estructura mínima.
 -- Las personas y contraseñas de este archivo son inventadas.
-CREATE DATABASE IF NOT EXISTS `crisenri_intranet` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE `crisenri_intranet`;
 
 CREATE TABLE IF NOT EXISTS `tb_empleados` (
   `id` int(11) NOT NULL AUTO_INCREMENT,

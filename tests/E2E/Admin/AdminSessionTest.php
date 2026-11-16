@@ -9,7 +9,7 @@ use Tests\Support\JwtFactory;
 use Tests\Support\Seed;
 
 /*
- | Sesión del admin (spec seguridad/01, regla 11). Usa el agente de prueba de docker/intranet-local.sql.
+ | Sesión del admin (spec seguridad/01, regla 11). Usa el agente de prueba de tests/fixtures/intranet-pruebas.sql.
  */
 
 const AGENT_EMAIL    = 'agente.prueba@premiumfitness.local';

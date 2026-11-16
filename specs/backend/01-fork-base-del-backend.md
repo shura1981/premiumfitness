@@ -43,7 +43,7 @@ Tener en este repo el backend de radical funcionando tal cual (misma API, mismas
 | B-02 | Se copia la rama de trabajo actual de radical (`add_bold_pay_system`, con la pasarela Bold), no `main`. | Derivado: es la más reciente; confirmar |
 | B-03 | No se conserva el historial de git de radical: se copian los archivos. Este repo ya tiene su propio historial. | Derivado |
 | B-04 | La base de datos se llama `crisenri_premiumfitness`, con el prefijo del hosting, como `crisenri_radical_nutrition`. | Derivado |
-| B-05 | En local, MariaDB 11.8 corre en un contenedor Docker propio (`premiumfitness-db`, puerto 3313), con una copia mínima de `crisenri_intranet` para las tablas externas. | Derivado |
+| B-05 | En local, la base vive en el MariaDB del sistema (11.8, el que usa phpMyAdmin) y ya tiene `crisenri_intranet`, que solo se lee. `scripts/reset-db.sh` entra con `DB_USER`/`DB_PASS` del `.env`, como en radical. En el hosting el esquema se importa desde phpMyAdmin con un solo `.sql`. | Confirmado (16 nov 2026, por el usuario) |
 | B-06 | Se añade `DB_PORT` (opcional, 3306 por defecto) a la configuración de la base de datos; radical no lo tiene. | Derivado |
 | B-08 | La sesión de la base de datos se fija en hora de Colombia (`SET time_zone = '-05:00'`), igual que PHP. Radical dependía de la hora del servidor: con la base en UTC, los códigos de verificación nacían vencidos. | Derivado |
 | B-09 | Quedan sin uso, a la espera de su spec: `SapClientService` (consulta del socio de negocio en SAP, S-28 del DER) y las features de tienda pública, checkout retail y saldo a favor. | Derivado |
@@ -53,7 +53,7 @@ Tener en este repo el backend de radical funcionando tal cual (misma API, mismas
 ## Plan
 
 1. **Copia:** `git archive` de la rama de radical, para llevar solo archivos versionados (sin `.env`, `vendor/`, `dist/`, `logs/` ni `cache/`). No se copian sus reglas de agentes, su README, sus specs ni sus documentos de producto. `scripts/` de radical convive con `scripts/der/`.
-2. **Base de datos local:** contenedor `premiumfitness-db` con el esquema de radical y sus migraciones; `scripts/reset-db.sh` la recrea.
+2. **Base de datos local:** MariaDB del sistema con el esquema de `docs/database/schema/crisenri_premiumfitness.sql`; `scripts/reset-db.sh` la recrea.
 3. **Configuración:** `.env.example` con los nombres de PremiumFitness; `.env` local con valores de desarrollo (no se versiona).
 4. **Seguridad:** quitar las dos rutas y sus pruebas; `.htaccess` y `.gitignore` con `storage/`.
 5. **Verificación:** PHPStan y Pest. Lo que falle por datos de radical se corrige en el fork, no en radical.
@@ -64,7 +64,7 @@ Tener en este repo el backend de radical funcionando tal cual (misma API, mismas
 - **Pruebas:** `composer run test` da 236 pruebas pasadas y 1 omitida (heredada: pide el usuario con id 1). `composer run lint` no da errores.
 - **Seguridad:** `POST /api/auth/login-with-credential` y `GET /qr` responden 404, con una prueba de regresión que antes fallaba (devolvían un token y una redirección). Tampoco se sirven ya las apps Angular desde el backend.
 - **Dependencias:** se actualizaron Slim (4.15.3) y `symfony/cache` (8.1.11) por dos avisos de seguridad de severidad media. Queda uno de severidad baja (B-10).
-- **Base local:** contenedor `premiumfitness-db` (MariaDB 11.8, puerto 3313), con `scripts/reset-db.sh`.
+- **Base local:** se montó primero en un contenedor Docker; el 16 nov 2026 pasó al MariaDB del sistema (B-05).
 
 ## Lo que sigue (cada punto, con su spec)
 
@@ -92,6 +92,10 @@ Los contratos que hoy usa la app web con su API simulada (`specs/frontend/01`, p
 - [x] Añadir `DB_PORT` a la configuración de la base de datos
 - [x] Crear la base de datos local y cargar el esquema, las migraciones y los datos de prueba
 - [x] `composer install`
+- [x] Un solo esquema, `docs/database/schema/crisenri_premiumfitness.sql`, en lugar del volcado de radical y sus ocho migraciones; `scripts/reset-db.sh` como el de radical (B-05). Verificado en un MariaDB 11.8 desechable: reimportado da la misma estructura y datos; Pest 429 + 2 omitidas, dos veces
+- [x] Las consultas nombran la intranet con `INTRANET_DB_NAME` (`IntranetTables`), y las pruebas usan `crisenri_intranet_pruebas`: verificado que `crisenri_intranet` queda idéntica (CHECKSUM) tras dos corridas
+- [x] Crear `crisenri_premiumfitness` en el MariaDB del sistema (31 tablas) y correr las pruebas allí: 430 pasan y 1 se omite (la de permisos, porque el usuario local los tiene todos), dos veces; `crisenri_intranet` idéntica antes y después (CHECKSUM de `tb_empleados` y `tb_productos_megaplexstars`)
+- [x] Quitar `docs/database/seed/dev-user-addresses.sql` (heredado de radical, con datos personales y sin uso): la base local queda vacía, con solo los datos de referencia
 - [x] Quitar `login-with-credential` y el autologin por QR, con sus pruebas
 - [x] `composer run lint` sin errores
 - [x] `composer run test` sin fallos

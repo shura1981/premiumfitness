@@ -6,6 +6,7 @@ namespace App\Features\Admin;
 
 use App\Infrastructure\Database\AbstractRepository;
 use App\Infrastructure\Database\DB;
+use App\Infrastructure\Database\IntranetTables;
 
 class EmpleadoRepository extends AbstractRepository
 {
@@ -18,7 +19,7 @@ class EmpleadoRepository extends AbstractRepository
     {
         return $this->fetchOne(
             'SELECT id, id_usuario, email, COALESCE(pass, \'\') AS pass, usuario, departamento, foto, celular, sede, cargo, F
-             FROM crisenri_intranet.tb_empleados
+             FROM ' . IntranetTables::fromEnv()->employees . '
              WHERE email = :email',
             EmpleadoModel::class,
             ['email' => $email],
@@ -29,7 +30,7 @@ class EmpleadoRepository extends AbstractRepository
     {
         return $this->fetchOne(
             'SELECT id, id_usuario, email, COALESCE(pass, \'\') AS pass, usuario, departamento, foto, celular, sede, cargo, F
-             FROM crisenri_intranet.tb_empleados
+             FROM ' . IntranetTables::fromEnv()->employees . '
              WHERE id_usuario = :id',
             EmpleadoModel::class,
             ['id' => $id],
@@ -43,7 +44,7 @@ class EmpleadoRepository extends AbstractRepository
     {
         return $this->fetchAll(
             'SELECT id, id_usuario, email, COALESCE(pass, \'\') AS pass, usuario, departamento, foto, celular, sede, cargo, F
-             FROM crisenri_intranet.tb_empleados
+             FROM ' . IntranetTables::fromEnv()->employees . '
              WHERE activo = 1 AND deleteSoft = 0',
             EmpleadoModel::class,
         );

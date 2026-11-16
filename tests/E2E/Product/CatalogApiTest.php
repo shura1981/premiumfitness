@@ -177,7 +177,13 @@ it('findByCodes lee siempre de la fuente aunque el listado esté en caché', fun
     expect($catalog->findByCodes([$code]))->toBe([]);
 });
 
-it('la app solo puede leer la tabla de la intranet', function (): void {
-    expect(fn () => Seed::pdo()->exec("UPDATE crisenri_intranet.tb_productos_megaplexstars SET valor = 1 WHERE codigo = 100507"))
-        ->toThrow(PDOException::class, 'command denied');
+it('el usuario de la app no tiene permiso de escritura sobre crisenri_intranet', function (): void {
+    // Se revisan los permisos sin intentar escribir: la intranet nunca se modifica, ni en local.
+    $grants = Seed::pdo()->query('SHOW GRANTS')->fetchAll(PDO::FETCH_COLUMN);
+
+    if (preg_grep('/^GRANT ALL PRIVILEGES ON \*\.\* /', $grants) !== []) {
+        test()->markTestSkipped('El usuario local tiene todos los permisos; el de solo lectura se crea en el hosting (spec catalogo/01).');
+    }
+
+    expect(preg_grep('/(ALL PRIVILEGES|INSERT|UPDATE|DELETE).* ON (`crisenri_intranet`|\*)\.\*/', $grants))->toBe([]);
 });

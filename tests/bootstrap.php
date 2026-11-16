@@ -12,6 +12,10 @@ $_ENV['SMS_DRIVER'] = 'memory';
 // Sin caché del catálogo: las pruebas cambian productos y leen el resultado de inmediato.
 $_ENV['PRODUCT_CATALOG_CACHE_SECONDS'] = '0';
 
+// Las pruebas crean productos y agentes: lo hacen en su propia base, nunca en crisenri_intranet.
+$_ENV['INTRANET_DB_NAME'] = Tests\Support\TestIntranet::DATABASE;
+Tests\Support\TestIntranet::prepare();
+
 App\Infrastructure\Database\DB::boot(
     App\Infrastructure\Database\DatabaseConfig::fromEnv()
 );

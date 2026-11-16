@@ -6,6 +6,7 @@ namespace App\Features\Order;
 
 use App\Infrastructure\Database\AbstractRepository;
 use App\Infrastructure\Database\DB;
+use App\Infrastructure\Database\IntranetTables;
 use PDO;
 
 /**
@@ -66,7 +67,7 @@ class UserOrderRepository extends AbstractRepository
             'SELECT i.product_sku, i.product_name, i.quantity, i.product_full_price, i.unit_price,
                     i.discount_percentage, i.line_total, i.redemption_points, p.imageswebp
              FROM orders_items i
-             LEFT JOIN crisenri_intranet.tb_productos_megaplexstars p ON p.codigo = i.product_sku
+             LEFT JOIN ' . IntranetTables::fromEnv()->products . ' p ON p.codigo = i.product_sku
              WHERE i.order_id = ?
              ORDER BY i.item_id'
         );

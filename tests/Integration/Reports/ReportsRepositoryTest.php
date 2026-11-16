@@ -112,7 +112,7 @@ function activeEmployeeIdForReportsRepository(): ?int
 {
     $stmt = Seed::pdo()->query(
         'SELECT id
-         FROM crisenri_intranet.tb_empleados
+         FROM ' . App\Infrastructure\Database\IntranetTables::fromEnv()->employees . '
          WHERE activo = 1 AND deleteSoft = 0
          ORDER BY id ASC
          LIMIT 1'

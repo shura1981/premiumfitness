@@ -11,6 +11,7 @@ use App\Features\Order\StatusOrderRepository;
 use App\Features\Point\PointLotRepository;
 use App\Infrastructure\Config\BusinessConfig;
 use App\Infrastructure\Database\DB;
+use App\Infrastructure\Database\IntranetTables;
 use App\Shared\Exceptions\ApiException;
 use PDO;
 use Throwable;
@@ -46,7 +47,7 @@ class AdjustmentService
                     (SELECT COALESCE(SUM(m.amount), 0) FROM commission_movements m WHERE m.adjustment_id = a.id) AS commission_amount,
                     (SELECT COALESCE(SUM(pm.points), 0) FROM point_movements pm WHERE pm.adjustment_id = a.id) AS points
              FROM adjustments a
-             LEFT JOIN crisenri_intranet.tb_empleados e ON e.id_usuario = a.agent_id
+             LEFT JOIN ' . IntranetTables::fromEnv()->employees . ' e ON e.id_usuario = a.agent_id
              WHERE a.order_id = ? ORDER BY a.id'
         );
         $stmt->execute([$orderId]);

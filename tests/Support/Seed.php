@@ -7,7 +7,6 @@ namespace Tests\Support;
 use App\Infrastructure\Database\DB;
 use App\Infrastructure\Database\DatabaseConfig;
 use PDO;
-use RuntimeException;
 
 /**
  * Real INSERT helpers. Every helper uses unique values (uniqid) to avoid
@@ -73,7 +72,7 @@ final class Seed
 
     /**
      * Pedido pendiente de pago. Sin `$items` lleva un producto real del catálogo local de la intranet
-     * (docker/intranet-local.sql).
+     * (tests/fixtures/intranet-pruebas.sql).
      *
      * @param list<array<string, mixed>> $items
      */
@@ -224,30 +223,12 @@ final class Seed
         return (int) $pdo->lastInsertId();
     }
 
-    /**
-     * Conexión de administración a la copia LOCAL de la intranet. La app solo tiene SELECT sobre
-     * esa base (en el hosting es de la intranet y no se toca); las pruebas crean aquí sus productos.
-     */
+    /** Conexión a la intranet de las pruebas (`crisenri_intranet_pruebas`), donde crean sus productos. */
     public static function intranetPdo(): PDO
     {
         static $pdo = null;
 
-        if ($pdo === null) {
-            $host = (string) $_ENV['DB_HOST'];
-
-            if (!in_array($host, ['127.0.0.1', 'localhost'], true)) {
-                throw new RuntimeException('Las pruebas solo escriben en la copia local de la intranet.');
-            }
-
-            $pdo = new PDO(
-                sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4', $host, (int) ($_ENV['DB_PORT'] ?? 3306), $_ENV['INTRANET_DB_NAME']),
-                'root',
-                (string) ($_ENV['DB_ROOT_PASS'] ?? ''),
-                [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION],
-            );
-        }
-
-        return $pdo;
+        return $pdo ??= TestIntranet::connect(TestIntranet::DATABASE);
     }
 
     /**

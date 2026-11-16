@@ -8,16 +8,17 @@ Aplicación de referidos, compras, comisiones y puntos para los entrenadores y c
 
 ```bash
 composer install
-scripts/reset-db.sh        # recrea la base local (contenedor Docker `premiumfitness-db`, puerto 3313)
+scripts/reset-db.sh        # recrea la base local con docs/database/schema/crisenri_premiumfitness.sql
 composer run start         # API en http://localhost:8000
 composer run lint          # PHPStan
 composer run test          # Pest, contra la base local
 ```
 
 - El `.env` local no se versiona: parte de `.env.example`. La base local es propia de este proyecto; no uses credenciales de otros.
+- **Base:** un solo archivo, `docs/database/schema/crisenri_premiumfitness.sql` (sin migraciones: la app aún no ha salido). En el hosting se importa desde phpMyAdmin; en local, la base vive en el MariaDB del sistema y `scripts/reset-db.sh` la recrea con `DB_USER`/`DB_PASS` del `.env`, como en radical. Un cambio de esquema se hace en ese archivo.
 - `scripts/reset-db.sh` borra y recrea la base: solo corre si `DB_HOST` es local.
-- `docker/intranet-local.sql` crea una copia mínima de `crisenri_intranet` (`tb_empleados` y `tb_productos_megaplexstars`) para desarrollo y pruebas. En el hosting esas tablas son de la intranet y solo se leen.
-- Agente de prueba del admin en local: `agente.prueba@premiumfitness.local` / `admin-local-123`.
+- `crisenri_intranet` es la base real de la intranet (también en local) y solo se lee: la app la nombra con `INTRANET_DB_NAME`. Las pruebas usan su propia base, `crisenri_intranet_pruebas`, con la estructura de la real (`CREATE TABLE … LIKE`) y los datos de `tests/fixtures/intranet-pruebas.sql`; nunca escriben en `crisenri_intranet`.
+- El admin en local entra con un empleado real de `tb_empleados`. Los agentes `agente.prueba@premiumfitness.local` / `admin-local-123` solo existen en la base de las pruebas.
 - En local los SMS no se envían: con `SMS_DRIVER=log` el código queda en `logs/sms-dev.log`. Las pruebas usan `SMS_DRIVER=memory`.
 - Para probar una compra sin pagar de verdad: `php scripts/dev-pagar-pedido.php <id del pedido>` envía al backend local el aviso de pago aprobado de Bold, firmado. Solo corre en local.
 - Las pruebas escriben en la base local y no la limpian. Si algo queda raro, `scripts/reset-db.sh` la recrea.

@@ -114,5 +114,5 @@ Los índices únicos que ya existen (`trainer_referral_id`, `source_key` y otros
 - [x] Registrar los índices y el supuesto de no usar tabla de saldos en `specs/diseño/01-DER.md`
 - [x] Actualizar CU-09 y CU-10, y resolver PD-14 en `docs/casos-de-uso-y-actores.md`
 - [x] Actualizar RF-11 y resolver D-08 en el PRD
-- [x] Crear los índices en la migración inicial (`docs/database/migrations/premiumfitness_01_der_base.sql`)
+- [x] Crear los índices en la migración inicial (hoy en `docs/database/schema/crisenri_premiumfitness.sql`)
 - [x] Probar las consultas con `EXPLAIN` sobre datos de prueba y confirmar que usan solo el índice (`tests/Integration/Database/DerSchemaTest.php`)

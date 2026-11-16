@@ -6,7 +6,7 @@ namespace App\Features\Product;
 
 use App\Infrastructure\Database\AbstractRepository;
 use App\Infrastructure\Database\DB;
-use InvalidArgumentException;
+use App\Infrastructure\Database\IntranetTables;
 use PDO;
 
 /**
@@ -32,14 +32,7 @@ final class IntranetProductCatalog extends AbstractRepository implements Product
 
     public static function fromEnv(): self
     {
-        $database = (string) $_ENV['INTRANET_DB_NAME'];
-
-        // El nombre de la base va en el SQL (no se puede pasar como parámetro): se valida.
-        if (preg_match('/^[a-z0-9_]+$/', $database) !== 1) {
-            throw new InvalidArgumentException('INTRANET_DB_NAME no es válido.');
-        }
-
-        return new self("`{$database}`.`tb_productos_megaplexstars`");
+        return new self(IntranetTables::fromEnv()->products);
     }
 
     public function available(?string $category = null): array

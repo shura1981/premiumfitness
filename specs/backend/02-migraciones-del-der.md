@@ -2,6 +2,8 @@
 
 **Estado:** en curso · **Creado:** 15 de noviembre de 2026
 
+> **16 nov 2026:** las migraciones se unieron en un solo esquema, `docs/database/schema/crisenri_premiumfitness.sql`, y se borraron (con las cinco heredadas de radical): la app aún no ha salido, y en el hosting el esquema se importa desde phpMyAdmin con un solo archivo. Lo que sigue describe cómo se construyó; los cambios de esquema se hacen ahora en ese archivo.
+
 ## Petición original
 
 > Termina los frontends y luego el backend.
@@ -64,3 +66,4 @@ Los cambios del DER que modifican o quitan algo que el código heredado todavía
 - [x] Quitar la clave foránea de `orders_items` y las tablas de productos de radical (`premiumfitness_03_catalogo_y_compras.sql`)
 - [~] `orders_coupons.trainer_id` obligatorio: descartado. La fila solo se crea cuando la compra tiene entrenador, y siempre con él; la columna queda anulable porque no aporta hacerla obligatoria.
 - [x] Quitar `credit_balances` y `orders.balance_id` (`premiumfitness_03_catalogo_y_compras.sql`). `password_reset_tokens` se conserva: guarda el token de un solo uso de la recuperación (spec `seguridad/01`, regla 7)
+- [x] Unir el esquema de radical y las ocho migraciones en `docs/database/schema/crisenri_premiumfitness.sql` y borrar las migraciones (16 nov 2026): reimportado en una base vacía da la misma estructura (31 tablas) y los mismos datos de referencia

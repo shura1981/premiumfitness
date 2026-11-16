@@ -82,7 +82,7 @@ No hay contradicción con `docs/requerimientos.md`, que no dice de dónde sale e
 - [x] Confirmar la estructura de la tabla en la base (C-12)
 - [x] Obtener el código de Nutra C: 103040 (C-11)
 - [ ] Crear el usuario de base de datos con `SELECT` sobre `tb_productos_megaplexstars`
-  - Hecho en local (`scripts/reset-db.sh`), con una prueba de que la app no puede escribir en la tabla. Falta crearlo en el hosting al desplegar.
+  - En el hosting, al desplegar. La prueba revisa los permisos con `SHOW GRANTS`, sin escribir nunca en la intranet; en local, con un usuario con todos los permisos, se omite. Las pruebas crean sus productos en `crisenri_intranet_pruebas`.
 - [x] Validar `INTRANET_DB_NAME`, `PRODUCT_CATALOG_CACHE_SECONDS`, `VAT_PERCENTAGE` y `VAT_EXEMPT_PRODUCT_CODES` en `load/bootstrap.php`
 - [x] Implementar `CatalogProduct`, `ProductImages` y `ProductContent`
   - `imageswebp` y `tablasjpg` son un JSON con una URL por tamaño (`small`, `medium`, `semiMedium`, `big`, `bigger` y `seo`), confirmado en el código de la web (`api_MegaplexStar`). La galería de la ficha son la imagen del producto y su tabla nutricional.
