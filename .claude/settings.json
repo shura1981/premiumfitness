@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "ClaudeInChromeDomain(console.firebase.google.com)",
-      "ClaudeInChromeDomain(console.cloud.google.com)"
+      "ClaudeInChromeDomain(console.cloud.google.com)",
+      "ClaudeInChromeDomain(join.nutramerican.com)"
     ]
   }
 }

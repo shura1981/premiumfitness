@@ -203,7 +203,8 @@ class ReportsRepository extends AbstractRepository
         return $this->fetchAll(
             "SELECT oi.product_sku,
                     MAX(oi.product_name) AS product_name,
-                    MAX(p.category_name) AS category_name,
+                    -- Un producto que ya no está en el catálogo (o sin categoría) sale sin categoría, no rompe el reporte.
+                    COALESCE(MAX(p.category_name), '') AS category_name,
                     SUM(oi.quantity) AS total_sold,
                     COALESCE(SUM(oi.line_total), 0) AS revenue
              FROM orders_items oi
@@ -261,8 +262,8 @@ class ReportsRepository extends AbstractRepository
     public function topCategories(string $dateFrom, string $dateTo): array
     {
         return $this->fetchAll(
-            "SELECT CRC32(p.category_name) AS category_id,
-                    p.category_name,
+            "SELECT CRC32(COALESCE(p.category_name, '')) AS category_id,
+                    COALESCE(p.category_name, '') AS category_name,
                     COUNT(DISTINCT oi.product_sku) AS product_count,
                     COALESCE(SUM(oi.line_total), 0) AS revenue
              FROM orders_items oi

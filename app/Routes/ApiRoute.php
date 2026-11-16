@@ -214,6 +214,9 @@ return static function (\Slim\App $app): void {
         $group->get('/trainer/commission', [$trainerController, 'commission'])->add($trainerOnly)->add($jwt);
         $group->get('/trainer/commission/settlements/{id:[0-9]+}/receipt', [$trainerController, 'receipt'])->add($trainerOnly)->add($jwt);
         $group->get('/trainer/commission/conversion-preview', [$trainerController, 'conversionPreview'])->add($trainerOnly)->add($jwt);
+        // Ventas del entrenador en el módulo de comisión (spec negocio/06).
+        $group->get('/trainer/sales', [$trainerController, 'sales'])->add($trainerOnly)->add($jwt);
+        $group->get('/trainer/sales/history', [$trainerController, 'salesHistory'])->add($trainerOnly)->add($jwt);
         $group->post('/trainer/commission/convert', [$trainerController, 'convert'])
             ->add($limitByIp('trainer-convert', 10))->add($trainerOnly)->add($jwt);
         $group->get('/trainer/diet-access', [$trainerController, 'dietAccess'])->add($trainerOnly)->add($jwt);

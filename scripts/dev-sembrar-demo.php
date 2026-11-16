@@ -7,7 +7,7 @@ declare(strict_types=1);
  * usando la API real del backend local (registro, código SMS, enlaces, compras y aviso de pago de Bold),
  * como lo haría la app. Así los puntos, la comisión y los referidos salen de las reglas, no inventados.
  *
- *   php scripts/dev-sembrar-demo.php
+ *   php scripts/dev-sembrar-demo.php [--historial]
  *
  * Crea, con la contraseña PASSWORD de abajo:
  *   - el entrenador DEMO (entra por /coach/entrar);
@@ -15,6 +15,7 @@ declare(strict_types=1);
  *   - un entrenador referido por él, con un cliente que compra: activa los puntos del referido;
  *   - una conversión de comisión a puntos, más una compra después para que quede comisión del mes;
  *   - un canje con puntos y una compra propia sin pagar (para ver «Pagar» en el pedido).
+ * Con --historial suma ventas de los últimos 12 meses en varias ciudades (también sobre un demo ya creado).
  * Necesita el backend en marcha (`composer run start`) y `SMS_DRIVER=log`: lee los códigos de
  * `logs/sms-dev.log`. Si el entrenador demo ya existe, no hace nada: `scripts/reset-db.sh` vacía la base.
  */
@@ -52,14 +53,11 @@ if (($_ENV['SMS_DRIVER'] ?? '') !== 'log') {
 DB::boot(DatabaseConfig::fromEnv());
 $pdo = DB::getInstance();
 
-$exists = $pdo->prepare('SELECT id FROM users WHERE num_cell = ?');
+$api      = rtrim((string) ($_ENV['DEV_API_URL'] ?? 'http://localhost:8000'), '/') . '/api';
+$history  = in_array('--historial', $argv, true);
+$exists   = $pdo->prepare('SELECT id FROM users WHERE num_cell = ?');
 $exists->execute([TRAINER['phone']]);
-if ($exists->fetchColumn() !== false) {
-    fwrite(STDOUT, "El entrenador demo ya existe (celular " . TRAINER['phone'] . "). Para crearlo de nuevo, vacía la base con scripts/reset-db.sh.\n");
-    exit(0);
-}
-
-$api = rtrim((string) ($_ENV['DEV_API_URL'] ?? 'http://localhost:8000'), '/') . '/api';
+$demoReady = $exists->fetchColumn() !== false;
 
 /**
  * Petición JSON a la API local. Si el límite de peticiones responde 429, espera y repite.
@@ -156,9 +154,73 @@ function purchase(string $api, string $token, int $addressId, array $items, bool
     return $orderId;
 }
 
+/**
+ * Ventas de ejemplo de los últimos 12 meses en varias ciudades, para ver Ventas y su histórico
+ * (spec negocio/06). Se compran y se pagan con la API como cualquier venta; solo después se mueve
+ * su fecha de aprobación al mes que toca. Los movimientos de comisión quedan con la fecha de hoy:
+ * así no bloquean la conversión, pero el saldo del mes los incluye (son datos de demostración).
+ */
+function salesHistory(string $api, PDO $pdo): void
+{
+    fwrite(STDOUT, "Ventas de meses anteriores\n");
+    $cityIds = array_map('intval', $pdo->query(
+        "SELECT MIN(id) FROM cities WHERE name IN ('BOGOTA', 'MEDELLIN', 'CALI', 'BARRANQUILLA', 'BUCARAMANGA', 'CHIA', 'PEREIRA', 'CARTAGENA')
+         GROUP BY name ORDER BY FIELD(name, 'BOGOTA', 'MEDELLIN', 'CALI', 'BARRANQUILLA', 'BUCARAMANGA', 'CHIA', 'PEREIRA', 'CARTAGENA')"
+    )->fetchAll(PDO::FETCH_COLUMN));
+    if ($cityIds === []) {
+        $cityIds = array_map('intval', $pdo->query('SELECT id FROM cities ORDER BY id LIMIT 6')->fetchAll(PDO::FETCH_COLUMN));
+    }
+
+    $tokens = array_map(
+        static fn (array $client): string => (string) call($api, 'POST', '/auth/login', ['phone' => $client['phone'], 'password' => PASSWORD, 'role' => 'client'])['access_token'],
+        CLIENTS,
+    );
+    $catalog = array_values(array_filter(
+        call($api, 'GET', '/products', token: $tokens[0])['data'],
+        static fn (array $product): bool => !$product['is_out_of_stock'] && $product['final_price'] > 0,
+    ));
+
+    $addresses = [];
+    $sale      = 0;
+    $today     = new DateTimeImmutable('today');
+    for ($back = 11; $back >= 0; $back--) {
+        $month = $today->modify('first day of this month')->modify("-{$back} months");
+        $count = $back === 0 ? 6 : 1 + ($back * 7) % 3;
+        for ($i = 0; $i < $count; $i++, $sale++) {
+            $client = $sale % count(CLIENTS);
+            $cityId = $cityIds[($sale * 3 + $back) % count($cityIds)];
+            $key    = "{$client}:{$cityId}";
+            $addresses[$key] ??= address($api, $tokens[$client], $cityId, 'Demo ' . (count($addresses) + 1));
+            $items = [['code' => (int) $catalog[($sale * 5) % count($catalog)]['code'], 'quantity' => 1 + $sale % 3]];
+            if ($sale % 2 === 0) {
+                $items[] = ['code' => (int) $catalog[($sale * 11 + 3) % count($catalog)]['code'], 'quantity' => 1];
+            }
+            $orderId = purchase($api, $tokens[$client], $addresses[$key], $items);
+
+            $lastDay = $back === 0 ? max(1, (int) $today->format('j') - 1) : (int) $month->format('t');
+            $day     = 1 + ($sale * 5 + $i * 3) % $lastDay;
+            $pdo->prepare('UPDATE orders SET approved_at = ?, created_at = ? WHERE order_id = ?')->execute([
+                $month->format('Y-m-') . sprintf('%02d 1%d:%02d:00', $day, $i % 9, ($sale * 7) % 60),
+                $month->format('Y-m-') . sprintf('%02d 09:00:00', $day),
+                $orderId,
+            ]);
+        }
+    }
+    fwrite(STDOUT, "  {$sale} ventas repartidas en 12 meses y " . count($cityIds) . " ciudades.\n");
+}
+
 $city = $pdo->query("SELECT id FROM cities WHERE name LIKE 'BOGOT%' ORDER BY id LIMIT 1")->fetchColumn()
     ?: $pdo->query('SELECT id FROM cities ORDER BY id LIMIT 1')->fetchColumn();
 $cityId = (int) $city;
+
+if ($demoReady) {
+    if ($history) {
+        salesHistory($api, $pdo);
+        exit(0);
+    }
+    fwrite(STDOUT, "El entrenador demo ya existe (celular " . TRAINER['phone'] . "). Para sumarle ventas de meses anteriores: --historial. Para crearlo de nuevo, vacía la base con scripts/reset-db.sh.\n");
+    exit(0);
+}
 
 fwrite(STDOUT, "Cuentas\n");
 $coach    = account($api, TRAINER, 'trainer');
@@ -214,3 +276,7 @@ $dashboard = call($api, 'GET', '/trainer/dashboard', token: $coach['token']);
 fwrite(STDOUT, "\nListo. Entra por /coach/entrar con el celular " . TRAINER['phone'] . " y la contraseña de PASSWORD en este script.\n");
 fwrite(STDOUT, 'Clientes y referida: los celulares de CLIENTS, REFERRED y REFERRED_CLIENT, con la misma contraseña.' . "\n");
 fwrite(STDOUT, 'Resumen del inicio: ' . json_encode($dashboard, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . "\n");
+
+if ($history) {
+    salesHistory($api, $pdo);
+}

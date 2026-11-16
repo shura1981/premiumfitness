@@ -174,6 +174,8 @@ interface OrderDetail extends OrderSummary {
 | `GET /trainer/commission/conversion-preview` | — | `ConversionPreview`. 409 `conversion_blocked` o `nothing_to_convert`. |
 | `POST /trainer/commission/convert` | `{ idempotency_key }` | `ConversionPreview` con lo aplicado. Repetir la clave devuelve lo mismo. |
 | `GET /trainer/commission/settlements/:id/receipt` | — | El comprobante (PDF o imagen); 404 si no es suyo. Pide el token: la app lo descarga como archivo (blob), no con un enlace. `receipt_url` de la liquidación es esta ruta, relativa a la base de la API. |
+| `GET /trainer/sales?period=AAAA-MM` | — | `TrainerSales` (spec `negocio/06`): `{ period, period_label, totals: { sales, commission, amount, cities, products, units }, last_7_days, days: [{ date, sales, commission, amount }], cities: [{ city, department, sales, commission, amount }], products: [{ code, name, units, share }] }`. Sin `period`, el mes en curso. 422 si el mes no es válido o es futuro. |
+| `GET /trainer/sales/history` | — | `{ totals: { sales, commission, amount }, months: [{ period, label, sales, commission, amount }] }`, del mes más reciente al más antiguo. |
 | `GET /trainer/diet-access` | — | `DietAccess` |
 | `POST /trainer/diet-access/redeem` | — | `DietAccess`. Hay un solo canje por mes: repetirlo no cobra de nuevo. 409 `not_enough_points` o `already_active`. |
 | `POST /trainer/redemptions/preview` | `{ items: [{ code, quantity }] }` | `RedemptionPreview` |

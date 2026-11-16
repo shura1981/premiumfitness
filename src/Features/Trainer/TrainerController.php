@@ -143,6 +143,42 @@ class TrainerController
             ->withHeader('Cache-Control', 'private, no-store');
     }
 
+    /**
+     * Ventas del mes (spec negocio/06): resumen, días, ciudades y productos. `?period=AAAA-MM`;
+     * sin él, el mes en curso.
+     */
+    public function sales(Request $request, Response $response): Response
+    {
+        $trainerId = self::trainerId($request);
+        $period    = self::period($request);
+        $sales     = new TrainerSalesRepository();
+
+        return $this->json($response, [
+            'period'       => $period,
+            'period_label' => CommissionCalendar::label($period),
+            'totals'       => $sales->totals($trainerId, $period),
+            'last_7_days'  => $sales->lastSevenDays($trainerId),
+            'days'         => $sales->days($trainerId, $period),
+            'cities'       => $sales->cities($trainerId, $period),
+            'products'     => $sales->products($trainerId, $period),
+        ]);
+    }
+
+    /** Histórico de ventas mes a mes, con los totales de todos los meses. */
+    public function salesHistory(Request $request, Response $response): Response
+    {
+        $months = array_map(static fn (array $month): array => $month + ['label' => CommissionCalendar::label($month['period'])], new TrainerSalesRepository()->months(self::trainerId($request)));
+
+        return $this->json($response, [
+            'totals' => [
+                'sales'      => array_sum(array_column($months, 'sales')),
+                'commission' => round(array_sum(array_column($months, 'commission')), 2),
+                'amount'     => round(array_sum(array_column($months, 'amount')), 2),
+            ],
+            'months' => $months,
+        ]);
+    }
+
     public function conversionPreview(Request $request, Response $response): Response
     {
         return $this->json($response, $this->conversion->preview(self::trainerId($request)));
@@ -198,6 +234,19 @@ class TrainerController
             'closes_at'    => CommissionCalendar::end($period)->format(DATE_ATOM),
             'pays_at'      => $this->calendar->dueDate($period)->format('Y-m-d'),
         ];
+    }
+
+    /** Mes pedido (`AAAA-MM`), sin pasar del actual; sin él, el actual. */
+    private static function period(Request $request): string
+    {
+        $current = CommissionCalendar::periodOf(new DateTimeImmutable());
+        $period  = (string) ($request->getQueryParams()['period'] ?? $current);
+
+        if (preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $period) !== 1 || $period > $current) {
+            throw ApiException::invalid('Elige un mes válido.', errors: ['period' => 'Usa el formato AAAA-MM, hasta el mes actual.']);
+        }
+
+        return $period;
     }
 
     private static function trainerId(Request $request): int

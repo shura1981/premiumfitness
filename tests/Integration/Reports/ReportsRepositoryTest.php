@@ -125,3 +125,18 @@ function activeEmployeeIdForReportsRepository(): ?int
 
     return (int) $id;
 }
+
+it('un producto vendido que ya no está en el catálogo sale sin categoría y no rompe el reporte', function (): void {
+    $orderId = Seed::approvedOrderWithCanonicalApprobada(Seed::user());
+    $sku     = 990000000 + random_int(1, 9999999);
+    Seed::pdo()->prepare(
+        "INSERT INTO orders_items (order_id, product_sku, product_name, product_full_price, quantity, unit_price, line_total)
+         VALUES (?, ?, 'Producto retirado', 1000, 1, 1000, 999999999)"
+    )->execute([$orderId, $sku]);
+
+    $top = new ReportsRepository()->topProducts(date('Y-m-d'), date('Y-m-d'), 1);
+
+    expect($top[0]->product_sku)->toBe($sku)
+        ->and($top[0]->category_name)->toBe('');
+});
+
