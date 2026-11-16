@@ -79,7 +79,7 @@ class DietAccessNoticeService
             return 0;
         }
 
-        PushOutbox::enqueue($trainerId, $type, $title, $body, ['route' => '/entrenador'], $sourceKey);
+        PushOutbox::enqueue($trainerId, $type, $title, $body, ['route' => '/coach'], $sourceKey);
 
         return 1;
     }

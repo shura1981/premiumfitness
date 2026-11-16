@@ -270,7 +270,7 @@ it('envía cada notificación pendiente una vez, a todos los dispositivos del us
     $user = Seed::user();
     Seed::pdo()->prepare("INSERT INTO push_devices (user_id, platform, token) VALUES (?, 'web', ?), (?, 'web', ?)")
         ->execute([$user, 'tok-a-' . $user, $user, 'tok-b-' . $user]);
-    PushOutbox::enqueue($user, 'points_earned', 'Ganaste puntos', 'Texto', ['route' => '/entrenador/puntos'], 'test:' . uniqid());
+    PushOutbox::enqueue($user, 'points_earned', 'Ganaste puntos', 'Texto', ['route' => '/coach/puntos'], 'test:' . uniqid());
 
     $channel = fakeFcm();
     $first   = new PushSender($channel)->sendPending();

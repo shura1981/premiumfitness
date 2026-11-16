@@ -180,7 +180,7 @@ class CommissionAdminController
                         number_format((float) $settlement['total_amount'], 0, ',', '.'),
                         explode(' ', CommissionCalendar::label((string) $settlement['period']))[0],
                     ),
-                    ['route' => '/entrenador/comision', 'settlement_id' => $id],
+                    ['route' => '/coach/comision', 'settlement_id' => $id],
                     "settlement:{$id}:paid",
                 );
             }

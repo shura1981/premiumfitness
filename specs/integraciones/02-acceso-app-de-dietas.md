@@ -86,7 +86,7 @@ Content-Type: application/json
   "reason": "sales_goal",
   "valid_until": "2026-11-30T23:59:59-05:00",
   "message": "Tienes acceso por cumplir tu meta de octubre.",
-  "renew_url": "https://premiumfitness.nutramerican.com/entrenador/dietas",
+  "renew_url": "https://premiumfitness.nutramerican.com/coach/dietas",
   "checked_at": "2026-11-15T10:15:00-05:00"
 }
 ```

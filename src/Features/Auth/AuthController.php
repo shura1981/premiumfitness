@@ -70,6 +70,7 @@ class AuthController
         $session = $this->auth->login(
             (string) $body['phone'],
             (string) $body['password'],
+            (string) $body['role'],
             ReferralLink::fromRequest($body['referral'] ?? null),
             self::ip($request),
             $request->getHeaderLine('User-Agent'),

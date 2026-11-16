@@ -31,6 +31,12 @@ class AuthService
     private const INVALID_LOGIN     = 'El celular o la contraseña no coinciden.';
     private const INVALID_CODE      = 'El código no es válido o ya venció. Pide uno nuevo.';
 
+    /** Mensaje del login de un rol cuando la cuenta es del otro (spec seguridad/01, S-08). */
+    private const WRONG_AREA = [
+        'trainer' => 'Esta cuenta es de entrenador. Entra por el acceso de entrenadores.',
+        'client'  => 'Esta cuenta es de cliente. Entra por el acceso de clientes.',
+    ];
+
     /** Hash de una contraseña que nadie conoce: iguala el tiempo de respuesta cuando el celular no existe. */
     private const DUMMY_HASH = '$argon2id$v=19$m=65536,t=4,p=1$L0Fyd0hBRTBlcGhjanFiVA$KjiWS69D9d9immw943t8NGFhuYxAQU7FCfQkcjons24';
 
@@ -148,8 +154,13 @@ class AuthService
     // Sesión
     // -------------------------------------------------------------------------
 
-    /** @throws ApiException */
-    public function login(string $phone, string $password, ?ReferralLink $link, string $ip, string $userAgent): SessionResult
+    /**
+     * Login del área de un rol: `/entrar` (client) o `/coach/entrar` (trainer). La cuenta del otro rol
+     * no abre sesión; se comprueba después de la contraseña para no revelar el rol de un celular.
+     *
+     * @throws ApiException
+     */
+    public function login(string $phone, string $password, string $role, ?ReferralLink $link, string $ip, string $userAgent): SessionResult
     {
         $phone = PhoneNumber::normalize($phone) ?? '';
 
@@ -166,6 +177,10 @@ class AuthService
         }
 
         $this->throttle->clear($phone);
+
+        if ($user->role !== $role) {
+            throw new ApiException(403, 'wrong_area', self::WRONG_AREA[$user->role] ?? self::INVALID_LOGIN, extra: ['role' => $user->role]);
+        }
 
         if ($user->status === 'suspended') {
             throw ApiException::forbidden('Tu cuenta está suspendida. Escríbenos para revisarla.', 'account_suspended');

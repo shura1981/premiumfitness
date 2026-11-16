@@ -130,7 +130,7 @@ class AdjustmentService
                     $order['order_type'] === 'redemption'
                         ? sprintf('Cancelamos tu canje #%d y te devolvimos %s puntos.', $orderId, number_format($effect['points'], 0, ',', '.'))
                         : sprintf('El pedido #%d de un cliente tuvo una devolución: ajustamos tu comisión y tus puntos.', $orderId),
-                    ['route' => $order['order_type'] === 'redemption' ? '/entrenador/puntos' : '/entrenador/comision', 'order_id' => $orderId],
+                    ['route' => $order['order_type'] === 'redemption' ? '/coach/puntos' : '/coach/comision', 'order_id' => $orderId],
                     "adjustment:{$adjustmentId}",
                 );
             }

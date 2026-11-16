@@ -119,7 +119,7 @@ class ConversionService
                 'commission_converted',
                 'Convertiste tu comisión',
                 sprintf('Recibiste %s puntos por convertir tu comisión.', number_format($result['points_granted'], 0, ',', '.')),
-                ['route' => '/entrenador/puntos'],
+                ['route' => '/coach/puntos'],
                 "conversion:{$conversionId}",
             );
 

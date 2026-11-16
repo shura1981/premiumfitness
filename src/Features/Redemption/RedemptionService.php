@@ -101,7 +101,7 @@ class RedemptionService
                 'redemption_created',
                 'Canje recibido',
                 sprintf('Canjeaste %s puntos. Estamos preparando tu pedido.', number_format($quote['preview']['points_total'], 0, ',', '.')),
-                ['route' => '/pedidos/' . $orderId, 'order_id' => $orderId],
+                ['route' => '/coach/pedidos/' . $orderId, 'order_id' => $orderId],
                 "redemption:{$orderId}",
             );
 

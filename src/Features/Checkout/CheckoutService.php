@@ -87,7 +87,7 @@ class CheckoutService
             $this->coupon($quote),
         );
 
-        return ['order_id' => $orderId, 'payment' => $this->boldPayment($orderId, $quote->total)];
+        return ['order_id' => $orderId, 'payment' => $this->boldPayment($orderId, $quote->total, $buyer)];
     }
 
     /**
@@ -118,7 +118,7 @@ class CheckoutService
             throw ApiException::conflict('order_not_payable', 'Este pedido ya no se puede pagar. Haz la compra de nuevo.');
         }
 
-        return ['order_id' => $orderId, 'payment' => $this->boldPayment($orderId, (int) round((float) $order['amount']))];
+        return ['order_id' => $orderId, 'payment' => $this->boldPayment($orderId, (int) round((float) $order['amount']), $this->buyer($userId))];
     }
 
     /** @throws ApiException */
@@ -143,18 +143,21 @@ class CheckoutService
 
     /**
      * Datos del botón de Bold. La firma de integridad cubre el pedido, el valor y la moneda:
-     * Bold rechaza el pago si la app cambia cualquiera de los tres.
+     * Bold rechaza el pago si la app cambia cualquiera de los tres. La vuelta del pago abre el área
+     * de quien compra: la raíz para el cliente y `/coach` para el entrenador (spec seguridad/01, S-08).
      *
      * @return array<string, mixed>
      */
-    private function boldPayment(int $orderId, int $amount): array
+    private function boldPayment(int $orderId, int $amount, Buyer $buyer): array
     {
+        $area = $buyer->isTrainer() ? '/coach' : '';
+
         $config = BoldCheckoutService::fromEnv()->buildCheckoutConfig([
             'order_id'        => (string) $orderId,
             'amount'          => $amount,
             'currency'        => 'COP',
             'description'     => "Pedido PremiumFitness #{$orderId}",
-            'redirection_url' => $this->business->webAppUrl . '/pago/resultado?pedido=' . $orderId,
+            'redirection_url' => $this->business->webAppUrl . $area . '/pago/resultado?pedido=' . $orderId,
         ]);
 
         return [

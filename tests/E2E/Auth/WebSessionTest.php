@@ -47,6 +47,38 @@ it('responde lo mismo si el celular no existe o la contraseña no coincide', fun
         ->and(AppFactory::cookie($wrongPassword, 'pf_rt_web'))->toBeNull();
 });
 
+it('cada login solo acepta cuentas de su rol y no abre sesión con las del otro', function (string $accountRole, string $loginRole): void {
+    $userId   = $accountRole === 'trainer' ? Seed::trainer() : Seed::user();
+    $response = Auth::login(Seed::phoneOf($userId), role: $loginRole);
+    $body     = AppFactory::json($response);
+
+    expect($response->getStatusCode())->toBe(403)
+        ->and($body['code'])->toBe('wrong_area')
+        ->and($body['role'])->toBe($accountRole)
+        ->and($body['message'])->toContain($accountRole === 'trainer' ? 'entrenador' : 'cliente')
+        ->and($body)->not->toHaveKey('access_token')
+        ->and(AppFactory::cookie($response, 'pf_rt_web'))->toBeNull();
+})->with([
+    'entrenador en /entrar'     => ['trainer', 'client'],
+    'cliente en /coach/entrar' => ['client', 'trainer'],
+]);
+
+it('con una contraseña errada no revela de qué rol es la cuenta', function (): void {
+    $response = Auth::login(Seed::phoneOf(Seed::trainer()), 'otra-clave-123', role: 'client');
+
+    expect($response->getStatusCode())->toBe(401)
+        ->and(AppFactory::json($response)['code'])->toBe('invalid_credentials');
+});
+
+it('exige el rol del login', function (?string $role): void {
+    $body = ['phone' => Seed::phoneOf(Seed::user()), 'password' => Seed::PASSWORD] + ($role === null ? [] : ['role' => $role]);
+
+    $response = Auth::post('/api/auth/login', $body);
+
+    expect($response->getStatusCode())->toBe(422)
+        ->and(AppFactory::json($response)['errors'])->toHaveKey('role');
+})->with(['sin rol' => [null], 'rol desconocido' => ['admin']]);
+
 it('no deja entrar a una cuenta suspendida ni a una sin verificar', function (string $status, string $code): void {
     $userId = Seed::user();
     Seed::pdo()->prepare('UPDATE users SET status = ? WHERE id = ?')->execute([$status, $userId]);
@@ -79,10 +111,10 @@ it('limita el login a 5 por minuto desde una misma IP', function (): void {
     $ip = AppFactory::randomIp();
 
     for ($i = 0; $i < 5; $i++) {
-        Auth::post('/api/auth/login', ['phone' => Seed::phone(), 'password' => 'cualquiera-1'], ip: $ip);
+        Auth::post('/api/auth/login', ['phone' => Seed::phone(), 'password' => 'cualquiera-1', 'role' => 'client'], ip: $ip);
     }
 
-    $response = Auth::post('/api/auth/login', ['phone' => Seed::phone(), 'password' => 'cualquiera-1'], ip: $ip);
+    $response = Auth::post('/api/auth/login', ['phone' => Seed::phone(), 'password' => 'cualquiera-1', 'role' => 'client'], ip: $ip);
 
     expect($response->getStatusCode())->toBe(429)
         ->and($response->getHeaderLine('Retry-After'))->not->toBe('');

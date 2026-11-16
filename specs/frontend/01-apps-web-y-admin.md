@@ -36,8 +36,8 @@ Tener los dos frontends de PremiumFitness creados y funcionando en local, con el
 
 1. `npm run build`, `npm run lint` y `npm test` pasan en `premiumfitness-web`; `npm run build` pasa en `premiumfitness-admin`.
 2. La app web usa solo tokens del sistema de diseño, funciona en tema claro y oscuro, y el acento elegido se conserva al recargar.
-3. Un cliente y un entrenador entran por el mismo login y cada uno ve su navegación: Tienda · Pedidos · Carrito · Cuenta, o Inicio · Tienda · Referidos · Puntos · Cuenta.
-4. Un cliente no puede abrir las rutas `/entrenador/**` y su navegador no descarga ese código.
+3. El cliente entra y se registra en la raíz (`/entrar`, `/registro`) y el entrenador en `/coach` (`/coach/entrar`, `/coach/registro`). Ninguno de los dos logins abre sesión con una cuenta del otro rol. Cada uno ve su navegación: Tienda · Pedidos · Carrito · Cuenta, o Inicio · Tienda · Referidos · Puntos · Cuenta.
+4. Todo lo del entrenador cuelga de `/coach/**`. Un cliente no puede abrir esas rutas y su navegador no descarga el código del área del entrenador; un entrenador que abre una ruta de cliente va a la misma ruta bajo `/coach`.
 5. Un import de una feature dentro de otra hace fallar el lint (spec `arquitectura/02`, regla de aislamiento).
 6. Los precios, saldos y puntos se muestran con el formato del sistema (`$224.910`, `11.246 pts`) y la app no calcula dinero: pinta lo que llega de la API.
 7. El build de producción no incluye la API simulada ni sus datos.
@@ -49,7 +49,7 @@ Tener los dos frontends de PremiumFitness creados y funcionando en local, con el
 | F-01 | Los repos van en `/home/steven/Proyectos/node/angular/` y se llaman `premiumfitness-web` y `premiumfitness-admin`. | Confirmado (15 nov 2026) |
 | F-02 | Se usa el Node 25.1.0 ya instalado con `nvm`, fijado en `.nvmrc`. Angular 22 lo marca como no soportado (pide 22.22, 24.15 o 26), pero compila; solo se usa para construir. | Confirmado (15 nov 2026) |
 | F-03 | Se empieza a codificar sin rehacer ni aprobar los mockups: el sistema de diseño ya está aprobado («quedó perfecto», 14 nov 2026). Reemplaza el criterio 6 del spec `diseño/02`. | Confirmado (15 nov 2026) |
-| F-04 | Las rutas de la app web van en español: `/entrar`, `/tienda`, `/pedidos`, `/carrito`, `/cuenta` y `/entrenador/**`. Los enlaces del entrenador siguen siendo `/r/c/<id>` y `/r/t/<id>`. | Derivado |
+| F-04 | Las rutas de la app web van en español. El cliente usa la raíz (`/entrar`, `/registro`, `/tienda`, `/pedidos`, `/carrito`, `/cuenta`) y el entrenador `/coach` con las mismas pantallas compartidas (`/coach/entrar`, `/coach/registro`, `/coach/tienda`…) y las suyas (`/coach`, `/coach/referidos`, `/coach/puntos`, `/coach/comision`, `/coach/canje`). Reemplaza `/entrenador/**` y el login único (16 nov 2026, spec `seguridad/01`, S-08). Los enlaces del entrenador siguen siendo `/r/c/<id>` y `/r/t/<id>`. | Confirmado (16 nov 2026) |
 | F-05 | El contrato de la API es `specs/backend/03-api-de-premiumfitness.plan.md`, el mismo para el backend, la app web y el admin. Reemplaza los contratos provisionales del plan de este spec. | Confirmado (16 nov 2026) |
 | F-09 | En local hay dos modos: `npm start` usa la API simulada y `npm run start:api` el backend de `localhost:8000` (web en el puerto 4200 y admin en el 4201, los orígenes que admite el CORS local). | Derivado |
 | F-10 | El SDK de Firebase de la app web queda fijo en la 13.1.0 (Apache-2.0): se evita instalar versiones publicadas hace menos de dos semanas. | Derivado |
@@ -61,7 +61,7 @@ Tener los dos frontends de PremiumFitness creados y funcionando en local, con el
 
 ## Estado al 16 de noviembre de 2026
 
-- **App web (16 nov 2026):** `npm run build`, `npm run lint` y `npm test` (153 pruebas) pasan. Todas las pantallas del checklist están hechas y se recorrieron en el navegador contra la API simulada y contra el backend local.
+- **App web (16 nov 2026):** `npm run build`, `npm run lint` y `npm test` (157 pruebas) pasan. Todas las pantallas del checklist están hechas y se recorrieron en el navegador contra la API simulada y contra el backend local.
 - **Admin (16 nov 2026):** `npm run build` y `npm test` (127 pruebas) pasan. Las pantallas nuevas se recorrieron en el navegador contra la API simulada y contra el backend local.
 - Ninguno de los dos repos tiene commits nuevos: los cambios están en el árbol de trabajo.
 
@@ -108,6 +108,7 @@ Plan técnico: [01-apps-web-y-admin.plan.md](01-apps-web-y-admin.plan.md).
 - [x] PWA: manifest, service worker y guía de instalación en iOS
   - Falta probar la instalación y el push en un iPhone real.
 - [x] Conectar la app al backend real (`npm run start:api`) y recorrer los flujos sin la API simulada (16 nov 2026)
+- [x] Separar el login y el registro por rol y mover el área del entrenador a `/coach/**` (F-04, S-08; 16 nov 2026)
 - [ ] Pantalla para canjear el acceso del mes a la app de dietas (`POST /trainer/diet-access/redeem`): Inicio solo muestra el estado
 - [ ] Pruebas unitarias de las pantallas de `features/` (hoy se verifican en el navegador; `core/` y `shared/` sí tienen)
 

@@ -41,25 +41,30 @@ src/app/
 
 - Alias: `@core/*`, `@shared/*`, `@layout/*`, `@features/*` y `@env/*`.
 - **Aislamiento:** `features/*` solo importa de `core/` y `shared/`; `shared/` solo de `core/`; `core/` de nadie. Lo impone `eslint-plugin-boundaries`.
-- Cada feature se carga con `loadChildren`. `/entrenador/**` lleva el guard de rol `trainer`.
+- Cada feature se carga con `loadChildren`. El área del entrenador (`features/trainer`) lleva `canMatch` con el rol `trainer`: un cliente no descarga su código.
 
 ## Rutas
 
-| Ruta | Pantalla | Quién |
-| --- | --- | --- |
-| `/entrar` | Login | Sin sesión |
-| `/r/c/:id`, `/r/t/:id` | Guarda el enlace y lleva al login o al registro | Todos |
-| `/tienda` | Tienda | Cliente y entrenador |
-| `/carrito` | Carrito | Cliente y entrenador |
-| `/pedidos` | Pedidos | Cliente y entrenador |
-| `/cuenta` | Cuenta y apariencia | Cliente y entrenador |
-| `/cupon` | Asociar cupón | Cliente sin entrenador |
-| `/entrenador` | Inicio | Entrenador |
-| `/entrenador/referidos` | Referidos | Entrenador |
-| `/entrenador/puntos` | Puntos | Entrenador |
-| `/entrenador/comision` | Comisión y conversión | Entrenador |
+La app tiene dos áreas con el mismo `Shell` y las mismas pantallas compartidas (spec `seguridad/01`, S-08). Cada área declara su rol con `provideArea()` en la ruta, y las pantallas arman sus enlaces con el pipe `area`, que antepone `/coach` en el área del entrenador.
 
-Al entrar, el cliente va a `/tienda` y el entrenador a `/entrenador`.
+| Cliente | Entrenador | Pantalla |
+| --- | --- | --- |
+| `/entrar` | `/coach/entrar` | Login (solo acepta cuentas de su rol) |
+| `/registro` | `/coach/registro` | Registro (el del entrenador pide su cupón) |
+| `/verificar` | `/coach/verificar` | Código SMS |
+| `/recuperar` | `/coach/recuperar` | Recuperar la contraseña |
+| `/tienda`, `/producto/:code` | `/coach/tienda`, `/coach/producto/:code` | Tienda y detalle |
+| `/carrito`, `/pagar`, `/pago/resultado` | `/coach/carrito`, `/coach/pagar`, `/coach/pago/resultado` | Compra |
+| `/pedidos`, `/pedidos/:id` | `/coach/pedidos`, `/coach/pedidos/:id` | Pedidos |
+| `/cuenta/**` | `/coach/cuenta/**` | Cuenta |
+| `/cupon` | — | Asociar cupón (cliente sin entrenador) |
+| — | `/coach` | Inicio |
+| — | `/coach/referidos`, `/coach/puntos`, `/coach/comision`, `/coach/canje` | Área del entrenador |
+
+- `/r/c/:id` lleva al registro o login de clientes y `/r/t/:id` al de entrenadores.
+- Al entrar, el cliente va a `/tienda` y el entrenador a `/coach`.
+- Quien abre una ruta del otro rol va a la suya: un entrenador en `/pedidos/5` pasa a `/coach/pedidos/5`, y un cliente en `/coach/...` a la raíz. Así los enlaces de pago y de push sirven aunque lleguen a la ruta equivocada.
+- El backend arma con `/coach` la vuelta del pago de Bold y las rutas de los push del entrenador.
 
 ## Contratos provisionales de la API (F-05)
 
@@ -67,7 +72,7 @@ Todas las rutas cuelgan de `environment.apiUrl`. El access token va en `Authoriz
 
 | Método y ruta | Devuelve |
 | --- | --- |
-| `POST /api/auth/login` `{ phone, password, referral? }` | `{ access_token, expires_in, user }` |
+| `POST /api/auth/login` `{ phone, password, role, referral? }` | `{ access_token, expires_in, user }` |
 | `POST /api/auth/refresh` | Igual que el login; 401 si no hay sesión |
 | `POST /api/auth/logout` | 204 |
 | `GET /api/referrals/trainers/:id` | `{ full_name }` del entrenador del enlace; 404 si no es válido |

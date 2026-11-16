@@ -42,11 +42,11 @@ Definir cómo se registran, inician sesión, mantienen la sesión y recuperan el
 2. **Registro:**
    - se crea la cuenta con `status='pending'` y se envía un código SMS;
    - al verificarlo se guarda `phone_verified_at` y la cuenta pasa a `active`;
-   - quien llega por el enlace `/r/t/<id>` o elige «soy entrenador» se registra como `trainer`; cualquier otro registro es `client`;
+   - cada rol tiene su registro: `/registro` crea cuentas `client` y `/coach/registro` cuentas `trainer` (el enlace `/r/t/<id>` lleva al de entrenador y `/r/c/<id>` al de cliente);
    - el enlace de referido (id del entrenador en base64) se procesa al terminar el registro o el login (reglas 12 y 13).
 3. **Login:**
    - con celular y contraseña;
-   - la app web acepta los dos roles y muestra el área de cada uno; el admin solo acepta agentes de `tb_empleados`;
+   - cada rol tiene su login en la app web: `/entrar` para clientes y `/coach/entrar` para entrenadores. La app envía el `role` del login y el backend rechaza con 403 `wrong_area` la cuenta de otro rol, sin abrir sesión (S-08); el admin solo acepta agentes de `tb_empleados`;
    - una cuenta `pending` recibe la opción de verificar el celular;
    - una cuenta `suspended` no entra.
 4. **Contraseña:**
@@ -120,6 +120,7 @@ Definir cómo se registran, inician sesión, mantienen la sesión y recuperan el
 | S-05 | La sesión del admin dura 12 horas, sin renovación más allá. | Derivado |
 | S-06 | `tb_empleados` no se toca. PremiumFitness solo la lee (login del admin y JOIN con `agent_id`) y verifica las contraseñas tal como las guarda la intranet. | Confirmado (9 nov 2026) |
 | S-07 | Proveedor de SMS. | Pendiente (D-10) |
+| S-08 | Login y registro separados por rol: clientes en la raíz de la app web (`/entrar`, `/registro`) y entrenadores en `/coach` (`/coach/entrar`, `/coach/registro`). Un login no abre sesión con una cuenta del otro rol. Reemplaza el login único con selector de rol (16 nov 2026). | Confirmado (16 nov 2026) |
 
 ## Plan
 
@@ -145,5 +146,6 @@ Definir cómo se registran, inician sesión, mantienen la sesión y recuperan el
 - [x] Actualizar el PRD (RF-01 y D-05), CU-01 y los supuestos del DER
 - [x] Implementar la sesión de la app web y del admin, el registro, los códigos y la recuperación (spec `backend/03`; pruebas en `tests/E2E/Auth/` y `tests/E2E/Admin/AdminSessionTest.php`)
 - [x] Cerrar las rutas heredadas sin sesión (`tests/E2E/Security/RoutesRequireCredentialsTest.php`)
+- [x] Login y registro separados por rol (S-08): `role` en `POST /auth/login`, 403 `wrong_area`, y `/coach` en la vuelta del pago y en los push del entrenador (pruebas en `tests/E2E/Auth/WebSessionTest.php` y `tests/E2E/Checkout/CheckoutTest.php`)
 - [ ] Elegir el proveedor de SMS (D-10)
 - [~] Decidir qué hacer con las contraseñas en texto plano de `tb_empleados` (S-06): descartado, `tb_empleados` no se toca (9 nov 2026)

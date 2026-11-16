@@ -250,8 +250,8 @@ it('asocia al cliente ya registrado que abre el enlace e inicia sesión, y no le
     $first    = Seed::trainer();
     $phone    = Seed::phoneOf($clientId);
 
-    $login = Auth::post('/api/auth/login', ['phone' => $phone, 'password' => Seed::PASSWORD, 'referral' => ['kind' => 'c', 'id' => ReferralLink::encodeId($first)]]);
-    Auth::post('/api/auth/login', ['phone' => $phone, 'password' => Seed::PASSWORD, 'referral' => ['kind' => 'c', 'id' => ReferralLink::encodeId(Seed::trainer())]]);
+    $login = Auth::post('/api/auth/login', ['phone' => $phone, 'password' => Seed::PASSWORD, 'role' => 'client', 'referral' => ['kind' => 'c', 'id' => ReferralLink::encodeId($first)]]);
+    Auth::post('/api/auth/login', ['phone' => $phone, 'password' => Seed::PASSWORD, 'role' => 'client', 'referral' => ['kind' => 'c', 'id' => ReferralLink::encodeId(Seed::trainer())]]);
 
     $stmt = Seed::pdo()->prepare('SELECT trainer_id FROM client_referrals WHERE client_id = ?');
     $stmt->execute([$clientId]);
@@ -282,6 +282,7 @@ it('un enlace no convierte cuentas ni crea vínculos que no aplican', function (
     $login = Auth::post('/api/auth/login', [
         'phone'    => Seed::phoneOf($userId),
         'password' => Seed::PASSWORD,
+        'role'     => $role,
         'referral' => ['kind' => $kind, 'id' => ReferralLink::encodeId($linkTrainer)],
     ]);
 
@@ -298,7 +299,7 @@ it('un enlace no convierte cuentas ni crea vínculos que no aplican', function (
 ]);
 
 it('un enlace inválido no impide iniciar sesión', function (mixed $referral): void {
-    $response = Auth::post('/api/auth/login', ['phone' => Seed::phoneOf(Seed::user()), 'password' => Seed::PASSWORD, 'referral' => $referral]);
+    $response = Auth::post('/api/auth/login', ['phone' => Seed::phoneOf(Seed::user()), 'password' => Seed::PASSWORD, 'role' => 'client', 'referral' => $referral]);
 
     expect($response->getStatusCode())->toBe(200)
         ->and(AppFactory::json($response)['user']['has_trainer'])->toBeFalse();

@@ -160,7 +160,7 @@ class MonthlyCloseService
                 number_format($payable, 0, ',', '.'),
                 date('j/n', (int) strtotime($dueDate)),
             ),
-            ['route' => '/entrenador/comision'],
+            ['route' => '/coach/comision'],
             "settlement:{$settlementId}",
         );
 

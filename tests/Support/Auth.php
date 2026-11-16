@@ -24,9 +24,18 @@ final class Auth
         ));
     }
 
-    public static function login(string $phone, string $password = Seed::PASSWORD): ResponseInterface
+    /** Login del área del rol de la cuenta (`/entrar` o `/coach/entrar`); sin cuenta, el de clientes. */
+    public static function login(string $phone, string $password = Seed::PASSWORD, ?string $role = null): ResponseInterface
     {
-        return self::post('/api/auth/login', ['phone' => $phone, 'password' => $password]);
+        return self::post('/api/auth/login', ['phone' => $phone, 'password' => $password, 'role' => $role ?? self::roleOf($phone)]);
+    }
+
+    private static function roleOf(string $phone): string
+    {
+        $stmt = Seed::pdo()->prepare('SELECT role FROM users WHERE num_cell = ?');
+        $stmt->execute([$phone]);
+
+        return (string) ($stmt->fetchColumn() ?: 'client');
     }
 
     /** Código de 6 dígitos del último SMS enviado al celular. */

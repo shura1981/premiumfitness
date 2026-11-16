@@ -108,7 +108,7 @@ class PointExpirationService
                     number_format((int) $lot['remaining_points'], 0, ',', '.'),
                     date('j/n', (int) strtotime((string) $lot['expires_at'])),
                 ),
-                ['route' => '/entrenador/puntos'],
+                ['route' => '/coach/puntos'],
                 $key,
             );
             $sent++;

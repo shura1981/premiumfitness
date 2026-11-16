@@ -156,7 +156,7 @@ class PurchaseApproval
                 'commission_earned',
                 'Ganaste comisión',
                 sprintf('Un cliente tuyo compró: ganaste $%s de comisión.', number_format($amount, 0, ',', '.')),
-                ['route' => '/entrenador/comision', 'order_id' => $orderId],
+                ['route' => '/coach/comision', 'order_id' => $orderId],
                 "order:{$orderId}:commission",
             );
         }
@@ -172,7 +172,7 @@ class PurchaseApproval
                 'points_earned',
                 'Ganaste puntos',
                 sprintf('Ganaste %s puntos por la compra de un cliente.', number_format($points, 0, ',', '.')),
-                ['route' => '/entrenador/puntos', 'order_id' => $orderId],
+                ['route' => '/coach/puntos', 'order_id' => $orderId],
                 "order:{$orderId}:points",
             );
         }
@@ -217,7 +217,7 @@ class PurchaseApproval
                 'referral_activated',
                 'Tu referido ya vendió',
                 sprintf('Un entrenador que referiste hizo su primera venta: ganaste %s puntos.', number_format($points, 0, ',', '.')),
-                ['route' => '/entrenador/referidos', 'trainer_id' => $referredId],
+                ['route' => '/coach/referidos', 'trainer_id' => $referredId],
                 "referral:{$referralId}",
             );
         }

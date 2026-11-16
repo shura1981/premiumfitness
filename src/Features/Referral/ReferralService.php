@@ -74,7 +74,7 @@ class ReferralService
                     'Ganarás %s puntos cuando uno de sus clientes haga su primera compra.',
                     number_format($this->business->trainerReferralPoints, 0, ',', '.'),
                 ),
-                ['route' => '/entrenador/referidos'],
+                ['route' => '/coach/referidos'],
                 "trainer-referral:{$userId}",
             );
         }
@@ -88,7 +88,7 @@ class ReferralService
             'client_linked',
             'Tienes un cliente nuevo',
             'Un cliente se asoció a ti. Sus compras te darán puntos y comisión.',
-            ['route' => '/entrenador/referidos'],
+            ['route' => '/coach/referidos'],
             "client-link:{$clientId}",
         );
     }

@@ -27,7 +27,7 @@ Este archivo es el contrato que comparten el backend, la app web y el admin. Ree
 
 | Método y ruta | Cuerpo | Respuesta |
 | --- | --- | --- |
-| `POST /auth/login` | `{ phone, password, referral? }` | 200 `Session` y cookie `pf_rt_web`. 401 `invalid_credentials`. 403 `phone_not_verified` (con `phone`) o `account_suspended`. |
+| `POST /auth/login` | `{ phone, password, role, referral? }` (`role`: `client` en `/entrar`, `trainer` en `/coach/entrar`) | 200 `Session` y cookie `pf_rt_web`. 401 `invalid_credentials`. 403 `wrong_area` (con `role` de la cuenta) si la cuenta es del otro rol, `phone_not_verified` (con `phone`) o `account_suspended`. |
 | `POST /auth/refresh` | — | 200 `Session` y cookie nueva. 401 si no hay sesión. |
 | `POST /auth/logout` | — | 204; borra la cookie. |
 | `POST /auth/register` | `{ full_name, document_type_id, document_id, phone, email, password, role, coupon_code? }` | 201 `{ phone, expires_in }` y envía el código. 409 `phone_taken`, `email_taken` o `document_taken`. Si el celular tiene una cuenta sin verificar, la actualiza y reenvía el código. |

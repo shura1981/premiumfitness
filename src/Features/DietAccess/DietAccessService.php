@@ -126,7 +126,7 @@ class DietAccessService
                 'diet_access_redeemed',
                 'Acceso a dietas activado',
                 'Canjeaste tus puntos: tienes la app de dietas hasta fin de mes.',
-                ['route' => '/entrenador'],
+                ['route' => '/coach'],
                 "diet:{$periodId}",
             );
 

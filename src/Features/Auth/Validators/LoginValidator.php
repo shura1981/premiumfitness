@@ -14,6 +14,7 @@ class LoginValidator extends AbstractValidator
         return [
             'phone'    => ['required', 'regex:/^3\d{9}$/'],
             'password' => ['required', 'string', 'max:128'],
+            'role'     => ['required', 'in:client,trainer'],
         ];
     }
 
@@ -23,6 +24,7 @@ class LoginValidator extends AbstractValidator
         return [
             'phone'    => 'Escribe tu celular de 10 dígitos.',
             'password' => 'Escribe tu contraseña.',
+            'role'     => 'Entra por el acceso de clientes o el de entrenadores.',
         ];
     }
 }
