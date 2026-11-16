@@ -41,7 +41,7 @@ When generating code for this repository:
    - MariaDB 11.8, `utf8mb4_unicode_ci`.
    - Tres apps (spec `arquitectura/02`): la **web** (PWA Angular para clientes y entrenadores, con un área por rol cargada aparte), el **admin** (Angular: call center, SAP, envíos y reportes) y **dietas** (Nutrition & Fitness Plus: Flutter, externa y desacoplada, con su propio backend en `dietas.elitenutapp.com`, que consulta el acceso a PremiumFitness por documento; spec `integraciones/02`).
    - Angular **22** (estable al 9 nov 2026: 22.2.x) con el builder `@angular/build:application`: esbuild para compilar y Vite como servidor de desarrollo (`ng serve`). No se usa el builder de Webpack (`@angular-devkit/build-angular`), que está obsoleto, ni un `vite.config` propio.
-   - **Subdominios separados:** backend (`api.`), app web (`app.`) y admin (`admin.`). El backend no sirve las apps Angular.
+   - **Subdominios separados:** backend (`premiumfitness-api.nutramerican.com`), app web (`premiumfitness.nutramerican.com`) y admin (`premiumfitness-admin.nutramerican.com`). El backend no sirve las apps Angular.
 
 ## Feature Slices
 
@@ -208,7 +208,7 @@ Todas las variables se validan en `load/bootstrap.php` al arranque. Nunca accede
 ```
 APP_ENV=development|production
 DB_HOST, DB_NAME, DB_USER, DB_PASS
-CORS_ALLOWED_ORIGINS=https://app.dominio.com,https://admin.dominio.com
+CORS_ALLOWED_ORIGINS=https://premiumfitness.nutramerican.com,https://premiumfitness-admin.nutramerican.com
 MAIL_HOST, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD
 MAIL_FROM, MAIL_FROM_NAME, MAIL_ENCRYPTION=tls|ssl
 SAP_API_URL, SAP_API_KEY
@@ -252,7 +252,7 @@ DIET_ACCESS_POINTS_GOAL=249000
 DIET_ACCESS_POINTS_COST=50000
 DIET_FREE_DAYS=30
 DIET_ACCESS_API_KEY=<mínimo 32 caracteres; la presenta quien consulta el acceso>
-DIET_ACCESS_RENEW_URL=https://app.dominio.com/entrenador/dietas
+DIET_ACCESS_RENEW_URL=https://premiumfitness.nutramerican.com/entrenador/dietas
 
 # Cierre mensual de comisión (spec negocio/05)
 COMMISSION_REPORT_RECIPIENTS=financiero1@dominio.com,financiero2@dominio.com

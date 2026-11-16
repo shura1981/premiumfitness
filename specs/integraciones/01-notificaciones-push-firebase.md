@@ -120,7 +120,7 @@ Tareas de este proyecto que requieren acceso o datos que el agente no tiene. Las
 | Tarea | Por qué no la hace el agente | Cuándo |
 | --- | --- | --- |
 | Copiar `firebase-fcm-sender.json` al hosting en `storage/private/` del proyecto (permisos 600) y configurar `FIREBASE_PROJECT_ID` y `FIREBASE_CREDENTIALS_PATH` en el `.env` del servidor | No tiene acceso al hosting (cPanel) | Al desplegar el fork |
-| Restringir la `apiKey` web por dominio en Google Cloud → Credenciales («Browser key (auto created by Firebase)»): `https://<subdominio-app>/*` y `http://localhost:4200/*` | Falta definir el subdominio de la app web | Cuando se defina el subdominio. El agente puede hacerlo si se le da |
+| Restringir la `apiKey` web por dominio en Google Cloud → Credenciales («Browser key (auto created by Firebase)»): `https://premiumfitness.nutramerican.com/*` y `http://localhost:4200/*` | Requiere acceso a la consola de Google Cloud del proyecto | Al desplegar la app web. El agente puede hacerlo si se le da acceso |
 | Probar el flujo de instalación y push en un iPhone real (S-06) | Requiere un dispositivo físico | Con la app web desplegada en HTTPS |
 
 ## Criterios de aceptación

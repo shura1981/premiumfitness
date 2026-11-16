@@ -51,7 +51,7 @@ PremiumFitness tiene **tres apps**:
 
 Angular 22 (estable al 9 nov 2026) con el builder `@angular/build:application`: esbuild para compilar y Vite como servidor de desarrollo, sin configuración de Vite propia. Componentes standalone y rutas de carga diferida (`loadChildren`), sin `NgModule`.
 
-**Sesión entre subdominios:** la app (`app.`) llama al backend (`api.`) con `withCredentials`. El refresh token va en una cookie del dominio `api.`, con `SameSite=Strict`, que funciona porque ambos subdominios pertenecen al mismo sitio. CORS permite el origen `app.` con credenciales.
+**Sesión entre subdominios:** la app (`premiumfitness.nutramerican.com`) llama al backend (`premiumfitness-api.nutramerican.com`) con `withCredentials`. El refresh token va en una cookie del host del backend, con `SameSite=Strict`, que funciona porque los dos son subdominios de `nutramerican.com` y por tanto el mismo sitio. CORS permite el origen de la app con credenciales.
 
 ```
 src/app/
@@ -91,7 +91,7 @@ src/app/
 | S-01 | Tres apps: web (clientes y entrenadores), admin y dietas. | Confirmado (9 nov 2026) |
 | S-02 | Rutas `/r/c/<id>` y `/r/t/<id>` para los enlaces. | Derivado |
 | S-03 | Los casos de cuenta ya registrada de la regla 6. | Derivado |
-| S-04 | Backend y frontends en subdominios separados: `api.` (backend PHP), `app.` (web) y `admin.` (admin). Las apps Angular se despliegan como estáticos en su subdominio; el backend no las sirve. | Confirmado (9 nov 2026); los nombres exactos se definen al desplegar |
+| S-04 | Backend y frontends en subdominios separados de `nutramerican.com`: `premiumfitness-api.nutramerican.com` (backend PHP), `premiumfitness.nutramerican.com` (app web) y `premiumfitness-admin.nutramerican.com` (admin). Las apps Angular se despliegan como estáticos en su subdominio; el backend no las sirve. | Confirmado (9 nov 2026); nombres confirmados el 15 nov 2026 |
 
 ## Checklist
 
