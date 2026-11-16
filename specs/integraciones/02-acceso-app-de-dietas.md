@@ -138,7 +138,7 @@ La respuesta no incluye nombre, puntos ni saldos. Los detalles los ve el entrena
 | ID | Supuesto | Clase |
 | --- | --- | --- |
 | S-01 | La meta se evalúa con el mes anterior. | Confirmado (9 nov 2026) |
-| S-02 | La meta se mide en puntos, con `DIET_ACCESS_POINTS_GOAL` = 249.000 para empezar. La lógica puede cambiar. | Confirmado (9 nov 2026), valor provisional |
+| S-02 | La meta se mide en puntos y su valor vive en la variable de entorno `DIET_ACCESS_POINTS_GOAL`, para cambiarlo sin tocar el código. Empieza en 249.000. La lógica puede cambiar. | Confirmado (9 y 15 nov 2026) |
 | S-03 | Para la meta solo cuentan los puntos por compras de clientes del mes (`client_sale`), no los de referidos ni conversiones. «Ha comprado» se lee como las compras de sus clientes. | Derivado: «meta de ventas» |
 | S-04 | Un mes de acceso cuesta 50.000 puntos. | Confirmado (9 nov 2026) |
 | S-05 | El mes gratis son 30 días desde el primer ingreso, que PremiumFitness registra en la primera consulta. | Confirmado (9 nov 2026) |
@@ -170,5 +170,5 @@ La respuesta no incluye nombre, puntos ni saldos. Los detalles los ve el entrena
 - [x] Rediseñar la integración: endpoint por documento, servidor a servidor
 - [x] Quitar la app `diets` de la autenticación y de las push
 - [x] Actualizar el DER, la autenticación, la arquitectura, los estándares, las reglas, los casos de uso, el PRD y las fases
-- [ ] Fijar el valor definitivo de la meta (S-02)
+- [x] Dejar el valor de la meta en una variable de entorno, fácil de cambiar (S-02): `DIET_ACCESS_POINTS_GOAL`, 249.000 para empezar
 - [~] Acordar con el equipo de Flutter la integración del login (S-07 anterior): descartado el 15 nov 2026, la app de dietas conserva su propio login
