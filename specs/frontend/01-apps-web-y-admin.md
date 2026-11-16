@@ -135,4 +135,5 @@ Plan técnico: [01-apps-web-y-admin.plan.md](01-apps-web-y-admin.plan.md).
 - [x] Conectar el admin al backend real (`npm run start:api`, puerto 4201) y recorrer sus flujos (16 nov 2026)
   - Tras las correcciones del backend falta repetir en el navegador: la lista de pedidos al entrar, el detalle de un canje y «Corregir pago».
 - [x] Que buscadores no indexen el admin: `noindex` en `index.html` y `X-Robots-Tag` en el `.htaccess` (F-11)
+- [x] Con un modal abierto, la página del fondo no se desplaza: clase `pf-modal` en los 7 modales y regla `html:has(.pf-modal)` en `styles.css`; en móvil también con el menú lateral abierto (16 nov 2026)
 - [ ] Reducir el bundle inicial: pesa 515 kB y el aviso salta a los 500 kB

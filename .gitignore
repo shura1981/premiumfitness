@@ -21,3 +21,6 @@ build
 tests/E2E/http/products/images
 assets/productos
 assets/images/
+
+# Registros locales: nunca van al repositorio.
+log/
