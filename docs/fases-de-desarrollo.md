@@ -200,7 +200,7 @@ Elegir motor de base de datos, migraciones, índices y restricciones. Diseñar t
 
 ## Fase 8. Desarrollar la app de dietas como SaaS — posterior al MVP
 
-**Estado (15 nov 2026):** la app y su backend SaaS ya existen fuera de este repositorio. La app es Nutrition & Fitness Plus (`/home/steven/Proyectos/flutter/dietas.nutramerican.com`: escritorio, móvil y PWA) y su backend es `/home/steven/Proyectos/node/express/dietas.elitenutapp.com` (organizaciones, módulos, sincronización e IA). Lo que queda en esta fase es la integración: el endpoint de PremiumFitness que responde el acceso por documento, el canje en la app web y la llamada desde el backend de dietas (spec `integraciones/02`).
+**Estado (15 nov 2026):** la app y su backend SaaS ya existen fuera de este repositorio. La app es Nutrition & Fitness Plus (`/home/steven/Proyectos/flutter/dietas.nutramerican.com`: escritorio, móvil y PWA) y su backend es `/home/steven/Proyectos/node/express/dietas.elitenutapp.com` (organizaciones, módulos, sincronización e IA). Lo que le toca a PremiumFitness es el endpoint que responde, por documento, si el entrenador puede entrar, y el canje en la app web (spec `integraciones/02`).
 
 **Base original:** `/home/steven/Proyectos/flutter/dietas_automaticas_flutter`.
 
@@ -213,9 +213,8 @@ El proyecto de referencia aportó la base de la app; el backend para servir a m�
 3. ~~Diseñar el backend SaaS con separación por organización~~: hecho en `dietas.elitenutapp.com`. Falta desplegarlo.
 4. Fijar el valor definitivo de la meta mensual. La referencia a 50.000 frente a 49.800 puntos ya está resuelta: el costo es 50.000.
 5. Construir en PremiumFitness el endpoint de acceso por documento (servidor a servidor, contrato genérico) y el canje en la app web (spec `integraciones/02`).
-6. Que el backend de dietas llame al proveedor al iniciar sesión y al abrir la app, respete `valid_until` y use la última respuesta si no hay conexión (D-01 y D-02 del spec).
-7. Mostrar en la app web el estado del acceso, su vigencia, el motivo y cómo recuperarlo.
+6. Mostrar en la app web el estado del acceso, su vigencia, el motivo y cómo recuperarlo.
 
-**Entregables:** feature `DietAccess` de PremiumFitness con el endpoint por documento, y la llamada al proveedor en el backend de dietas.
+**Entregables:** feature `DietAccess` de PremiumFitness con el endpoint por documento y el canje.
 
-**Aceptación:** mes gratis; acceso por meta; acceso por puntos; falta de saldo; un solo canje por mes; documento desconocido; credencial inválida; sin conexión con PremiumFitness. **Cobertura:** CU-14 y CU-15, regla 11.
+**Aceptación:** mes gratis; acceso por meta; acceso por puntos; falta de saldo; un solo canje por mes; documento desconocido; credencial inválida. **Cobertura:** CU-14 y CU-15, regla 11.

@@ -251,7 +251,7 @@ VAT_EXEMPT_PRODUCT_CODES=103040   # Nutra C
 DIET_ACCESS_POINTS_GOAL=249000
 DIET_ACCESS_POINTS_COST=50000
 DIET_FREE_DAYS=30
-DIET_ACCESS_API_KEY=<mínimo 32 caracteres; la presenta el backend de dietas>
+DIET_ACCESS_API_KEY=<mínimo 32 caracteres; la presenta quien consulta el acceso>
 DIET_ACCESS_RENEW_URL=https://app.dominio.com/entrenador/dietas
 
 # Cierre mensual de comisión (spec negocio/05)

@@ -28,24 +28,18 @@ Que la app de dietas sepa si un entrenador de PremiumFitness puede usarla, consu
 
 ## Contexto
 
-| Pieza | Dónde | Papel |
-| --- | --- | --- |
-| App de dietas | `/home/steven/Proyectos/flutter/dietas.nutramerican.com` | Su propio login (correo y contraseña). Pregunta su acceso a su backend al abrirse (`GET /acceso`). |
-| Backend de dietas | `/home/steven/Proyectos/node/express/dietas.elitenutapp.com` | Decide qué módulos tiene cada organización. Llamará al proveedor de acceso con el documento del usuario. |
-| PremiumFitness | Este repositorio | Proveedor de acceso: responde si el documento corresponde a un entrenador con acceso, por qué y hasta cuándo. |
+La app de dietas (Nutrition & Fitness Plus, `/home/steven/Proyectos/flutter/dietas.nutramerican.com`) y su backend son otro proyecto, desacoplado de este. A PremiumFitness solo le llega una pregunta: **¿este documento puede entrar a la app de dietas?** Responde si ese documento cumplió el contrato de compras o de puntos. Lo que la app de dietas haga con la respuesta es asunto de ese proyecto.
 
 ## Alcance
 
-- Un endpoint de PremiumFitness, servidor a servidor, que responde el acceso de un documento.
-- El contrato de respuesta, genérico para que otros proyectos lo implementen igual.
+- Un endpoint de PremiumFitness, servidor a servidor, que responde si un documento puede entrar a la app de dietas.
 - Las reglas de acceso de PremiumFitness (mes gratis, meta y canje).
 - El estado y el canje de puntos en el área del entrenador de la app web.
 - El modelo de datos que lo soporta.
 
 ## Fuera de alcance
 
-- Cambios en la app de dietas: su login y sus pantallas no cambian.
-- Cómo el backend de dietas guarda la respuesta y la traduce a módulos: lo decide ese proyecto (ver D-01).
+- Todo lo del proyecto de dietas: su login, sus cuentas, cuándo pregunta y qué hace con la respuesta.
 - Cobro en dinero.
 
 ## Reglas
@@ -56,7 +50,7 @@ Que la app de dietas sepa si un entrenador de PremiumFitness puede usarla, consu
    - **Meta:** en `M − 1` ganó por compras de sus clientes al menos `DIET_ACCESS_POINTS_GOAL` puntos (**249.000, valor provisional**).
    - **Canje:** canjeó `DIET_ACCESS_POINTS_COST` (50.000) puntos por el mes `M`.
 3. **Qué puntos cuentan para la meta:** la suma de `initial_points` de los lotes `client_sale` con `accrued_at` en `M − 1`. No cuentan los 50.000 por referido ni los puntos de una conversión. **Esta lógica puede cambiar.**
-4. **Primer ingreso:** la primera vez que el backend de dietas consulta el documento de un entrenador, PremiumFitness guarda la fecha (`trainers.diet_first_access_at`). Desde ahí corren los 30 días gratis, aunque cubran parte del mes siguiente.
+4. **Primer ingreso:** la primera vez que se consulta el documento de un entrenador, PremiumFitness guarda la fecha (`trainers.diet_first_access_at`). Desde ahí corren los 30 días gratis, aunque cubran parte del mes siguiente.
 5. **Canje del mes:** se hace en la app web de PremiumFitness.
    - consume 50.000 puntos por FIFO, a precio completo, como cualquier canje;
    - solo se permite si el entrenador no tiene ya acceso en ese mes por la meta, y si no está en su mes gratis o este termina antes de fin de mes;
@@ -64,9 +58,9 @@ Que la app de dietas sepa si un entrenador de PremiumFitness puede usarla, consu
    - no se devuelve.
 6. **El estado se calcula en cada consulta.** PremiumFitness no guarda un «acceso» precalculado: responde con lo que vale en ese momento y hasta cuándo (`valid_until`).
 7. **Sin acceso:** la respuesta dice por qué y cómo recuperarlo: canjear puntos en la app web, si tiene saldo, o cumplir la meta este mes para tener acceso el siguiente. Solo se desactivan las dietas, no la cuenta de PremiumFitness (CU-15).
-8. **Constantes en variables de entorno:** `DIET_ACCESS_POINTS_GOAL=249000` (provisional), `DIET_ACCESS_POINTS_COST=50000` y `DIET_FREE_DAYS=30`. Cada acceso guarda los valores que aplicó. La integración usa además `DIET_ACCESS_API_KEY` (la credencial que presenta el backend de dietas, mínimo 32 caracteres) y `DIET_ACCESS_RENEW_URL` (el área de dietas de la app web).
+8. **Constantes en variables de entorno:** `DIET_ACCESS_POINTS_GOAL=249000` (provisional), `DIET_ACCESS_POINTS_COST=50000` y `DIET_FREE_DAYS=30`. Cada acceso guarda los valores que aplicó. La integración usa además `DIET_ACCESS_API_KEY` (la credencial que presenta quien consulta, mínimo 32 caracteres) y `DIET_ACCESS_RENEW_URL` (el área de dietas de la app web).
 
-## Endpoint para el backend de dietas
+## Endpoint de acceso
 
 ```
 POST /api/integrations/diet-access
@@ -76,7 +70,7 @@ Content-Type: application/json
 { "document": "1010123456" }
 ```
 
-- **Servidor a servidor.** Lo llama el backend de dietas, nunca la app ni un navegador. La credencial se compara en tiempo constante y no vale para ningún otro endpoint.
+- **Servidor a servidor**, con una credencial de servicio que se compara en tiempo constante y no vale para ningún otro endpoint.
 - **El documento va en el cuerpo**, no en la URL, para que no quede en los registros del servidor. Se normaliza: sin puntos, espacios ni guiones.
 - **Busca por `users.document_id`** entre los entrenadores. Si hay más de un usuario con ese número, responde `ambiguous` y no da acceso (ver S-09).
 - **Límite de peticiones** con `RateLimitMiddleware`, por IP y por documento.
@@ -86,7 +80,6 @@ Content-Type: application/json
 
 ```json
 {
-  "provider": "premiumfitness",
   "document": "1010123456",
   "has_access": true,
   "status": "active",
@@ -100,17 +93,14 @@ Content-Type: application/json
 
 | Campo | Para qué |
 | --- | --- |
-| `provider` | Quién respondió. Permite que el backend de dietas tenga varios proveedores. |
-| `has_access` | Lo único que el backend de dietas necesita para habilitar o no. |
+| `has_access` | La respuesta a la pregunta: puede entrar o no. |
 | `status` | `active`, `inactive`, `not_found` o `ambiguous`. |
 | `reason` | Por qué: `trial`, `sales_goal`, `points` o `none`. Informativo. |
 | `valid_until` | Hasta cuándo vale la respuesta. Con acceso: fin del mes gratis o del mes. Sin acceso: el fin del día, para volver a preguntar. |
 | `message` | Texto listo para mostrar al usuario, en español. |
 | `renew_url` | Dónde recuperar el acceso: `DIET_ACCESS_RENEW_URL`, el área de dietas de la app web. Nulo si no aplica. |
 
-La respuesta no incluye nombre, puntos ni saldos: solo lo que la app de dietas necesita. Los detalles los ve el entrenador en la app web.
-
-**Contrato genérico.** Cualquier otro proyecto que quiera dar acceso a la app de dietas implementa el mismo endpoint, la misma petición y estos mismos campos, con su propio `provider`. El backend de dietas solo necesita la URL y la credencial de cada proveedor.
+La respuesta no incluye nombre, puntos ni saldos. Los detalles los ve el entrenador en la app web.
 
 ## Endpoints de la app web (área del entrenador)
 
@@ -153,11 +143,9 @@ La respuesta no incluye nombre, puntos ni saldos: solo lo que la app de dietas n
 | S-04 | Un mes de acceso cuesta 50.000 puntos. | Confirmado (9 nov 2026) |
 | S-05 | El mes gratis son 30 días desde el primer ingreso, que PremiumFitness registra en la primera consulta. | Confirmado (9 nov 2026) |
 | S-06 | La consulta es por documento, desde la app de dietas desacoplada de este proyecto. | Confirmado (15 nov 2026) |
-| S-07 | La llama el backend de dietas, servidor a servidor, con una credencial de servicio (`DIET_ACCESS_API_KEY`). | Derivado: la credencial no puede vivir en una app instalada |
+| S-07 | La consulta es servidor a servidor, con una credencial de servicio (`DIET_ACCESS_API_KEY`). | Derivado: una credencial no puede vivir en una app instalada |
 | S-08 | El canje se hace en la app web de PremiumFitness, no en la app de dietas. | Derivado |
 | S-09 | Se busca solo por número de documento, sin el tipo. Si dos usuarios comparten el número, no se da acceso. | Derivado |
-| D-01 | El backend de dietas debe guardar el documento del administrador de cada organización, llamar al proveedor al iniciar sesión y al abrir la app, respetar `valid_until` y, si el proveedor no responde, usar la última respuesta hasta su `valid_until`. Hoy pide el documento al crear la organización. | Pendiente: backend de dietas |
-| D-02 | Qué organizaciones del backend de dietas se validan con PremiumFitness (por ejemplo, las de origen `premiumfitness`) y cuáles no. | Pendiente: backend de dietas |
 
 **Diferencia con `docs/requerimientos.md`:** el original habla de «tope de ventas» y del valor de la app en «50,000 mil puntos (primer mes gratis)», que serían 4 Bipro por 49.800. Producto fijó el costo en 50.000 puntos y la meta en puntos.
 
@@ -179,9 +167,8 @@ La respuesta no incluye nombre, puntos ni saldos: solo lo que la app de dietas n
 - [x] Actualizar las reglas 8 y 11, CU-14, CU-15, D-09 y las variables de entorno
 - [x] Corregir el repositorio de la app de dietas: `dietas.nutramerican.com` y su backend `dietas.elitenutapp.com`
 - [~] Conceder el acceso por la puerta de integración del backend de dietas: reemplazado el 15 nov 2026 por la consulta por documento
-- [x] Rediseñar la integración: endpoint por documento, servidor a servidor, con contrato genérico
+- [x] Rediseñar la integración: endpoint por documento, servidor a servidor
 - [x] Quitar la app `diets` de la autenticación y de las push
 - [x] Actualizar el DER, la autenticación, la arquitectura, los estándares, las reglas, los casos de uso, el PRD y las fases
-- [ ] Acordar con el backend de dietas la llamada al proveedor y qué organizaciones se validan (D-01, D-02)
 - [ ] Fijar el valor definitivo de la meta (S-02)
 - [~] Acordar con el equipo de Flutter la integración del login (S-07 anterior): descartado el 15 nov 2026, la app de dietas conserva su propio login
