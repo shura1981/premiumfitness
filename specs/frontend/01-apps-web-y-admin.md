@@ -117,6 +117,9 @@ Plan técnico: [01-apps-web-y-admin.plan.md](01-apps-web-y-admin.plan.md).
 - [x] Esqueletos con brillo que recorre la forma (también en las imágenes que cargan), en lugar del parpadeo
 - [x] Llevar el mismo estilo a Puntos (lotes con barra de remanente y vencimiento), Comisión (avance al cierre y hoja de conversión «comisión → puntos») y Referidos (fichas que eligen la lista y enlace en el color de acento)
 - [x] Mismo estilo en las pantallas compartidas: tienda (franja del descuento, tarjeta con el descuento sobre la foto y botón redondo para agregar), carrito con fotos, pedidos con icono y estado, detalle del pedido y cuenta agrupada (16 nov 2026)
+- [x] Icono de la app: el de Nutramerican en SVG (`public/brand/icono-app.svg`) como favicon y en los iconos de la PWA (normales, maskable e iOS); `npm run pwa-icons` los genera desde el SVG (16 nov 2026)
+- [x] Tienda: el encabezado (título y carrito) queda fijo arriba al desplazarse, con una sombra que aparece al bajar (16 nov 2026)
+- [x] Los estilos que solo usan Inicio, Puntos, Comisión y Ventas van en el CSS de cada pantalla, no en el paquete inicial (497 kB, por debajo del aviso de 500 kB)
 - [ ] Bandeja de notificaciones del entrenador. La campana ya está en el Inicio (arriba a la derecha) y por ahora abre Cuenta → Notificaciones; al tener el módulo solo cambia su destino
 - [ ] Pantalla para canjear el acceso del mes a la app de dietas (`POST /trainer/diet-access/redeem`): Inicio solo muestra el estado
 - [ ] Pruebas unitarias de las pantallas de `features/` (hoy se verifican en el navegador; `core/` y `shared/` sí tienen)
