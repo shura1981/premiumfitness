@@ -28,8 +28,8 @@ Si el catálogo cambia de lugar (otra tabla, SAP o una API), se escribe otro ada
 | `category`, `presentation`, `ruta`, `intro` | `category`, `presentation`, `slug`, `summary` | |
 | `imageswebp` | `images` | JSON separado en tamaños |
 | `grupo` | `group` | Presentaciones del mismo producto |
-| `agotado`, `nuevo` | `isOutOfStock`, `isNew` | |
-| `sap_code`, `sap_name` | `sapCode`, `sapName` | Internos: no salen en la API pública |
+| `agotado`, `nuevo` | `isOutOfStock`, `isNew` | `bit(1)`: se leen como número |
+| `sap_code`, `sap_name` | `sapCode`, `sapName` | Internos: no salen en la API pública. `sap_code = 0` llega como nulo. |
 | `description`, `uso`, `ingredientes`, `invima`, `video`, `tablasjpg` | `content` | Solo en la ficha; HTML limpio con `HtmlSanitizer::richText()` |
 | `descuento`, `old_price`, `promo` | — | No se leen. `promo` solo filtra. |
 
@@ -120,9 +120,10 @@ final readonly class CatalogProduct implements \JsonSerializable
             summary: self::text($row['intro'] ?? null),
             images: ProductImages::fromJson($row['imageswebp'] ?? null),
             group: self::text($row['grupo'] ?? null),
-            isOutOfStock: (bool) $row['agotado'],
-            isNew: (bool) ($row['nuevo'] ?? false),
-            sapCode: isset($row['sap_code']) ? (int) $row['sap_code'] : null,
+            isOutOfStock: (int) $row['agotado'] === 1,
+            isNew: (int) ($row['nuevo'] ?? 0) === 1,
+            // sap_code es NOT NULL: 0 significa que el producto no tiene artículo SAP.
+            sapCode: (int) $row['sap_code'] > 0 ? (int) $row['sap_code'] : null,
             sapName: self::text($row['sap_name'] ?? null),
             content: $withContent ? ProductContent::fromIntranetRow($row) : null,
         );
@@ -178,12 +179,14 @@ use PDO;
 final class IntranetProductCatalog extends AbstractRepository implements ProductCatalog
 {
     // Solo lo que usa la app. `descuento` y `old_price` no se leen nunca.
+    // Las columnas bit(1) llegan como bytes ("\x00" es verdadero en PHP): se leen como número.
     private const string COLUMNS = 'codigo, orden, producto, valor, category, presentation, ruta, intro,
-        imageswebp, grupo, agotado, nuevo, sap_code, sap_name';
+        imageswebp, grupo, agotado + 0 AS agotado, nuevo + 0 AS nuevo, sap_code, sap_name';
     private const string CONTENT_COLUMNS = 'description, uso, ingredientes, invima, video, tablasjpg';
 
-    // Lo que entra a la app: activo y sin promoción. `promo` puede venir NULL.
-    private const string SELLABLE = 'activo = 1 AND COALESCE(promo, 0) = 0';
+    // Lo que entra a la app: activo, sin promoción, con nombre y con precio.
+    // En SQL, `activo = 1` compara el bit como número; un `activo` NULL no entra.
+    private const string SELLABLE = "activo = 1 AND promo = 0 AND valor > 0 AND COALESCE(producto, '') <> ''";
 
     public function __construct(private readonly string $table)
     {
@@ -344,13 +347,14 @@ Los importes son `decimal(12,2)`. La base se redondea a dos decimales y el IVA e
 INTRANET_DB_NAME=crisenri_intranet
 PRODUCT_CATALOG_CACHE_SECONDS=600
 VAT_PERCENTAGE=19
-VAT_EXEMPT_PRODUCT_CODES=<codigo de Nutra C>
+VAT_EXEMPT_PRODUCT_CODES=103040   # Nutra C
 ```
 
 ## Riesgos
 
 | Riesgo | Mitigación |
 | --- | --- |
+| Las columnas `bit(1)` llegan como bytes y `(bool) "\x00"` es verdadero: un producto disponible saldría agotado. | Se leen como número en el SQL (`agotado + 0`) y se compara con `=== 1`. Hay una prueba para cada valor. |
 | La web edita la tabla con SQL armado por concatenación; un dato raro puede llegar a la app. | La app convierte tipos, limpia el HTML y tolera JSON mal formado. Solo lee. |
 | Un cambio de la web (precio, promoción, desactivación) cambia la app de inmediato. | Es lo que se busca: una sola fuente. El checkout vuelve a leer y rechaza lo que ya no se vende. El histórico vive en `orders_items`. |
 | Un producto pasa a `promo = 1` con unidades en un carrito. | `findByCodes` no lo devuelve y el checkout avisa que salió del catálogo. |
@@ -359,7 +363,7 @@ VAT_EXEMPT_PRODUCT_CODES=<codigo de Nutra C>
 
 ## Orden de trabajo
 
-1. Confirmar la estructura en la base y el código de Nutra C.
+1. ~~Confirmar la estructura en la base y el código de Nutra C~~ (hecho el 15 nov 2026: 42 columnas; Nutra C = 103040).
 2. Variables de entorno y su validación en el arranque.
 3. `CatalogProduct`, `ProductImages`, `ProductContent` y sus pruebas unitarias.
 4. `IntranetProductCatalog` con pruebas de integración contra la tabla de pruebas.

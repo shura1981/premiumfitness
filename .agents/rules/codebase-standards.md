@@ -245,7 +245,7 @@ PUSH_EXPIRY_NOTICE_DAYS=7
 INTRANET_DB_NAME=crisenri_intranet
 PRODUCT_CATALOG_CACHE_SECONDS=600
 VAT_PERCENTAGE=19
-VAT_EXEMPT_PRODUCT_CODES=<codigo de Nutra C>
+VAT_EXEMPT_PRODUCT_CODES=103040   # Nutra C
 
 # Acceso a dietas (spec integraciones/02; la meta es provisional y su lógica puede cambiar)
 DIET_ACCESS_POINTS_GOAL=249000

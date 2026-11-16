@@ -60,7 +60,8 @@
 
 - **Catálogo externo:** `crisenri_intranet.tb_productos_megaplexstars`, el maestro de la web, se lee sin migrarla, como `tb_empleados`. Salen del modelo `products`, `categories`, `product_groups`, `product_group_map`, `sap_products` y `product_sap_map` de radical: la tabla de la intranet ya trae `category`, `grupo`, `sap_code` y `sap_name`.
 - **Sin FK al catálogo:** `orders_items.product_sku` y `product_discount_rules.product_sku` guardan el `codigo` de la intranet, sin FK. `orders_items` añade `product_name` y copia al comprar el nombre, el precio y el `sap_code`.
-- **IVA:** ya no hay tasa por producto. Cada línea toma `VAT_PERCENTAGE` (19), salvo los códigos de `VAT_EXEMPT_PRODUCT_CODES` (Nutra C), y guarda tasa, base e IVA.
+- **IVA:** ya no hay tasa por producto. Cada línea toma `VAT_PERCENTAGE` (19), salvo los códigos de `VAT_EXEMPT_PRODUCT_CODES` (Nutra C, código 103040), y guarda tasa, base e IVA.
+- **Tipos:** la tabla externa se dibuja con los tipos reales (`SHOW COLUMNS`, 15 nov 2026).
 
 ## Objetivo
 
@@ -172,7 +173,7 @@ Proponer el modelo de datos del MVP comercial para revisarlo con negocio y tecno
 | S-45 | `users.token_push_notification` de radical se conserva sin usar: los tokens viven en `push_devices`, porque un usuario puede tener varios dispositivos y apps. | Derivado | Spec `integraciones/01`. |
 | S-46 | El acceso a dietas se guarda por mes en `diet_access_periods` (único por entrenador, período y origen). El canje descuenta los puntos con `point_movements` enlazados al período. | Confirmado | Spec `integraciones/02`. |
 | S-30 | No se usan los tramos por cantidad de radical (`products.discount_list`): los descuentos de PremiumFitness dependen del rol y de `product_discount_rules`. Antes decía: se conserva por la integración. | Derivado | Spec `catalogo/01`. |
-| S-47 | El catálogo es `crisenri_intranet.tb_productos_megaplexstars`, externa y de solo lectura. Entran los productos con `activo = 1` y `promo` distinto de 1; no se leen `descuento` ni `old_price`. El nombre es `producto`. La app la lee por la interfaz `ProductCatalog`. | Confirmado (15 nov 2026) | Spec `catalogo/01`. |
+| S-47 | El catálogo es `crisenri_intranet.tb_productos_megaplexstars`, externa y de solo lectura. Entran los productos con `activo = 1` y `promo = 0`; no se leen `descuento` ni `old_price`. Los combos son productos con su propio artículo SAP; si tienen `promo = 1`, no entran. El nombre es `producto`. La app la lee por la interfaz `ProductCatalog`. | Confirmado (15 nov 2026) | Spec `catalogo/01`. |
 | S-48 | `orders_items.product_sku` y `product_discount_rules.product_sku` guardan el `codigo` de la intranet sin FK, porque la tabla vive en otra base. Al comprar, la línea copia `product_name`, `product_full_price` (el `valor`) y `sap_code`. | Derivado | Spec `catalogo/01`; mismo criterio que `tb_empleados` (S-31). |
 
 ## Plan

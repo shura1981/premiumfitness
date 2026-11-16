@@ -406,14 +406,15 @@ PX = OIX + OW + 100
 # Catálogo: tabla externa de la intranet (spec catalogo/01). Reemplaza products, categories,
 # product_groups, product_group_map, sap_products y product_sap_map de radical.
 db.table("ext", "tb_productos_megaplexstars · externa (crisenri_intranet)", "X", PX, Y0, [
-    r("PK", "codigo", "int · = product_sku"), r("", "producto", "varchar · nombre"),
-    r("", "valor", "int · precio con IVA"), r("", "activo", "bit · solo 1"),
-    r("", "promo", "bit NULL · 1 no entra"), r("", "agotado", "bit"),
-    r("", "category / presentation", "varchar"), r("", "grupo", "varchar · presentaciones"),
-    r("", "sap_code", "bigint · artículo SAP"), r("", "sap_name", "varchar NULL"),
-    r("", "orden / ruta / intro / imageswebp", "varchar / json · listado"),
-    r("", "description / uso / invima / tablasjpg", "text / json · ficha"),
-    r("", "descuento / old_price", "int · no se leen")])
+    r("PK", "codigo", "bigint(20) (AI) · = product_sku"), r("", "producto", "varchar(255) NULL · nombre"),
+    r("", "valor", "int(255) NULL · precio con IVA"), r("", "activo", "bit(1) NULL · solo 1"),
+    r("", "promo", "bit(1) · 1 no entra"), r("", "agotado", "bit(1)"),
+    r("", "category / presentation", "varchar(50) / varchar(60)"), r("", "grupo", "varchar(200) · presentaciones"),
+    r("", "sap_code", "bigint(20) · 0 = sin artículo SAP"), r("", "sap_name", "varchar(200) NULL"),
+    r("", "orden / ruta / intro / imageswebp", "int / varchar / text / longtext · listado"),
+    r("", "description / uso / invima / tablasjpg", "text / longtext · ficha"),
+    r("", "descuento / old_price", "int · no se leen"),
+    r("", "… 21 columnas más", "nuevo, ingredientes, video, SEO e imágenes de la web")])
 RCX = db.R("ext") + 110
 db.table("pdr", "product_discount_rules", "N", RCX, Y0, [
     r("PK", "id", "bigint(20) (AI)"), r("", "product_sku", "bigint(20) · codigo (sin FK)"),
@@ -591,14 +592,14 @@ db.note(NX, Y0 + 380, 620, 390,
         "sap_products y product_sap_map): el catálogo es tb_productos_megaplexstars.<br>"
         "• Externas (crisenri_intranet, solo lectura): tb_empleados, por JOIN (orders.agent_id = id_usuario), "
         "y tb_productos_megaplexstars, el maestro de productos de la web, que se lee con la interfaz ProductCatalog "
-        "(activo = 1 y promo distinto de 1; descuento y old_price no se leen).<br><br>"
+        "(activo = 1 y promo = 0; descuento y old_price no se leen).<br><br>"
         "<b>Sin línea</b><br>"
         "• audit_logs.user_id → users.<br>"
         "• commission_settlements.trainer_id → trainers; commission_settlements.paid_by_agent_id → tb_empleados.<br>"
         "• refresh_tokens.agent_id → tb_empleados; refresh_tokens.replaced_by_id → refresh_tokens.<br>"
         "• diet_access_periods.trainer_id → trainers.<br>"
         "• orders_items copia al comprar el codigo (product_sku), producto, valor y sap_code del catálogo, sin FK.<br>"
-        "• IVA por línea: VAT_PERCENTAGE (19) salvo los códigos de VAT_EXEMPT_PRODUCT_CODES (Nutra C, 0); "
+        "• IVA por línea: VAT_PERCENTAGE (19) salvo los códigos de VAT_EXEMPT_PRODUCT_CODES (Nutra C = 103040, 0); "
         "base = pagado / 1,19. No hay tasa en el catálogo.<br>"
         "• orders_items guarda el descuento y la comisión vigentes de cada producto al momento de la compra: "
         "valor por defecto (variable de entorno) o estrategia del producto (product_discount_rules).<br>"
