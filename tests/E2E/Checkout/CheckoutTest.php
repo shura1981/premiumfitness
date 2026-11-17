@@ -59,7 +59,8 @@ it('cobra el flete de la ciudad de la dirección', function (string $city, int $
     'Bogotá, desde 170.000 es gratis'  => ['BOGOTA (CUN)', 170000, 0],
     'Armenia, la bodega más barata'    => ['ARMENIA (QUI)', 2000000, 13500],
     'Palmira, sube al mínimo'          => ['PALMIRA (VAL)', 100000, 9900],
-    'Ocaña, con «?» en cities'         => ['OCA?A (NOR)', 100000, 11400],
+    'Ocaña, con Ñ'                     => ['OCAÑA (NOR)', 100000, 11400],
+    'El Piñón, con Ð en la tarifa'     => ['EL PIÑON (MAG)', 100000, 11400],
 ]);
 
 it('no deja comprar si no hay envío a la ciudad de la dirección', function (string $city, string $name): void {

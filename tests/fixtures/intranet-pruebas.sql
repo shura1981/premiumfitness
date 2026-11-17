@@ -129,5 +129,7 @@ REPLACE INTO `tb_servientrega`
   (4, 'CALI (VAL)', 'VALLE DEL CAUCA', 'N.A.', '6201', 'N.A.', '3315', 'N.A.', 'N.A.', 'N.A.', '1', 'N.A.', '3', 'N.A.', 'N.A.', 'N.A.', '1', 'N.A.', '1', 'N.A.', 'N.A.'),
   -- Tipo 3: 4.900, que sube al mínimo de 9.900.
   (5, 'PALMIRA (VAL)', 'VALLE DEL CAUCA', 'N.A.', 'N.A.', 'N.A.', '3315', 'N.A.', 'N.A.', 'N.A.', 'N.A.', 'N.A.', '3', 'N.A.', 'N.A.', 'N.A.', 'N.A.', 'N.A.', '1', 'N.A.', 'N.A.'),
-  -- En `cities` es «OCA?A (NOR)». Tipo 4: 11.400.
-  (6, 'OCAÑA (NOR)', 'NORTE DE SANTANDER', 'N.A.', 'N.A.', 'N.A.', 'N.A.', '9000', 'N.A.', 'N.A.', 'N.A.', 'N.A.', 'N.A.', '4', 'N.A.', 'N.A.', 'N.A.', 'N.A.', 'N.A.', '2', 'N.A.');
+  -- Tipo 4: 11.400.
+  (6, 'OCAÑA (NOR)', 'NORTE DE SANTANDER', 'N.A.', 'N.A.', 'N.A.', 'N.A.', '9000', 'N.A.', 'N.A.', 'N.A.', 'N.A.', 'N.A.', '4', 'N.A.', 'N.A.', 'N.A.', 'N.A.', 'N.A.', '2', 'N.A.'),
+  -- Mal escrita en la intranet real («Ð» por «Ñ»); en `cities` es «EL PIÑON (MAG)».
+  (7, 'EL PIÐON (MAG)', 'MAGDALENA', 'N.A.', 'N.A.', 'N.A.', '9000', 'N.A.', 'N.A.', 'N.A.', 'N.A.', 'N.A.', '4', 'N.A.', 'N.A.', 'N.A.', 'N.A.', 'N.A.', '3', 'N.A.', 'N.A.');

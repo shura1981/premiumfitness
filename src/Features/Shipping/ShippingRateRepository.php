@@ -36,9 +36,9 @@ final class ShippingRateRepository extends AbstractRepository
     /**
      * Tarifa de la ciudad: la fila de `tb_servientrega` con el mismo nombre (`CALI (VAL)`).
      *
-     * `cities` heredó de radical nombres con «?» donde iba una letra con tilde o una Ñ («PASTO (NAR)»
-     * con «NARI?O», «OCA?A (NOR)»): el «?» vale por cualquier letra. Los espacios dobles no cuentan.
-     * Radical buscaba también por departamento, que no coincide en varias ciudades; el nombre ya lo trae.
+     * Una letra con tilde o una Ñ vale por cualquier letra: la tabla de la intranet tiene algunas mal
+     * escritas («EL PIÐON (MAG)» por «EL PIÑON»). Los espacios dobles no cuentan. Radical buscaba
+     * también por departamento, que no coincide en varias ciudades; el nombre ya lo trae.
      *
      * @return array<string, mixed>|null
      */
@@ -54,11 +54,11 @@ final class ShippingRateRepository extends AbstractRepository
         return $row === false ? null : $row;
     }
 
-    /** `OCA?A  (NOR)` → `OCA_A (NOR)`, con los comodines propios de LIKE escapados. */
+    /** `OCAÑA  (NOR)` → `OCA_A (NOR)`, con los comodines propios de LIKE escapados. */
     private static function pattern(string $cityDept): string
     {
-        $text = (string) preg_replace('/\s+/', ' ', trim($cityDept));
+        $text = strtr((string) preg_replace('/\s+/', ' ', trim($cityDept)), ['\\' => '\\\\', '%' => '\\%', '_' => '\\_']);
 
-        return strtr($text, ['\\' => '\\\\', '%' => '\\%', '_' => '\\_', '?' => '_']);
+        return (string) preg_replace('/[^\x00-\x7F]/u', '_', $text);
     }
 }
