@@ -159,6 +159,7 @@ interface OrderDetail extends OrderSummary {
 
 - El pago con Bold usa el botón de Bold en la app (`bold`), con los datos firmados por el backend. Con Addi y Sistecrédito, la app abre `redirect_url`, la página de pago de la pasarela, que el backend pidió con el pedido guardado. Al volver, la app abre `/pago/resultado?pedido=<id>` y consulta `GET /orders/:id` hasta que el estado deje de ser `pendiente`.
 - El pedido se aprueba por el webhook de la pasarela, nunca por la app.
+- `bold.order_id` es el id del intento de pago (`pf-<consecutivo>`), no el número del pedido: cada «Pagar» (`POST /checkout` o `POST /orders/:id/pay`) crea un intento nuevo (spec `backend/03`, P-24). El número del pedido es `order_id` y la vuelta usa `?pedido=<order_id>`.
 - `payment_gateway` admite `bold`, `addi` y `sistecredito` (spec `backend/03`, P-02). Si la pasarela no entrega su página de pago, responde 502 `payment_unavailable` y el pedido queda pendiente para pagarlo desde el detalle.
 - `total` incluye el IVA y el envío; `tax_amount` es informativo («incluye $X de IVA»).
 - En un canje, `total` es 0, `redemption_points` es el total de puntos y `items[].redemption_points` es el de la línea completa (precio × cantidad). Su línea de tiempo empieza en «Canje confirmado», sin pasos de pago. Los importes en dinero de un canje son informativos (el precio completo): la app muestra los puntos.

@@ -17,8 +17,9 @@ use Throwable;
  *
  * Consulta órdenes `payment_gateway = 'bold'` creadas en la fecha dada cuyo
  * estado sea `PENDIENTE%`, `INICIADA`, `ENVIADO` o `NULL`, consulta el respaldo
- * del webhook de Bold por `order_id` (`is_external_reference=true`) y despacha
- * cada evento encontrado mediante `PaymentEventDispatcher`.
+ * del webhook de Bold por las referencias de sus intentos de pago (`pf-<id>`,
+ * `is_external_reference=true`) y despacha el evento encontrado mediante
+ * `PaymentEventDispatcher`.
  */
 final class BoldPendingCronService extends AbstractRepository
 {

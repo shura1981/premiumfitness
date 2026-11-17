@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Features\PaymentGateway\Gateways\Bold;
 
 use App\Features\PaymentGateway\Events\PaymentEventDispatcher;
+use App\Features\PaymentGateway\PaymentAttemptRepository;
 use App\Infrastructure\Http\CurlHttpClient;
 use App\Shared\Exceptions\HttpRequestException;
 use InvalidArgumentException;
@@ -15,7 +16,8 @@ use RuntimeException;
  * real de un pago cuando el webhook no llegó a tiempo.
  *
  * Permite consultar por:
- *   - Referencia externa (`order_id` local) → `?is_external_reference=true`
+ *   - Referencia externa: la del intento de pago (`pf-<id>`) → `?is_external_reference=true`.
+ *     Un pedido se concilia consultando las referencias de sus intentos (spec backend/03, P-24).
  *   - ID de pago Bold (`payment_id`)
  *
  * Selección de evento cuando existen múltiples notificaciones/intentos:
@@ -32,6 +34,7 @@ final readonly class BoldReconciliationService
         private string $identityKey,
         private string $notificationsUrl,
         private int $timeoutSeconds,
+        private PaymentAttemptRepository $attempts,
     ) {}
 
     public static function fromEnv(?CurlHttpClient $http = null): self
@@ -41,6 +44,7 @@ final readonly class BoldReconciliationService
             identityKey:      trim((string) $_ENV['BOLD_IDENTITY_KEY']),
             notificationsUrl: rtrim(trim((string) $_ENV['BOLD_URL_NOTIFICATIONS']), '/'),
             timeoutSeconds:   max(5, (int) $_ENV['PAYMENT_GATEWAY_TIMEOUT_SECONDS']),
+            attempts:         new PaymentAttemptRepository(),
         );
     }
 
@@ -54,7 +58,8 @@ final readonly class BoldReconciliationService
         }
 
         $trimmed = trim($queryValue);
-        $pattern = $isExternalReference ? '/^[1-9][0-9]*$/' : '/^[A-Za-z0-9_-]{6,64}$/';
+        // La referencia sigue la regla de Bold: letras, números, `-` y `_`, hasta 60 caracteres.
+        $pattern = $isExternalReference ? '/^[A-Za-z0-9_-]{1,60}$/' : '/^[A-Za-z0-9_-]{6,64}$/';
 
         if (preg_match($pattern, $trimmed) !== 1) {
             throw new InvalidArgumentException('Invalid Bold reconciliation query parameter.');
@@ -93,6 +98,33 @@ final readonly class BoldReconciliationService
     }
 
     /**
+     * Notificación relevante de un pedido entre las de todos sus intentos de pago: la aprobada si
+     * alguno se aprobó; si no, la del intento más reciente que tenga respuesta.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function fetchForOrder(int $orderId): ?array
+    {
+        $latest = null;
+
+        foreach ($this->attempts->referencesFor($orderId) as $reference) {
+            $notification = $this->fetchNotification($reference, true);
+
+            if ($notification === null) {
+                continue;
+            }
+
+            if (($notification['type'] ?? null) === 'SALE_APPROVED') {
+                return $notification;
+            }
+
+            $latest ??= $notification;
+        }
+
+        return $latest;
+    }
+
+    /**
      * Concilia el pago en local despachando el evento seleccionado a través de
      * `PaymentEventDispatcher`.
      *
@@ -104,12 +136,10 @@ final readonly class BoldReconciliationService
         ?string $paymentId = null,
     ): array {
         $normalizedPaymentId = $paymentId !== null ? trim($paymentId) : '';
-        $isExternalReference = ($normalizedPaymentId === '');
-        $queryValue = $isExternalReference
-            ? (string) ($orderId ?? '')
-            : $normalizedPaymentId;
 
-        $notification = $this->fetchNotification($queryValue, $isExternalReference);
+        $notification = $normalizedPaymentId !== ''
+            ? $this->fetchNotification($normalizedPaymentId, false)
+            : $this->fetchForOrder($orderId ?? 0);
 
         if ($notification === null || !is_array($notification['data'] ?? null)) {
             return [

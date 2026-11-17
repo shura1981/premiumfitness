@@ -2,7 +2,8 @@
 
 ### Prerrequisitos
 ### Estos endpoints son PÚBLICOS (sin JWT). Solo rate limit 60/min.
-@orderId = 1
+# Referencia del intento de pago (payment_attempts): pf-<id>. Ver spec backend/03, P-24.
+@reference = pf-1
 @amount = 120000
 
 ### --------------------------------------------------------------------------
@@ -16,7 +17,7 @@ POST {{baseUrl}}/api/payment-gateway/webhook/addi
 Content-Type: application/json
 
 {
-  "orderId": {{orderId}},
+  "orderId": "{{reference}}",
   "applicationId": "ADDI-APP-100001",
   "status": "APPROVED",
   "approvedAmount": {{amount}}
@@ -27,7 +28,7 @@ POST {{baseUrl}}/api/payment-gateway/webhook/addi
 Content-Type: application/json
 
 {
-  "orderId": {{orderId}},
+  "orderId": "{{reference}}",
   "applicationId": "ADDI-APP-100002",
   "status": "REJECTED",
   "approvedAmount": 0
@@ -38,7 +39,7 @@ POST {{baseUrl}}/api/payment-gateway/webhook/addi
 Content-Type: application/json
 
 {
-  "orderId": {{orderId}},
+  "orderId": "{{reference}}",
   "applicationId": "ADDI-APP-100003",
   "status": "PENDING",
   "approvedAmount": 0
@@ -49,7 +50,7 @@ POST {{baseUrl}}/api/payment-gateway/webhook/addi
 Content-Type: application/json
 
 {
-  "orderId": {{orderId}},
+  "orderId": "{{reference}}",
   "applicationId": "ADDI-APP-100004",
   "status": "ABANDONED",
   "approvedAmount": 0
@@ -70,7 +71,7 @@ POST {{baseUrl}}/api/payment-gateway/webhook/addi
 Content-Type: application/json
 
 {
-  "orderId": {{orderId}},
+  "orderId": "{{reference}}",
   "applicationId": "ADDI-APP-XXXXX",
   "approvedAmount": {{amount}}
 }
@@ -88,7 +89,7 @@ POST {{baseUrl}}/api/payment-gateway/webhook/sistecredito
 Content-Type: application/json
 
 {
-  "Invoice": "{{orderId}}",
+  "Invoice": "{{reference}}",
   "Value": {{amount}},
   "Currency": "COP",
   "PaymentMethodResponse": {
@@ -102,7 +103,7 @@ POST {{baseUrl}}/api/payment-gateway/webhook/sistecredito
 Content-Type: application/json
 
 {
-  "Invoice": "{{orderId}}",
+  "Invoice": "{{reference}}",
   "Value": {{amount}},
   "Currency": "COP",
   "PaymentMethodResponse": {
@@ -116,7 +117,7 @@ POST {{baseUrl}}/api/payment-gateway/webhook/sistecredito
 Content-Type: application/json
 
 {
-  "Invoice": "{{orderId}}",
+  "Invoice": "{{reference}}",
   "Value": {{amount}},
   "Currency": "COP",
   "PaymentMethodResponse": {
@@ -130,7 +131,7 @@ POST {{baseUrl}}/api/payment-gateway/webhook/sistecredito
 Content-Type: application/json
 
 {
-  "Invoice": "{{orderId}}",
+  "Invoice": "{{reference}}",
   "Value": {{amount}},
   "Currency": "COP",
   "PaymentMethodResponse": {}
@@ -175,7 +176,7 @@ x-bold-signature: REEMPLAZAR_CON_HMAC_SHA256_BASE64_BODY
       "currency": "COP"
     },
     "metadata": {
-      "reference": "{{orderId}}"
+      "reference": "{{reference}}"
     }
   }
 }
@@ -194,7 +195,7 @@ x-bold-signature: REEMPLAZAR_CON_HMAC_SHA256_BASE64_BODY
       "currency": "COP"
     },
     "metadata": {
-      "reference": "{{orderId}}"
+      "reference": "{{reference}}"
     }
   }
 }
@@ -213,7 +214,7 @@ x-bold-signature: REEMPLAZAR_CON_HMAC_SHA256_BASE64_BODY
       "currency": "COP"
     },
     "metadata": {
-      "reference": "{{orderId}}"
+      "reference": "{{reference}}"
     }
   }
 }
@@ -232,7 +233,7 @@ x-bold-signature: firma_invalida_para_verificar_rechazo
       "currency": "COP"
     },
     "metadata": {
-      "reference": "{{orderId}}"
+      "reference": "{{reference}}"
     }
   }
 }

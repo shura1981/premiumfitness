@@ -3,18 +3,20 @@
 declare(strict_types=1);
 
 use App\Features\PaymentGateway\Gateways\Addi\AddiWebhookProcessor;
+use App\Features\PaymentGateway\ForeignPaymentReferenceException;
 use App\Features\PaymentGateway\Normalizer\PaymentStatus;
+use Tests\Support\FakePaymentReferences;
 
 it('processes an APPROVED Addi payload into a canonical PaymentResult', function (): void {
     $payload = [
-        'orderId'        => '653449',
+        'orderId'        => 'pf-653449',
         'applicationId'  => 'app-addi-xyz-123',
         'status'         => 'APPROVED',
         'approvedAmount' => 255000,
         'currency'       => 'COP',
     ];
 
-    $result = (new AddiWebhookProcessor())->process($payload);
+    $result = (new AddiWebhookProcessor(references: new FakePaymentReferences()))->process($payload);
 
     expect($result->gateway)->toBe('addi')
         ->and($result->orderId)->toBe(653449)
@@ -26,11 +28,17 @@ it('processes an APPROVED Addi payload into a canonical PaymentResult', function
 });
 
 it('throws when orderId is missing', function (): void {
-    expect(fn () => (new AddiWebhookProcessor())->process(['status' => 'APPROVED']))
+    expect(fn () => (new AddiWebhookProcessor(references: new FakePaymentReferences()))->process(['status' => 'APPROVED']))
         ->toThrow(RuntimeException::class);
 });
 
 it('throws when status is missing', function (): void {
-    expect(fn () => (new AddiWebhookProcessor())->process(['orderId' => 1]))
+    expect(fn () => (new AddiWebhookProcessor(references: new FakePaymentReferences()))->process(['orderId' => 1]))
         ->toThrow(RuntimeException::class);
+});
+
+it('marca como ajena una referencia que no es pf-<id>', function (): void {
+    expect(fn () => (new AddiWebhookProcessor(references: new FakePaymentReferences()))->process([
+        'orderId' => '863', 'applicationId' => 'app-1', 'status' => 'APPROVED', 'approvedAmount' => 1000,
+    ]))->toThrow(ForeignPaymentReferenceException::class);
 });

@@ -7,7 +7,7 @@ namespace App\Features\Checkout;
 use App\Features\PaymentGateway\Gateways\Addi\AddiCheckoutService;
 use App\Features\PaymentGateway\Gateways\Bold\BoldCheckoutService;
 use App\Features\PaymentGateway\Gateways\Sistecredito\SistecreditoCheckoutService;
-use App\Features\PaymentGateway\Logging\PaymentGatewayLogService;
+use App\Features\PaymentGateway\PaymentAttemptRepository;
 use App\Infrastructure\Config\BusinessConfig;
 use App\Infrastructure\Database\DB;
 use App\Shared\Exceptions\ApiException;
@@ -21,7 +21,9 @@ use Throwable;
  * - Bold: los datos del botón, con la firma de integridad.
  * - Addi y Sistecrédito: la URL de su página de pago, que la app abre.
  *
- * En todas, el pedido lo aprueba el webhook de la pasarela, nunca la vuelta del usuario.
+ * Cada llamada es un intento de pago con su propio id, `pf-<consecutivo>` (spec backend/03, P-24):
+ * es la referencia que recibe la pasarela y con la que su webhook encuentra el pedido. En todas, el
+ * pedido lo aprueba el webhook, nunca la vuelta del usuario.
  */
 final class GatewayPayment
 {
@@ -35,12 +37,10 @@ final class GatewayPayment
 
     private const array NAMES = ['bold' => 'Bold', 'addi' => 'Addi', 'sistecredito' => 'Sistecrédito'];
 
-    private readonly PaymentGatewayLogService $logs;
-
-    public function __construct(private readonly BusinessConfig $business, ?PaymentGatewayLogService $logs = null)
-    {
-        $this->logs = $logs ?? PaymentGatewayLogService::default();
-    }
+    public function __construct(
+        private readonly BusinessConfig $business,
+        private readonly PaymentAttemptRepository $attempts = new PaymentAttemptRepository(),
+    ) {}
 
     /**
      * @param string $returnUrl A donde vuelve el usuario después de pagar (`/pago/resultado?pedido=`).
@@ -49,28 +49,25 @@ final class GatewayPayment
      */
     public function start(int $orderId, string $returnUrl): array
     {
-        $order   = $this->order($orderId);
-        $gateway = (string) $order['payment_gateway'];
+        $order     = $this->order($orderId);
+        $gateway   = (string) $order['payment_gateway'];
+        $reference = $this->attempts->create($orderId, $gateway, (float) $order['amount']);
 
         if ($gateway === 'bold') {
-            return $this->bold($order, $returnUrl);
+            return $this->bold($order, $reference, $returnUrl);
         }
-
-        $startedAt = microtime(true);
 
         try {
             $url = match ($gateway) {
                 'addi'         => AddiCheckoutService::fromEnv()->obtainRedirectUrl(
-                    $this->addiPayload($order, $this->items($orderId), $returnUrl)
+                    $this->addiPayload($order, $reference, $this->items($orderId), $returnUrl)
                 ),
                 'sistecredito' => SistecreditoCheckoutService::fromEnv()->createOrder(
-                    self::sistecreditoPayload($order, $returnUrl)
+                    self::sistecreditoPayload($order, $reference, $returnUrl)
                 )['paymentRedirectUrl'],
                 default        => throw new \LogicException("Pasarela no soportada: {$gateway}"),
             };
-        } catch (Throwable $e) {
-            $this->logs->consumeFailed($gateway, 'checkout', $orderId, $e, (microtime(true) - $startedAt) * 1000);
-
+        } catch (Throwable) {
             $name = self::NAMES[$gateway] ?? $gateway;
             throw new ApiException(
                 502,
@@ -87,10 +84,11 @@ final class GatewayPayment
      * documentación; la URL del webhook la pone `AddiCheckoutService`.
      *
      * @param array<string, mixed>       $order
+     * @param string                     $reference Id del intento de pago (`pf-<id>`).
      * @param list<array<string, mixed>> $items
      * @return array<string, mixed>
      */
-    public function addiPayload(array $order, array $items, string $returnUrl): array
+    public function addiPayload(array $order, string $reference, array $items, string $returnUrl): array
     {
         [$firstName, $lastName] = self::splitName((string) $order['full_name']);
         $address = [
@@ -100,7 +98,7 @@ final class GatewayPayment
         ];
 
         return [
-            'orderId'             => (string) $order['order_id'],
+            'orderId'             => $reference,
             'totalAmount'         => self::decimal((float) $order['amount']),
             'shippingAmount'      => self::decimal((float) $order['shipping_amount']),
             'totalTaxesAmount'    => self::decimal((float) $order['tax_amount']),
@@ -141,12 +139,13 @@ final class GatewayPayment
      * Datos de la orden de Sistecrédito (Credinet); el resto del cuerpo lo pone su servicio.
      *
      * @param array<string, mixed> $order
+     * @param string               $reference Id del intento de pago (`pf-<id>`).
      * @return array{invoice: string, description: string, value: int, docType: string, document: string, urlResponse: string}
      */
-    public static function sistecreditoPayload(array $order, string $returnUrl): array
+    public static function sistecreditoPayload(array $order, string $reference, string $returnUrl): array
     {
         return [
-            'invoice'     => (string) $order['order_id'],
+            'invoice'     => $reference,
             'description' => 'Pedido ' . self::BRAND . ' #' . $order['order_id'],
             'value'       => (int) round((float) $order['amount']),
             'docType'     => self::documentType($order),
@@ -162,11 +161,11 @@ final class GatewayPayment
      * @param array<string, mixed> $order
      * @return array<string, mixed>
      */
-    private function bold(array $order, string $returnUrl): array
+    private function bold(array $order, string $reference, string $returnUrl): array
     {
         $orderId = (int) $order['order_id'];
         $config  = BoldCheckoutService::fromEnv()->buildCheckoutConfig([
-            'order_id'        => (string) $orderId,
+            'order_id'        => $reference,
             'amount'          => (int) round((float) $order['amount']),
             'currency'        => self::CURRENCY,
             'description'     => 'Pedido ' . self::BRAND . " #{$orderId}",

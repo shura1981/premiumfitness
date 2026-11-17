@@ -58,7 +58,7 @@ final class Shop
      *
      * @return array<string, mixed> Cuerpo de la respuesta del webhook.
      */
-    public static function boldWebhook(int $orderId, float $amount, ?string $paymentId = null, string $type = 'SALE_APPROVED', bool $validSignature = true): array
+    public static function boldWebhook(int $orderId, float $amount, ?string $paymentId = null, string $type = 'SALE_APPROVED', bool $validSignature = true, ?string $reference = null): array
     {
         $raw = json_encode([
             'id'   => 'evt-' . bin2hex(random_bytes(6)),
@@ -66,7 +66,7 @@ final class Shop
             'data' => [
                 'payment_id' => $paymentId ?? 'PAY-' . bin2hex(random_bytes(8)),
                 'amount'     => ['total' => $amount, 'currency' => 'COP'],
-                'metadata'   => ['reference' => (string) $orderId],
+                'metadata'   => ['reference' => $reference ?? self::reference($orderId)],
             ],
         ], JSON_THROW_ON_ERROR);
 
@@ -84,11 +84,12 @@ final class Shop
      *
      * @return array<string, mixed> Cuerpo de la respuesta del webhook.
      */
-    public static function gatewayWebhook(string $gateway, int $orderId, float $amount, string $status): array
+    public static function gatewayWebhook(string $gateway, int $orderId, float $amount, string $status, ?string $reference = null): array
     {
+        $reference ??= self::reference($orderId);
         $payload = $gateway === 'addi'
-            ? ['orderId' => (string) $orderId, 'applicationId' => 'APP-' . bin2hex(random_bytes(6)), 'status' => $status, 'approvedAmount' => $amount]
-            : ['Invoice' => (string) $orderId, 'Value' => $amount, 'Currency' => 'COP',
+            ? ['orderId' => $reference, 'applicationId' => 'APP-' . bin2hex(random_bytes(6)), 'status' => $status, 'approvedAmount' => $amount]
+            : ['Invoice' => $reference, 'Value' => $amount, 'Currency' => 'COP',
                'PaymentMethodResponse' => ['TransactionId' => 'SC-' . bin2hex(random_bytes(6)), 'StatusResponse' => $status]];
 
         $request = (new ServerRequestFactory())
@@ -106,6 +107,20 @@ final class Shop
         $stmt->execute([$orderId]);
 
         return self::boldWebhook($orderId, (float) $stmt->fetchColumn());
+    }
+
+    /** Referencia del último intento de pago del pedido (`pf-<id>`), la que recibe la pasarela. */
+    public static function reference(int $orderId): string
+    {
+        $stmt = Seed::pdo()->prepare('SELECT MAX(id) FROM payment_attempts WHERE order_id = ?');
+        $stmt->execute([$orderId]);
+        $id = $stmt->fetchColumn();
+
+        if ($id === null || $id === false) {
+            throw new \RuntimeException("El pedido {$orderId} no tiene intentos de pago.");
+        }
+
+        return 'pf-' . $id;
     }
 
     /** @return array<string, mixed> */

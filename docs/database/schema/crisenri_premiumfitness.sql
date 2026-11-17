@@ -2852,6 +2852,20 @@ COMMIT;
 SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `payment_attempts` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT 'consecutivo del id de pago: pf-<id>',
+  `order_id` bigint(20) NOT NULL,
+  `gateway` enum('addi','sistecredito','bold') NOT NULL,
+  `amount` decimal(12,2) NOT NULL COMMENT 'valor enviado a la pasarela',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `ix_payment_attempts_order` (`order_id`),
+  CONSTRAINT `fk_payment_attempts_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='intentos de pago: cada «Pagar» es uno, con su propio id';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `payment_event_jobs` (
   `job_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `order_id` bigint(20) NOT NULL,

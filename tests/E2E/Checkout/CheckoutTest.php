@@ -181,11 +181,12 @@ it('firma el pago en el servidor con el valor del pedido', function (): void {
     $amount   = (int) $_ENV['SHIPPING_FREE_THRESHOLD'] + 1000;
 
     expect($body['payment']['gateway'])->toBe('bold')
-        ->and($bold['order_id'])->toBe((string) $body['order_id'])
+        // El id de pago es el del intento (`pf-<id>`), no el número del pedido (P-24).
+        ->and($bold['order_id'])->toBe(Shop::reference($body['order_id']))
         ->and($bold['amount'])->toBe($amount)
         ->and($bold['currency'])->toBe('COP')
-        // Firma de integridad de Bold: sha256(pedido + valor + moneda + secreto).
-        ->and($bold['integrity_signature'])->toBe(hash('sha256', $body['order_id'] . $amount . 'COP' . trim($_ENV['BOLD_SECRET_KEY'])))
+        // Firma de integridad de Bold: sha256(id de pago + valor + moneda + secreto).
+        ->and($bold['integrity_signature'])->toBe(hash('sha256', $bold['order_id'] . $amount . 'COP' . trim($_ENV['BOLD_SECRET_KEY'])))
         ->and($bold['redirection_url'])->toStartWith(rtrim($_ENV['WEB_APP_URL'], '/') . '/pago/resultado?pedido=' . $body['order_id'])
         ->and($bold['description'])->toContain('PremiumFitness')
         // A la app solo viaja la llave pública (`api_key`), nunca el secreto.
@@ -235,6 +236,51 @@ it('solo ofrece las pasarelas habilitadas', function (): void {
 
     expect(array_column($body['data'], 'id'))->toBe(['bold', 'addi', 'sistecredito']);
 });
+
+// ── Id de pago por intento (P-24) ─────────────────────────────────────────
+
+it('cada «Pagar» es un intento con su propio id de pago, consecutivo y con el prefijo pf-', function (): void {
+    $user    = Seed::user();
+    $code    = Seed::catalogProduct(['valor' => 100000]);
+    $first   = AppFactory::json(Shop::checkout($user, [['code' => $code, 'quantity' => 1]]));
+    $orderId = $first['order_id'];
+    $retry   = AppFactory::json(AppFactory::dispatch(AppFactory::request('POST', "/api/orders/{$orderId}/pay", [], JwtFactory::authHeader($user))));
+
+    $firstRef = $first['payment']['bold']['order_id'];
+    $retryRef = $retry['payment']['bold']['order_id'];
+
+    expect($firstRef)->toMatch('/^pf-[1-9][0-9]*$/')
+        ->and($retryRef)->toMatch('/^pf-[1-9][0-9]*$/')
+        ->and((int) substr($retryRef, 3))->toBeGreaterThan((int) substr($firstRef, 3))
+        // Es el mismo pedido: volver a pagar no crea otro.
+        ->and($retry['order_id'])->toBe($orderId)
+        ->and(Shop::rows('SELECT gateway, amount FROM payment_attempts WHERE order_id = ? ORDER BY id', [$orderId]))->toBe([
+            ['gateway' => 'bold', 'amount' => Shop::orderRow($orderId)['amount']],
+            ['gateway' => 'bold', 'amount' => Shop::orderRow($orderId)['amount']],
+        ]);
+});
+
+it('el aviso del intento anterior también aprueba el pedido', function (): void {
+    $user    = Seed::user();
+    $orderId = Shop::order($user, [['code' => Seed::catalogProduct(['valor' => 100000]), 'quantity' => 1]]);
+    $firstRef = Shop::reference($orderId);
+    AppFactory::dispatch(AppFactory::request('POST', "/api/orders/{$orderId}/pay", [], JwtFactory::authHeader($user)));
+
+    $result = Shop::boldWebhook($orderId, (float) Shop::orderRow($orderId)['amount'], reference: $firstRef);
+
+    expect($result)->toMatchArray(['processed' => true, 'order_id' => $orderId, 'status' => 'APROBADA']);
+});
+
+it('ignora el aviso de Bold de un pago ajeno, como los del sitio web que comparte la cuenta', function (string $reference): void {
+    $orderId = Shop::order(Seed::user(), [['code' => Seed::catalogProduct(['valor' => 100000]), 'quantity' => 1]]);
+    $amount  = (float) Shop::orderRow($orderId)['amount'];
+
+    // Una referencia numérica igual al número del pedido no lo toca.
+    $result = Shop::boldWebhook($orderId, $amount, reference: $reference === 'pedido' ? (string) $orderId : $reference);
+
+    expect($result)->toBe(['ok' => true, 'processed' => false, 'reason' => 'foreign_reference'])
+        ->and(Shop::orderRow($orderId)['approved_at'])->toBeNull();
+})->with(['pedido', 'pf-999999999']);
 
 // ── Pedidos del usuario ───────────────────────────────────────────────────
 

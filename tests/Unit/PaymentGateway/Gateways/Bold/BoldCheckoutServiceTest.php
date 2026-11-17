@@ -61,10 +61,12 @@ it('builds BoldCheckout options with JSON-encoded customerData and billingAddres
         ]);
 });
 
-it('rejects non-positive orderId or amount when generating integrity hash', function (): void {
+it('acepta la referencia con la regla de Bold y rechaza otra, o un valor no positivo', function (): void {
     $service = new BoldCheckoutService('PUB', 'SEC', 'https://example.com/response/bold');
 
-    expect(fn () => $service->generateIntegrityHash(0, 10000))->toThrow(InvalidArgumentException::class)
-        ->and(fn () => $service->generateIntegrityHash(10, 0))->toThrow(InvalidArgumentException::class);
+    expect($service->generateIntegrityHash('pf-12', 10000))->toBe(hash('sha256', 'pf-1210000COPSEC'))
+        ->and(fn () => $service->generateIntegrityHash('pf 12', 10000))->toThrow(InvalidArgumentException::class)
+        ->and(fn () => $service->generateIntegrityHash(str_repeat('a', 61), 10000))->toThrow(InvalidArgumentException::class)
+        ->and(fn () => $service->generateIntegrityHash('pf-12', 0))->toThrow(InvalidArgumentException::class);
 });
 

@@ -9,11 +9,14 @@ declare(strict_types=1);
  *
  *   php scripts/dev-pagar-pedido.php <id del pedido> [valor pagado]
  *
- * Sin el valor, paga exactamente lo que vale el pedido. Se niega a correr fuera de local.
+ * Sin el valor, paga exactamente lo que vale el pedido. El aviso lleva la referencia del último
+ * intento de pago del pedido (`pf-<id>`, spec backend/03, P-24); si no tiene ninguno, crea uno.
+ * Se niega a correr fuera de local.
  */
 
 require __DIR__ . '/../load/bootstrap.php';
 
+use App\Features\PaymentGateway\PaymentAttemptRepository;
 use App\Infrastructure\Database\DatabaseConfig;
 use App\Infrastructure\Database\DB;
 use App\Infrastructure\Http\CurlHttpClient;
@@ -40,13 +43,16 @@ if ($amount === false) {
     exit(1);
 }
 
+$attempts  = new PaymentAttemptRepository();
+$reference = $attempts->referencesFor($orderId)[0] ?? $attempts->create($orderId, 'bold', (float) $amount);
+
 $body = json_encode([
     'id'   => 'evt-local-' . bin2hex(random_bytes(6)),
     'type' => 'SALE_APPROVED',
     'data' => [
         'payment_id' => 'LOCAL-' . bin2hex(random_bytes(8)),
         'amount'     => ['total' => (float) ($argv[2] ?? $amount), 'currency' => 'COP'],
-        'metadata'   => ['reference' => (string) $orderId],
+        'metadata'   => ['reference' => $reference],
     ],
 ], JSON_THROW_ON_ERROR);
 

@@ -45,6 +45,12 @@ class PaymentGatewayController
     private const string TEMPLATES_PATH = __DIR__ . '/../../../views/payment-response';
     private const string PAYMENT_METHOD_BOLD = 'bold';
 
+    /**
+     * Aviso de un pago que no es de PremiumFitness (por ejemplo, del sitio web de Nutramerican, que
+     * comparte la cuenta de Bold): se responde 200 sin tocar nada, para que la pasarela no reintente.
+     */
+    private const array FOREIGN_REFERENCE = ['ok' => true, 'processed' => false, 'reason' => 'foreign_reference'];
+
     public function __construct(
         private ?PaymentEventDispatcher $dispatcher = null,
     ) {}
@@ -61,6 +67,8 @@ class PaymentGatewayController
             $outcome = $this->getDispatcher()->dispatch($result);
 
             return $this->json($response, ['ok' => true] + $outcome);
+        } catch (ForeignPaymentReferenceException) {
+            return $this->json($response, self::FOREIGN_REFERENCE);
         } catch (Throwable $e) {
             return $this->json($response, ['ok' => false, 'error' => $e->getMessage()]);
         }
@@ -74,6 +82,8 @@ class PaymentGatewayController
             $outcome = $this->getDispatcher()->dispatch($result);
 
             return $this->json($response, ['ok' => true] + $outcome);
+        } catch (ForeignPaymentReferenceException) {
+            return $this->json($response, self::FOREIGN_REFERENCE);
         } catch (Throwable $e) {
             return $this->json($response, ['ok' => false, 'error' => $e->getMessage()]);
         }
@@ -108,6 +118,8 @@ class PaymentGatewayController
             $outcome = $this->getDispatcher()->dispatch($result);
 
             return $this->json($response, ['ok' => true] + $outcome);
+        } catch (ForeignPaymentReferenceException) {
+            return $this->json($response, self::FOREIGN_REFERENCE);
         } catch (Throwable $e) {
             return $this->json($response, ['ok' => false, 'error' => $e->getMessage()]);
         }
@@ -150,15 +162,11 @@ class PaymentGatewayController
             $paymentId = isset($query['payment_id']) && is_string($query['payment_id'])
                 ? trim($query['payment_id'])
                 : '';
-            $isExternalReference = ($paymentId === '');
-            $queryValue = $isExternalReference
-                ? (string) ($query['order_id'] ?? '')
-                : $paymentId;
-
-            $notification = BoldReconciliationService::fromEnv()->fetchNotification(
-                $queryValue,
-                $isExternalReference,
-            );
+            $bold = BoldReconciliationService::fromEnv();
+            // Por pedido se consultan las referencias de sus intentos de pago (`pf-<id>`).
+            $notification = $paymentId !== ''
+                ? $bold->fetchNotification($paymentId, false)
+                : $bold->fetchForOrder((int) ($query['order_id'] ?? 0));
 
             if ($notification === null) {
                 return $this->jsonError($response, 'Bold notification not found', 404);

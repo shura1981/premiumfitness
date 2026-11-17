@@ -50,8 +50,9 @@ final readonly class BoldCheckoutService
         $normalizedAmount  = trim((string) $amount);
         $normalizedCurrency = strtoupper(trim($currency));
 
-        if (preg_match('/^[1-9][0-9]*$/', $normalizedOrderId) !== 1) {
-            throw new InvalidArgumentException('Bold orderId must be a positive integer.');
+        // Regla de Bold para la referencia: letras, números, `-` y `_`, hasta 60 caracteres.
+        if (preg_match('/^[A-Za-z0-9_-]{1,60}$/', $normalizedOrderId) !== 1) {
+            throw new InvalidArgumentException('Bold orderId must be 1-60 letters, digits, "-" or "_".');
         }
 
         if (preg_match('/^[1-9][0-9]*$/', $normalizedAmount) !== 1) {

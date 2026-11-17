@@ -3,11 +3,13 @@
 declare(strict_types=1);
 
 use App\Features\PaymentGateway\Gateways\Sistecredito\SistecreditoWebhookProcessor;
+use App\Features\PaymentGateway\ForeignPaymentReferenceException;
 use App\Features\PaymentGateway\Normalizer\PaymentStatus;
+use Tests\Support\FakePaymentReferences;
 
 it('processes an Approved Sistecredito payload (PascalCase)', function (): void {
     $payload = [
-        'Invoice'  => '1112',
+        'Invoice'  => 'pf-1112',
         'Value'    => 128642,
         'Currency' => 'COP',
         'PaymentMethodResponse' => [
@@ -16,7 +18,7 @@ it('processes an Approved Sistecredito payload (PascalCase)', function (): void 
         ],
     ];
 
-    $result = (new SistecreditoWebhookProcessor())->process($payload);
+    $result = (new SistecreditoWebhookProcessor(references: new FakePaymentReferences()))->process($payload);
 
     expect($result->gateway)->toBe('sistecredito')
         ->and($result->orderId)->toBe(1112)
@@ -28,14 +30,21 @@ it('processes an Approved Sistecredito payload (PascalCase)', function (): void 
 });
 
 it('throws when Invoice is missing', function (): void {
-    expect(fn () => (new SistecreditoWebhookProcessor())->process([
+    expect(fn () => (new SistecreditoWebhookProcessor(references: new FakePaymentReferences()))->process([
         'PaymentMethodResponse' => ['StatusResponse' => 'Approved'],
     ]))->toThrow(RuntimeException::class);
 });
 
 it('throws when PaymentMethodResponse.StatusResponse is missing', function (): void {
-    expect(fn () => (new SistecreditoWebhookProcessor())->process([
+    expect(fn () => (new SistecreditoWebhookProcessor(references: new FakePaymentReferences()))->process([
         'Invoice' => '1',
         'PaymentMethodResponse' => [],
     ]))->toThrow(RuntimeException::class);
+});
+
+it('marca como ajena una referencia que no es pf-<id>', function (): void {
+    expect(fn () => (new SistecreditoWebhookProcessor(references: new FakePaymentReferences()))->process([
+        'Invoice' => '863', 'Value' => 1000,
+        'PaymentMethodResponse' => ['TransactionId' => 'SC-1', 'StatusResponse' => 'Approved'],
+    ]))->toThrow(ForeignPaymentReferenceException::class);
 });

@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Features\PaymentGateway\Gateways\Sistecredito;
 
+use App\Features\PaymentGateway\ForeignPaymentReferenceException;
 use App\Features\PaymentGateway\Normalizer\PaymentStatusNormalizer;
+use App\Features\PaymentGateway\PaymentAttemptRepository;
+use App\Features\PaymentGateway\PaymentReferenceResolver;
 use App\Features\PaymentGateway\Result\PaymentResult;
 use RuntimeException;
 
@@ -13,7 +16,7 @@ use RuntimeException;
  *
  * Estructura esperada (extracto):
  *   {
- *     "Invoice": "1112",
+ *     "Invoice": "pf-1112",   // referencia del intento de pago
  *     "Value": 128642,
  *     "Currency": "COP",
  *     "PaymentMethodResponse": {
@@ -29,6 +32,7 @@ final class SistecreditoWebhookProcessor
 {
     public function __construct(
         private readonly PaymentStatusNormalizer $normalizer = new PaymentStatusNormalizer(),
+        private ?PaymentReferenceResolver $references = null,
     ) {}
 
     /**
@@ -37,9 +41,9 @@ final class SistecreditoWebhookProcessor
      */
     public function process(array $payload): PaymentResult
     {
-        $orderId = isset($payload['Invoice']) ? (int) $payload['Invoice'] : 0;
-        if ($orderId <= 0) {
-            throw new RuntimeException('Sistecredito webhook: missing or invalid Invoice.');
+        $reference = is_scalar($payload['Invoice'] ?? null) ? trim((string) $payload['Invoice']) : '';
+        if ($reference === '') {
+            throw new RuntimeException('Sistecredito webhook: missing Invoice.');
         }
 
         /** @var array<string, mixed> $method */
@@ -51,6 +55,9 @@ final class SistecreditoWebhookProcessor
         if ($rawStatus === '') {
             throw new RuntimeException('Sistecredito webhook: missing PaymentMethodResponse.StatusResponse.');
         }
+
+        $orderId = ($this->references ??= new PaymentAttemptRepository())->orderIdFor($reference)
+            ?? throw ForeignPaymentReferenceException::for('Sistecrédito', $reference);
 
         [$codStatus, $statusText] = $this->normalizer->normalize('sistecredito', $rawStatus);
 

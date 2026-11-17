@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Features\Order\OrderRepository;
 use App\Features\PaymentGateway\Normalizer\PaymentStatus;
+use App\Features\PaymentGateway\PaymentAttemptRepository;
 use App\Features\User\UserRepository;
 use Slim\Psr7\Factory\ServerRequestFactory;
 use Slim\Psr7\Factory\StreamFactory;
@@ -49,8 +50,9 @@ it('rejects POST /api/payment-gateway/webhook/bold with invalid signature', func
 
 it('treats signed VOID_REJECTED Bold webhook as a no-op and approves order on signed SALE_APPROVED', function (): void {
     $userId  = Seed::user();
-    $orderId = Seed::order($userId, amount: 185000);
-    $signer  = BoldTestSigner::fromEnv();
+    $orderId   = Seed::order($userId, amount: 185000);
+    $reference = (new PaymentAttemptRepository())->create($orderId, 'bold', 185000);
+    $signer    = BoldTestSigner::fromEnv();
 
     try {
         $voidRejectedRaw = json_encode([
@@ -58,7 +60,7 @@ it('treats signed VOID_REJECTED Bold webhook as a no-op and approves order on si
             'data' => [
                 'payment_id' => 'BOLD-TX-VOID-REJ',
                 'amount' => ['total' => 185000, 'currency' => 'COP'],
-                'metadata' => ['reference' => (string) $orderId],
+                'metadata' => ['reference' => $reference],
             ],
         ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
 
@@ -76,7 +78,7 @@ it('treats signed VOID_REJECTED Bold webhook as a no-op and approves order on si
             'data' => [
                 'payment_id' => 'BOLD-TX-OK-' . $orderId,
                 'amount' => ['total' => 185000, 'currency' => 'COP'],
-                'metadata' => ['reference' => (string) $orderId],
+                'metadata' => ['reference' => $reference],
             ],
         ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
 

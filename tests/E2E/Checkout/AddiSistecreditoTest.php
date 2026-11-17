@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Features\Checkout\GatewayPayment;
+use App\Features\PaymentGateway\PaymentAttemptRepository;
 use App\Infrastructure\Config\BusinessConfig;
 use Tests\Support\Seed;
 use Tests\Support\Shop;
@@ -12,11 +13,15 @@ use Tests\Support\Shop;
  * El call center confirma cada pago en la plataforma de la pasarela.
  */
 
-/** Pedido sin pagar con la pasarela indicada. Se crea con Bold para no llamar a la pasarela real. */
+/**
+ * Pedido sin pagar con la pasarela indicada y un intento de pago suyo. Se crea con Bold para no
+ * llamar a la pasarela real.
+ */
 function orderWithGateway(int $userId, string $gateway, int $price = 100000): int
 {
     $orderId = Shop::order($userId, [['code' => Seed::catalogProduct(['valor' => $price]), 'quantity' => 1]]);
     Seed::pdo()->prepare('UPDATE orders SET payment_gateway = ? WHERE order_id = ?')->execute([$gateway, $orderId]);
+    (new PaymentAttemptRepository())->create($orderId, $gateway, orderAmount($orderId));
 
     return $orderId;
 }
@@ -74,6 +79,15 @@ it('un aviso repetido no aprueba dos veces', function (string $gateway, string $
         ->and(Shop::rows('SELECT 1 FROM point_lots WHERE order_id = ?', [$orderId]))->toHaveCount(1);
 })->with('pasarelas sin firma');
 
+it('ignora el aviso con una referencia ajena', function (string $gateway, string $approved): void {
+    $orderId = orderWithGateway(Seed::user(), $gateway);
+
+    $result = Shop::gatewayWebhook($gateway, $orderId, orderAmount($orderId), $approved, reference: (string) $orderId);
+
+    expect($result)->toBe(['ok' => true, 'processed' => false, 'reason' => 'foreign_reference'])
+        ->and(Shop::orderRow($orderId)['approved_at'])->toBeNull();
+})->with('pasarelas sin firma');
+
 // ── Datos que se envían a cada pasarela ───────────────────────────────────
 
 /** @return array<string, mixed> */
@@ -88,10 +102,10 @@ function gatewayOrder(): array
 
 it('arma la solicitud de Addi con el pedido guardado y la vuelta a la app', function (): void {
     $items   = [['product_sku' => 103040, 'product_name' => 'NUTRA C', 'quantity' => 2, 'unit_price' => '112455.00', 'tax_amount' => '35910.08']];
-    $payload = (new GatewayPayment(BusinessConfig::fromEnv()))->addiPayload(gatewayOrder(), $items, 'https://app.test/pago/resultado?pedido=901');
+    $payload = (new GatewayPayment(BusinessConfig::fromEnv()))->addiPayload(gatewayOrder(), 'pf-77', $items, 'https://app.test/pago/resultado?pedido=901');
 
     expect($payload)->toMatchArray([
-        'orderId' => '901', 'totalAmount' => '224910.0', 'shippingAmount' => '0.0', 'totalTaxesAmount' => '35910.1', 'currency' => 'COP',
+        'orderId' => 'pf-77', 'totalAmount' => '224910.0', 'shippingAmount' => '0.0', 'totalTaxesAmount' => '35910.1', 'currency' => 'COP',
     ])
         ->and($payload['items'][0])->toMatchArray(['sku' => '103040', 'quantity' => '2', 'unitPrice' => 112455, 'tax' => 35910])
         ->and($payload['client'])->toMatchArray([
@@ -103,8 +117,8 @@ it('arma la solicitud de Addi con el pedido guardado y la vuelta a la app', func
 });
 
 it('arma la orden de Sistecrédito con el pedido guardado y la vuelta a la app', function (): void {
-    expect(GatewayPayment::sistecreditoPayload(gatewayOrder(), 'https://app.test/pago/resultado?pedido=901'))->toBe([
-        'invoice'     => '901',
+    expect(GatewayPayment::sistecreditoPayload(gatewayOrder(), 'pf-77', 'https://app.test/pago/resultado?pedido=901'))->toBe([
+        'invoice'     => 'pf-77',
         'description' => 'Pedido PremiumFitness #901',
         'value'       => 224910,
         'docType'     => 'CE',
