@@ -10,6 +10,8 @@ use App\Features\DiscountRule\DiscountPolicy;
 use App\Features\DiscountRule\DiscountRuleRepository;
 use App\Features\Order\VatPolicy;
 use App\Features\Product\IntranetProductCatalog;
+use App\Features\Shipping\Destination;
+use App\Features\Shipping\Shipping;
 use App\Features\Trainer\TrainerRepository;
 use App\Infrastructure\Config\BusinessConfig;
 use App\Infrastructure\Database\DB;
@@ -37,6 +39,7 @@ class CheckoutService
     private readonly AddressBook $addresses;
     private readonly TrainerRepository $trainers;
     private readonly BusinessConfig $business;
+    private readonly Shipping $shipping;
 
     public function __construct()
     {
@@ -48,15 +51,22 @@ class CheckoutService
             new DiscountPolicy($this->business),
             VatPolicy::fromEnv(),
             $this->business,
+            $this->shipping = Shipping::fromEnv(),
         );
         $this->purchases  = new PurchaseRepository();
         $this->addresses  = new AddressBook();
         $this->trainers   = new TrainerRepository();
     }
 
-    public function preview(int $userId, mixed $items): Quote
+    /**
+     * @param int|null $addressId Dirección elegida: con ella se calcula el flete.
+     * @throws ApiException 422 si la dirección no es suya.
+     */
+    public function preview(int $userId, mixed $items, ?int $addressId = null): Quote
     {
-        return $this->calculator->quote($this->buyer($userId), CartInput::normalize($items));
+        $to = $addressId === null ? null : $this->destination($userId, $addressId);
+
+        return $this->calculator->quote($this->buyer($userId), CartInput::normalize($items), $to);
     }
 
     /**
@@ -68,14 +78,14 @@ class CheckoutService
     public function place(int $userId, mixed $items, int $addressId, string $gateway, ?string $notes): array
     {
         $buyer = $this->buyer($userId);
-        $quote = $this->calculator->quote($buyer, CartInput::normalize($items));
+        $quote = $this->calculator->quote($buyer, CartInput::normalize($items), $this->destination($userId, $addressId));
+
+        if (!$quote->shippingAvailable) {
+            throw ApiException::conflict('shipping_unavailable', (string) $quote->message);
+        }
 
         if (!$quote->canCheckout) {
             throw ApiException::conflict('out_of_stock', $quote->message ?? 'Hay productos que ya no están disponibles.');
-        }
-
-        if ($this->addresses->find($userId, $addressId) === null) {
-            throw ApiException::invalid('Elige una dirección de entrega.', errors: ['address_id' => 'Elige una de tus direcciones.']);
         }
 
         $orderId = $this->purchases->create(
@@ -123,6 +133,15 @@ class CheckoutService
     }
 
     /** @throws ApiException */
+    /** Ciudad de una dirección del usuario; una dirección ajena «no existe». */
+    private function destination(int $userId, int $addressId): Destination
+    {
+        $address = $this->addresses->find($userId, $addressId);
+        $to      = $address === null ? null : $this->shipping->destination((int) $address['city_id']);
+
+        return $to ?? throw ApiException::invalid('Elige una dirección de entrega.', errors: ['address_id' => 'Elige una de tus direcciones.']);
+    }
+
     private function buyer(int $userId): Buyer
     {
         return Buyer::fromUserId($userId) ?? throw ApiException::unauthorized();

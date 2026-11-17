@@ -16,7 +16,8 @@ final readonly class Quote
         public int $discountAmount,
         public float $taxBase,
         public float $taxAmount,
-        public int $shippingAmount,
+        /** Flete de la dirección elegida; null mientras no hay dirección o si no hay envío a ella. */
+        public ?int $shippingAmount,
         public int $total,
         /** Entrenador al que se atribuye la compra de un cliente; null si no genera recompensas. */
         public ?int $trainerId,
@@ -25,12 +26,14 @@ final readonly class Quote
         public float $commissionAmount,
         public bool $canCheckout,
         public ?string $message,
+        /** false si Servientrega no llega a la ciudad de la dirección elegida. */
+        public bool $shippingAvailable = true,
     ) {}
 
     /** Lo pagado por los productos, sin el envío. */
     public function productsTotal(): int
     {
-        return $this->total - $this->shippingAmount;
+        return $this->total - ($this->shippingAmount ?? 0);
     }
 
     /** @return array<string, mixed> Contrato `CheckoutPreview`. */

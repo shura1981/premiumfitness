@@ -383,7 +383,7 @@ it('vuelve a dar el pago firmado de un pedido propio pendiente, con el valor gua
     $paid = AppFactory::dispatch(AppFactory::request('POST', $path, [], JwtFactory::authHeader($user)));
 
     expect($retry->getStatusCode())->toBe(200)
-        ->and(AppFactory::json($retry)['payment']['bold']['amount'])->toBe(100000 + (int) $_ENV['SHIPPING_FEE'])
+        ->and(AppFactory::json($retry)['payment']['bold']['amount'])->toBe(100000 + Shop::SHIPPING)
         ->and($foreign->getStatusCode())->toBe(404)
         ->and($paid->getStatusCode())->toBe(409);
 });

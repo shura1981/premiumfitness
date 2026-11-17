@@ -28,9 +28,14 @@ class CheckoutController
 
     public function preview(Request $request, Response $response): Response
     {
-        $body = (array) ($request->getParsedBody() ?? []);
+        $body      = (array) ($request->getParsedBody() ?? []);
+        $addressId = filter_var($body['address_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 
-        return $this->json($response, $this->checkout->preview(self::userId($request), $body['items'] ?? null)->toArray());
+        return $this->json($response, $this->checkout->preview(
+            self::userId($request),
+            $body['items'] ?? null,
+            $addressId === false ? null : $addressId,
+        )->toArray());
     }
 
     public function gateways(Request $request, Response $response): Response

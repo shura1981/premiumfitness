@@ -22,9 +22,6 @@ final readonly class BusinessConfig
         /** @var list<int> */
         public array $vatExemptProductCodes,
         public string $webAppUrl,
-        /** Envío: se cobra `shippingFee` si los productos pagados no llegan a `shippingFreeThreshold`. */
-        public int $shippingFee = 0,
-        public int $shippingFreeThreshold = 0,
     ) {}
 
     public static function fromEnv(): self
@@ -43,8 +40,6 @@ final readonly class BusinessConfig
                 array_filter(array_map(trim(...), explode(',', (string) ($_ENV['VAT_EXEMPT_PRODUCT_CODES'] ?? ''))), static fn (string $code): bool => $code !== ''),
             )),
             webAppUrl: rtrim((string) $_ENV['WEB_APP_URL'], '/'),
-            shippingFee: (int) $_ENV['SHIPPING_FEE'],
-            shippingFreeThreshold: (int) $_ENV['SHIPPING_FREE_THRESHOLD'],
         );
     }
 }

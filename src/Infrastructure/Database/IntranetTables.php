@@ -16,11 +16,14 @@ readonly class IntranetTables
 {
     public string $employees;
     public string $products;
+    public string $shippingRates;
 
     private function __construct(public string $database)
     {
         $this->employees = "`{$database}`.`tb_empleados`";
         $this->products  = "`{$database}`.`tb_productos_megaplexstars`";
+        // Tarifas de Servientrega por ciudad desde cada bodega: las del webservice `/fletes` del sitio.
+        $this->shippingRates = "`{$database}`.`tb_servientrega`";
     }
 
     public static function fromEnv(): self

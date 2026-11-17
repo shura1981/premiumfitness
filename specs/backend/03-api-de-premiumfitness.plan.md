@@ -114,9 +114,9 @@ interface ProductDetail extends Product {
 
 | Método y ruta | Cuerpo | Respuesta |
 | --- | --- | --- |
-| `POST /checkout/preview` | `{ items: [{ code, quantity }] }` | `CheckoutPreview` |
+| `POST /checkout/preview` | `{ items: [{ code, quantity }], address_id? }` | `CheckoutPreview`. Con `address_id`, el flete de su ciudad (P-03); 422 si la dirección no es suya. |
 | `GET /checkout/payment-gateways` | — | `{ data: [{ id, name, description }] }` |
-| `POST /checkout` | `{ items, address_id, payment_gateway, notes? }` | 201 `CheckoutResult`. 409 `out_of_stock` o `price_changed`. |
+| `POST /checkout` | `{ items, address_id, payment_gateway, notes? }` | 201 `CheckoutResult`. 409 `out_of_stock`, `price_changed` o `shipping_unavailable` (Servientrega no llega a la ciudad de la dirección). |
 | `GET /orders` | — | `{ data: OrderSummary[] }`, los propios |
 | `GET /orders/:id` | — | `OrderDetail`; 404 si no es de quien consulta |
 | `POST /orders/:id/pay` | — | `CheckoutResult` de un pedido propio que sigue pendiente, con el valor guardado. 409 `order_not_payable` si ya se pagó, es un canje o tiene más de un día. |
@@ -128,7 +128,9 @@ interface CheckoutPreview {
     unit_price: number; final_unit_price: number; discount_percentage: number; line_total: number;
     available: boolean;                                // false: agotado o ya no se vende
   }[];
-  subtotal_full: number; discount_amount: number; tax_amount: number; shipping_amount: number; total: number;
+  subtotal_full: number; discount_amount: number; tax_amount: number;
+  shipping_amount: number | null;                      // null sin address_id o si no hay envío a esa ciudad
+  total: number;                                       // productos + flete (sin flete mientras es null)
   can_checkout: boolean; message: string | null;
 }
 interface CheckoutResult {

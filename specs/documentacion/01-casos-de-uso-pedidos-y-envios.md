@@ -41,7 +41,7 @@ Dejar documentados en `docs/casos-de-uso-y-actores.md` el procesamiento y el env
 | S-03 | El agente solo libera un pedido suyo que todavía no tenga código SAP, como en radical. | Derivado |
 | S-04 | La aprobación del pago llega por webhook de la pasarela, como en radical. El proveedor sigue pendiente (D-10). | Derivado |
 | S-05 | Si los canjes también pasan por SAP y por el call center. | Pendiente |
-| S-06 | Si se cobra el envío y cómo. En el checkout retail de radical, el flete se cobra como un producto interno, «Flete». | Pendiente |
+| S-06 | Si se cobra el envío y cómo. En el checkout retail de radical, el flete se cobra como un producto interno, «Flete». Resuelto en el spec `backend/03`: el flete se cobra según la ciudad con las reglas de la tienda de radical (P-03) y se guarda en `orders.shipping_amount`, no como producto; el canje no paga envío (P-25). | Confirmado (16 nov 2026, Steven) |
 
 ## Checklist
 

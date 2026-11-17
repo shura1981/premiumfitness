@@ -71,6 +71,7 @@ Cada feature vive en `src/Features/<FeatureName>/`: Controller, Model, Repositor
 | `Audit` | `audit_logs` de las operaciones sensibles | RF-16 |
 | `Reference` | Listas de los formularios: tipos de documento, ciudades y localidades | `backend/03` |
 | `DietAccess` | Estado y canje del acceso a la app de dietas, y el endpoint por documento que consulta su backend | `integraciones/02` |
+| `Shipping` | Flete según la ciudad de entrega: tarifa de Servientrega de la intranet (`tb_servientrega`) y reglas de la tienda de radical | `backend/03` (P-03) |
 
 ## Codebase Scanning Instructions
 
@@ -274,9 +275,16 @@ REPORTS_STORAGE_PATH=storage/private/reports
 RECEIPTS_STORAGE_PATH=storage/private/receipts
 ADMIN_APP_URL=https://premiumfitness-admin.nutramerican.com   # enlaces de los correos a financiero
 
-# Envío (heredado de radical; por confirmar)
-SHIPPING_FEE=25000
-SHIPPING_FREE_THRESHOLD=500000
+# Flete por ciudad (spec backend/03, P-03): reglas de la tienda de radical, tarifa de tb_servientrega
+SHIPPING_ORIGINS=barranquilla,bogota,bucaros,cali,cucuta,medallo   # bodegas; se cobra la más barata
+SHIPPING_MINIMUM_FEE=9900
+SHIPPING_MAIN_CITIES=BARRANQUILLA,BUCARAMANGA,CALI,CUCUTA,MEDELLIN,PEREIRA
+SHIPPING_MAIN_CITIES_FEE=9900
+SHIPPING_MAIN_CITIES_FREE_FROM=1000000
+SHIPPING_BOGOTA_FEE=11300
+SHIPPING_BOGOTA_FREE_FROM=170000
+SHIPPING_RATE_TYPE3_FEE=4900, SHIPPING_RATE_TYPE4_FEE=11400, SHIPPING_RATE_DECLARED_VALUE=300000,
+SHIPPING_RATE_HANDLING_PERCENTAGE=0.5, SHIPPING_RATE_SURCHARGE=2000, SHIPPING_RATE_FLOOR_LIMIT=11000, SHIPPING_RATE_FLOOR=12500
 ```
 
 ## Testing

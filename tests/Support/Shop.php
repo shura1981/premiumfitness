@@ -13,11 +13,17 @@ use Slim\Psr7\Factory\StreamFactory;
  */
 final class Shop
 {
-    /** Dirección del usuario. Devuelve su id. */
-    public static function address(int $userId): int
+    /**
+     * Flete de la dirección de las pruebas, en Armenia: la tarifa más barata de la intranet de pruebas
+     * (`tests/fixtures/intranet-pruebas.sql`), desde Bogotá.
+     */
+    public const int SHIPPING = 13500;
+
+    /** Dirección del usuario en la ciudad indicada (`cities.city_dept`). Devuelve su id. */
+    public static function address(int $userId, string $city = 'ARMENIA (QUI)'): int
     {
         $pdo = Seed::pdo();
-        $pdo->prepare("INSERT INTO addresses (city_id, address, address_name) VALUES ((SELECT MIN(id) FROM cities), 'CL 1 2 3', 'CASA')")->execute();
+        $pdo->prepare("INSERT INTO addresses (city_id, address, address_name) VALUES ((SELECT id FROM cities WHERE city_dept = ?), 'CL 1 2 3', 'CASA')")->execute([$city]);
         $addressId = (int) $pdo->lastInsertId();
         $pdo->prepare('INSERT INTO address_user_map (user_id, address_id, is_main) VALUES (?, ?, 1)')->execute([$userId, $addressId]);
 
@@ -25,9 +31,11 @@ final class Shop
     }
 
     /** @param list<array{code:int, quantity:int}> $items */
-    public static function preview(int $userId, array $items): ResponseInterface
+    public static function preview(int $userId, array $items, ?int $addressId = null): ResponseInterface
     {
-        return AppFactory::dispatch(AppFactory::request('POST', '/api/checkout/preview', ['items' => $items], JwtFactory::authHeader($userId)));
+        $body = ['items' => $items] + ($addressId === null ? [] : ['address_id' => $addressId]);
+
+        return AppFactory::dispatch(AppFactory::request('POST', '/api/checkout/preview', $body, JwtFactory::authHeader($userId)));
     }
 
     /** @param list<array{code:int, quantity:int}> $items */

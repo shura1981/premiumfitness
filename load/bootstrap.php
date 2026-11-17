@@ -28,7 +28,16 @@ $dotenv->required([
     'CLIENT_DISCOUNT_PERCENTAGE', 'TRAINER_DISCOUNT_PERCENTAGE', 'CLIENT_PURCHASE_POINTS_PERCENTAGE',
     'TRAINER_COMMISSION_PERCENTAGE', 'COMMISSION_CONVERSION_PERCENTAGE', 'VAT_PERCENTAGE',
 ])->assert(fn ($v) => is_numeric($v) && $v >= 0 && $v <= 100, 'must be a percentage between 0 and 100.');
-$dotenv->required(['TRAINER_REFERRAL_POINTS', 'POINTS_EXPIRATION_MONTHS', 'SHIPPING_FEE', 'SHIPPING_FREE_THRESHOLD'])->isInteger();
+$dotenv->required(['TRAINER_REFERRAL_POINTS', 'POINTS_EXPIRATION_MONTHS'])->isInteger();
+
+// Flete por ciudad (spec backend/03, P-03): los valores de la tienda de radical.
+$dotenv->required([
+    'SHIPPING_MINIMUM_FEE', 'SHIPPING_MAIN_CITIES_FEE', 'SHIPPING_MAIN_CITIES_FREE_FROM', 'SHIPPING_BOGOTA_FEE',
+    'SHIPPING_BOGOTA_FREE_FROM', 'SHIPPING_RATE_DECLARED_VALUE', 'SHIPPING_RATE_SURCHARGE', 'SHIPPING_RATE_FLOOR_LIMIT',
+    'SHIPPING_RATE_FLOOR', 'SHIPPING_RATE_TYPE3_FEE', 'SHIPPING_RATE_TYPE4_FEE',
+])->isInteger();
+$dotenv->required('SHIPPING_RATE_HANDLING_PERCENTAGE')->assert(fn ($v) => is_numeric($v) && $v >= 0 && $v <= 100, 'must be a percentage between 0 and 100.');
+$dotenv->required(['SHIPPING_ORIGINS', 'SHIPPING_MAIN_CITIES'])->notEmpty();
 
 // Acceso a la app de dietas (spec integraciones/02) y pago de la comisión (spec negocio/05).
 $dotenv->required(['DIET_ACCESS_POINTS_GOAL', 'DIET_ACCESS_POINTS_COST', 'DIET_FREE_DAYS', 'COMMISSION_PAYMENT_DAY'])->isInteger();

@@ -99,3 +99,35 @@ SET `imageswebp` = JSON_OBJECT(
     `description` = '<p>Proteína de suero de leche. Texto de ejemplo para desarrollo.</p>',
     `uso` = 'Mezcla una porción en 250 ml de agua o leche.'
 WHERE `codigo` = 100507 AND `imageswebp` IS NULL;
+
+-- Tarifas de Servientrega (spec backend/03, P-03), con la estructura real de `tb_servientrega`: costo
+-- (`_c`, con coma decimal), tipo (`_t`) y días (`_d`) desde cada bodega. Los valores son de prueba;
+-- las ciudades son las de `cities`. «N.A.»: sin servicio desde esa bodega.
+CREATE TABLE IF NOT EXISTS `tb_servientrega` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `ciudad` varchar(50) NOT NULL,
+  `departamento` varchar(50) NOT NULL,
+  `barranquilla_c` varchar(50) NOT NULL, `bogota_c` varchar(50) NOT NULL, `bucaros_c` varchar(50) NOT NULL,
+  `cali_c` varchar(50) NOT NULL, `cucuta_c` varchar(50) NOT NULL, `medallo_c` varchar(50) NOT NULL,
+  `barranquilla_t` varchar(50) NOT NULL, `bogota_t` varchar(50) NOT NULL, `bucaros_t` varchar(50) NOT NULL,
+  `cali_t` varchar(50) NOT NULL, `cucuta_t` varchar(50) NOT NULL, `medallo_t` varchar(50) NOT NULL,
+  `barranquilla_d` varchar(50) NOT NULL, `bogota_d` varchar(50) NOT NULL, `bucaros_d` varchar(50) NOT NULL,
+  `cali_d` varchar(50) NOT NULL, `cucuta_d` varchar(50) NOT NULL, `medallo_d` varchar(50) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+REPLACE INTO `tb_servientrega`
+  (`id`, `ciudad`, `departamento`,
+   `barranquilla_c`, `bogota_c`, `bucaros_c`, `cali_c`, `cucuta_c`, `medallo_c`,
+   `barranquilla_t`, `bogota_t`, `bucaros_t`, `cali_t`, `cucuta_t`, `medallo_t`,
+   `barranquilla_d`, `bogota_d`, `bucaros_d`, `cali_d`, `cucuta_d`, `medallo_d`) VALUES
+  -- La más barata es desde Bogotá: 10.000,75 → 10.000 + 1.500 + 2.000 = 13.500 (la de Cali, 23.500).
+  (1, 'ARMENIA (QUI)', 'QUINDIO', 'N.A.', '10000,75', 'N.A.', '20000', 'N.A.', 'N.A.', 'N.A.', '1', 'N.A.', '1', 'N.A.', 'N.A.', 'N.A.', '2', 'N.A.', '3', 'N.A.', 'N.A.'),
+  -- Ninguna bodega llega.
+  (2, 'APARTADO (ANT)', 'ANTIOQUIA', 'N.A.', 'N.A.', 'N.A.', 'N.A.', 'N.A.', 'N.A.', 'N.A.', 'N.A.', 'N.A.', 'N.A.', 'N.A.', 'N.A.', 'N.A.', 'N.A.', 'N.A.', 'N.A.', 'N.A.', 'N.A.'),
+  (3, 'BOGOTA (CUN)', 'CUNDINAMARCA', '10500,75', '3315', 'N.A.', '6201', 'N.A.', 'N.A.', '1', '3', 'N.A.', '1', 'N.A.', 'N.A.', '2', '1', 'N.A.', '1', 'N.A.', 'N.A.'),
+  (4, 'CALI (VAL)', 'VALLE DEL CAUCA', 'N.A.', '6201', 'N.A.', '3315', 'N.A.', 'N.A.', 'N.A.', '1', 'N.A.', '3', 'N.A.', 'N.A.', 'N.A.', '1', 'N.A.', '1', 'N.A.', 'N.A.'),
+  -- Tipo 3: 4.900, que sube al mínimo de 9.900.
+  (5, 'PALMIRA (VAL)', 'VALLE DEL CAUCA', 'N.A.', 'N.A.', 'N.A.', '3315', 'N.A.', 'N.A.', 'N.A.', 'N.A.', 'N.A.', '3', 'N.A.', 'N.A.', 'N.A.', 'N.A.', 'N.A.', '1', 'N.A.', 'N.A.'),
+  -- En `cities` es «OCA?A (NOR)». Tipo 4: 11.400.
+  (6, 'OCAÑA (NOR)', 'NORTE DE SANTANDER', 'N.A.', 'N.A.', 'N.A.', 'N.A.', '9000', 'N.A.', 'N.A.', 'N.A.', 'N.A.', 'N.A.', '4', 'N.A.', 'N.A.', 'N.A.', 'N.A.', 'N.A.', '2', 'N.A.');

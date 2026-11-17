@@ -9,6 +9,8 @@ use App\Features\DiscountRule\DiscountPolicy;
 use App\Features\DiscountRule\DiscountRuleRepository;
 use App\Features\Order\VatPolicy;
 use App\Features\Product\ProductCatalog;
+use App\Features\Shipping\Destination;
+use App\Features\Shipping\Shipping;
 use App\Infrastructure\Config\BusinessConfig;
 
 /**
@@ -19,6 +21,7 @@ use App\Infrastructure\Config\BusinessConfig;
  *   - IVA por línea sobre lo pagado; la comisión del entrenador, sobre la base sin IVA.
  *   - Puntos del entrenador: una sola vez, sobre lo pagado por los productos (con IVA, sin envío).
  *   - Solo la compra de un cliente con entrenador genera comisión y puntos.
+ *   - Flete según la ciudad de entrega (P-03); sin dirección todavía no se sabe.
  */
 final readonly class QuoteCalculator
 {
@@ -31,12 +34,14 @@ final readonly class QuoteCalculator
         private DiscountPolicy $discounts,
         private VatPolicy $vat,
         private BusinessConfig $business,
+        private Shipping $shipping,
     ) {}
 
     /**
      * @param list<array{code:int, quantity:int}> $items Ya normalizados: códigos únicos y cantidades válidas.
+     * @param Destination|null                   $to    Ciudad de entrega; sin ella el flete queda en null.
      */
-    public function quote(Buyer $buyer, array $items): Quote
+    public function quote(Buyer $buyer, array $items, ?Destination $to = null): Quote
     {
         $codes    = array_column($items, 'code');
         $products = $this->catalog->findByCodes($codes);
@@ -82,17 +87,18 @@ final readonly class QuoteCalculator
             );
         }
 
-        return $this->totals($lines, $rewarded ? $buyer->trainerId : null);
+        return $this->totals($lines, $rewarded ? $buyer->trainerId : null, $to);
     }
 
     /** @param list<QuoteLine> $lines */
-    private function totals(array $lines, ?int $trainerId): Quote
+    private function totals(array $lines, ?int $trainerId, ?Destination $to): Quote
     {
         $sellable     = array_filter($lines, static fn (QuoteLine $line): bool => $line->available);
         $unavailable  = count($lines) - count($sellable);
         $subtotalFull = array_sum(array_map(static fn (QuoteLine $line): int => $line->unitPrice * $line->quantity, $sellable));
         $products     = array_sum(array_map(static fn (QuoteLine $line): int => $line->lineTotal, $sellable));
-        $shipping     = $products > 0 && $products < $this->business->shippingFreeThreshold ? $this->business->shippingFee : 0;
+        $shipping     = $to === null ? null : $this->shipping->amount($to, $products);
+        $noShipping   = $to !== null && $shipping === null;
 
         $rewardPercentage = $trainerId === null ? null : $this->business->clientPurchasePointsPercentage;
 
@@ -103,18 +109,20 @@ final readonly class QuoteCalculator
             taxBase: round(array_sum(array_map(static fn (QuoteLine $line): float => $line->taxBase, $sellable)), 2),
             taxAmount: round(array_sum(array_map(static fn (QuoteLine $line): float => $line->taxAmount, $sellable)), 2),
             shippingAmount: $shipping,
-            total: $products + $shipping,
+            total: $products + ($shipping ?? 0),
             trainerId: $trainerId,
             rewardPercentage: $rewardPercentage,
             // Regla 1: una sola vez sobre el total pagado por los productos; 0,5 sube.
             rewardPoints: $rewardPercentage === null ? null : (int) round($products * $rewardPercentage / 100),
             commissionAmount: round(array_sum(array_map(static fn (QuoteLine $line): float => $line->commissionAmount ?? 0.0, $sellable)), 2),
-            canCheckout: $lines !== [] && $unavailable === 0,
+            canCheckout: $lines !== [] && $unavailable === 0 && !$noShipping,
             message: match (true) {
                 $lines === []    => 'Tu carrito está vacío.',
                 $unavailable > 0 => 'Hay productos que ya no están disponibles. Quítalos para continuar.',
+                $noShipping      => 'No tenemos envío a ' . mb_convert_case((string) $to?->cityName, MB_CASE_TITLE, 'UTF-8') . '. Elige otra dirección.',
                 default          => null,
             },
+            shippingAvailable: !$noShipping,
         );
     }
 }

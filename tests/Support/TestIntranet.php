@@ -15,7 +15,7 @@ final class TestIntranet
 {
     public const string DATABASE = 'crisenri_intranet_pruebas';
     private const string SOURCE  = 'crisenri_intranet';
-    private const array TABLES   = ['tb_empleados', 'tb_productos_megaplexstars'];
+    private const array TABLES   = ['tb_empleados', 'tb_productos_megaplexstars', 'tb_servientrega'];
     private const string FIXTURE = __DIR__ . '/../fixtures/intranet-pruebas.sql';
 
     /** Crea la base de pruebas si falta y carga sus datos (idempotente). */

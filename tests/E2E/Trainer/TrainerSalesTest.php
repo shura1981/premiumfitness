@@ -27,15 +27,10 @@ function paidSale(int $clientId, array $items, ?int $addressId = null): int
     return $orderId;
 }
 
-/** Dirección del cliente en otra ciudad (la de mayor id, distinta de la de Shop::address). */
+/** Dirección del cliente en otra ciudad (Cali, distinta de la de Shop::address y con flete). */
 function addressInAnotherCity(int $userId): int
 {
-    $pdo = Seed::pdo();
-    $pdo->prepare("INSERT INTO addresses (city_id, address, address_name) VALUES ((SELECT MAX(id) FROM cities), 'CL 9 8 7', 'OFICINA')")->execute();
-    $addressId = (int) $pdo->lastInsertId();
-    $pdo->prepare('INSERT INTO address_user_map (user_id, address_id, is_main) VALUES (?, ?, 0)')->execute([$userId, $addressId]);
-
-    return $addressId;
+    return Shop::address($userId, 'CALI (VAL)');
 }
 
 function commissionOf(int $orderId): float

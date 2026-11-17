@@ -16,7 +16,7 @@ it('calcula la compra de un cliente con entrenador: descuento, IVA y envío', fu
     [$client] = Seed::clientWithTrainer();
     $bipro    = Seed::catalogProduct(['valor' => 249900, 'producto' => 'BIPRO PRUEBA']);
 
-    $response = Shop::preview($client, [['code' => $bipro, 'quantity' => 2]]);
+    $response = Shop::preview($client, [['code' => $bipro, 'quantity' => 2]], Shop::address($client));
     $body     = AppFactory::json($response);
 
     expect($response->getStatusCode())->toBe(200)
@@ -28,19 +28,63 @@ it('calcula la compra de un cliente con entrenador: descuento, IVA y envío', fu
         ->and($body['discount_amount'])->toBe(49980)
         // 449.820 / 1,19 = 378.000 de base y 71.820 de IVA.
         ->and($body['tax_amount'])->toBe(71820)
-        // Lo pagado por los productos no llega al mínimo de envío gratis.
-        ->and($body['shipping_amount'])->toBe((int) $_ENV['SHIPPING_FEE'])
-        ->and($body['total'])->toBe(449820 + (int) $_ENV['SHIPPING_FEE'])
+        // Flete de la ciudad de la dirección (P-03).
+        ->and($body['shipping_amount'])->toBe(Shop::SHIPPING)
+        ->and($body['total'])->toBe(449820 + Shop::SHIPPING)
         ->and($body['can_checkout'])->toBeTrue()
         ->and($body['message'])->toBeNull();
 });
 
-it('no cobra envío cuando los productos pagados llegan al mínimo', function (): void {
-    $code = Seed::catalogProduct(['valor' => (int) $_ENV['SHIPPING_FREE_THRESHOLD']]);
+it('sin dirección todavía no hay flete: el total es el de los productos', function (): void {
+    $code = Seed::catalogProduct(['valor' => 100000]);
     $body = AppFactory::json(Shop::preview(Seed::user(), [['code' => $code, 'quantity' => 1]]));
 
-    expect($body['shipping_amount'])->toBe(0)
-        ->and($body['total'])->toBe((int) $_ENV['SHIPPING_FREE_THRESHOLD']);
+    expect($body['shipping_amount'])->toBeNull()
+        ->and($body['total'])->toBe(100000)
+        ->and($body['can_checkout'])->toBeTrue();
+});
+
+it('cobra el flete de la ciudad de la dirección', function (string $city, int $price, int $shipping): void {
+    $user = Seed::user();
+    $code = Seed::catalogProduct(['valor' => $price]);
+    $body = AppFactory::json(Shop::preview($user, [['code' => $code, 'quantity' => 1]], Shop::address($user, $city)));
+
+    expect($body['shipping_amount'])->toBe($shipping)
+        ->and($body['total'])->toBe($price + $shipping)
+        ->and($body['can_checkout'])->toBeTrue();
+})->with([
+    'Cali, ciudad principal'           => ['CALI (VAL)', 100000, 9900],
+    'Cali, desde 1.000.000 es gratis'  => ['CALI (VAL)', 1000000, 0],
+    'Bogotá'                           => ['BOGOTA (CUN)', 169999, 11300],
+    'Bogotá, desde 170.000 es gratis'  => ['BOGOTA (CUN)', 170000, 0],
+    'Armenia, la bodega más barata'    => ['ARMENIA (QUI)', 2000000, 13500],
+    'Palmira, sube al mínimo'          => ['PALMIRA (VAL)', 100000, 9900],
+    'Ocaña, con «?» en cities'         => ['OCA?A (NOR)', 100000, 11400],
+]);
+
+it('no deja comprar si no hay envío a la ciudad de la dirección', function (string $city, string $name): void {
+    $user    = Seed::user();
+    $code    = Seed::catalogProduct(['valor' => 100000]);
+    $address = Shop::address($user, $city);
+    $preview = AppFactory::json(Shop::preview($user, [['code' => $code, 'quantity' => 1]], $address));
+    $place   = Shop::checkout($user, [['code' => $code, 'quantity' => 1]], $address);
+
+    expect($preview)->toMatchArray([
+        'shipping_amount' => null, 'total' => 100000, 'can_checkout' => false,
+        'message' => "No tenemos envío a {$name}. Elige otra dirección.",
+    ])
+        ->and($place->getStatusCode())->toBe(409)
+        ->and(AppFactory::json($place)['code'])->toBe('shipping_unavailable');
+})->with([
+    'ninguna bodega llega'       => ['APARTADO (ANT)', 'Apartado'],
+    'no está en la tabla de tarifas' => ['SAN ANDRES (ARC)', 'San Andres'],
+]);
+
+it('la vista previa no acepta la dirección de otra persona', function (): void {
+    $code     = Seed::catalogProduct();
+    $response = Shop::preview(Seed::user(), [['code' => $code, 'quantity' => 1]], Shop::address(Seed::user()));
+
+    expect($response->getStatusCode())->toBe(422);
 });
 
 it('Nutra C no lleva IVA y los demás sí', function (): void {
@@ -108,8 +152,8 @@ it('crea el pedido del cliente con todo lo que aplicó guardado', function (): v
         ->and($order)->toMatchArray([
             'user_id' => $client, 'order_type' => 'client_purchase', 'payment_gateway' => 'bold', 'address_id' => $address,
             'subtotal_full' => '249900.00', 'discount_amount' => '24990.00', 'tax_base' => '189000.00', 'tax_amount' => '35910.00',
-            'shipping_amount' => number_format((float) $_ENV['SHIPPING_FEE'], 2, '.', ''),
-            'amount' => number_format(224910 + (float) $_ENV['SHIPPING_FEE'], 2, '.', ''),
+            'shipping_amount' => number_format(Shop::SHIPPING, 2, '.', ''),
+            'amount' => number_format(224910 + Shop::SHIPPING, 2, '.', ''),
             // 5 % de 224.910 = 11.245,5 → 11.246 (0,5 sube). El envío no cuenta.
             'reward_percentage' => '5.00', 'reward_points' => 11246,
             'approved_at' => null, 'payment_reference' => null,
@@ -174,11 +218,11 @@ it('guarda el porcentaje de la estrategia del producto en la línea', function (
 
 it('firma el pago en el servidor con el valor del pedido', function (): void {
     $user     = Seed::user();
-    $code     = Seed::catalogProduct(['valor' => (int) $_ENV['SHIPPING_FREE_THRESHOLD'] + 1000]);
+    $code     = Seed::catalogProduct(['valor' => 100000]);
     $response = Shop::checkout($user, [['code' => $code, 'quantity' => 1]]);
     $body     = AppFactory::json($response);
     $bold     = $body['payment']['bold'];
-    $amount   = (int) $_ENV['SHIPPING_FREE_THRESHOLD'] + 1000;
+    $amount   = 100000 + Shop::SHIPPING;
 
     expect($body['payment']['gateway'])->toBe('bold')
         // El id de pago es el del intento (`pf-<id>`), no el número del pedido (P-24).
@@ -216,7 +260,7 @@ it('ignora los precios que envíe la app', function (): void {
         'shipping'        => 0,
     ], JwtFactory::authHeader($user)));
 
-    expect(AppFactory::json($response)['payment']['bold']['amount'])->toBe(100000 + (int) $_ENV['SHIPPING_FEE']);
+    expect(AppFactory::json($response)['payment']['bold']['amount'])->toBe(100000 + Shop::SHIPPING);
 });
 
 it('no deja comprar con la dirección de otra persona ni con una pasarela no habilitada', function (): void {
@@ -296,7 +340,7 @@ it('lista solo los pedidos propios, el más reciente primero', function (): void
     expect(array_column($body['data'], 'id'))->toBe([$last, $first])
         ->and($body['data'][1])->toMatchArray([
             'status' => 'pendiente', 'items_count' => 2, 'first_item' => 'PRIMERA LINEA', 'is_redemption' => false, 'redemption_points' => null,
-            'total' => 100000 + (int) $_ENV['SHIPPING_FEE'],
+            'total' => 100000 + Shop::SHIPPING,
         ])
         ->and($body['data'][1]['created_at'])->toMatch('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}-05:00$/');
 });
@@ -323,7 +367,7 @@ it('el detalle trae líneas, totales, dirección y la línea de tiempo según el
     $pending = $detail();
     expect($pending['status'])->toBe('pendiente')
         ->and($pending['address'])->toMatchArray(['name' => 'CASA', 'address' => 'CL 1 2 3'])
-        ->and($pending['shipping_amount'])->toBe((int) $_ENV['SHIPPING_FEE'])
+        ->and($pending['shipping_amount'])->toBe(Shop::SHIPPING)
         ->and($pending['tracking'])->toBeNull()
         ->and($done($pending))->toBe(['pendiente']);
 
