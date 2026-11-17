@@ -223,7 +223,7 @@ it('no deja comprar con la dirección de otra persona ni con una pasarela no hab
     $code = Seed::catalogProduct();
 
     $foreignAddress = Shop::checkout($user, [['code' => $code, 'quantity' => 1]], Shop::address(Seed::user()));
-    $otherGateway   = Shop::checkout($user, [['code' => $code, 'quantity' => 1]], gateway: 'addi');
+    $otherGateway   = Shop::checkout($user, [['code' => $code, 'quantity' => 1]], gateway: 'epayco');
 
     expect($foreignAddress->getStatusCode())->toBe(422)
         ->and(AppFactory::json($foreignAddress)['errors'])->toHaveKey('address_id')
@@ -233,7 +233,7 @@ it('no deja comprar con la dirección de otra persona ni con una pasarela no hab
 it('solo ofrece las pasarelas habilitadas', function (): void {
     $body = AppFactory::json(AppFactory::dispatch(AppFactory::request('GET', '/api/checkout/payment-gateways', headers: JwtFactory::authHeader(Seed::user()))));
 
-    expect(array_column($body['data'], 'id'))->toBe(['bold']);
+    expect(array_column($body['data'], 'id'))->toBe(['bold', 'addi', 'sistecredito']);
 });
 
 // ── Pedidos del usuario ───────────────────────────────────────────────────

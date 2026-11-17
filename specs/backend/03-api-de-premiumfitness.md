@@ -39,7 +39,7 @@ Las reglas de negocio no se repiten aquí: están en `docs/reglas-de-negocio.md`
 | ID | Supuesto | Clase |
 | --- | --- | --- |
 | P-01 | Los errores de la API nueva usan `{ message, code, errors }`, lo que ya espera la app web. Las rutas heredadas del admin conservan `{ error }` hasta adaptarlas. | Derivado |
-| P-02 | La pasarela de la primera entrega es Bold. **Addi y Sistecrédito quedan deshabilitadas** (sin rutas): sus avisos de pago en radical se aceptan sin verificar quién los envía (ver «Hallazgos»). Se habilitan cuando se pueda verificar el aviso con cada proveedor. | Derivado: confirmar qué pasarelas se contratan para PremiumFitness |
+| P-02 | Las pasarelas son **Bold, Addi y Sistecrédito**. En las tres, el backend arma el pago con el pedido guardado y el pedido lo aprueba el webhook de la pasarela, solo si lo pagado cubre su valor. El aviso de Bold trae firma; los de Addi y Sistecrédito no, y se aceptan como en radical: **el call center confirma cada pago en la plataforma de la pasarela**. | Confirmado (16 nov 2026, Steven) |
 | P-03 | El envío se cobra con la regla de radical, ahora en variables: `SHIPPING_FEE` (25.000) si los productos pagados no llegan a `SHIPPING_FREE_THRESHOLD` (500.000). Se guarda en `orders.shipping_amount`, una columna que el DER no tenía. No genera puntos ni comisión. | Derivado: confirmar si PremiumFitness cobra envío y cuánto |
 | P-13 | El precio con descuento de cada unidad se redondea al peso (0,5 sube): el peso no tiene centavos y la pasarela cobra enteros. La base y el IVA de la línea sí llevan dos decimales. | Derivado |
 | P-14 | La venta se atribuye al entrenador que tenía el cliente al crear el pedido (queda en `orders_coupons`), aunque cambie antes de pagarse. | Derivado |
@@ -74,7 +74,7 @@ Al revisar el fork (15 nov 2026) se encontró que la API de radical:
    - `POST /api/payment-gateway/consume/bold` firma el valor que envíe la app, y al llegar el aviso de Bold no se compara lo pagado con el valor del pedido: se puede pagar $1 por cualquier pedido.
 4. **Servidor de desarrollo:** `server.php` entregaba cualquier archivo del proyecto pedido por URL (`.env` incluido). Solo afecta a `composer run start`.
 
-En PremiumFitness todo quedó corregido y con pruebas (criterios 2 y 3; P-02 y P-15). **`backend-radical-nutrition` tiene los puntos 1 a 3 en producción.** No se toca desde este repo.
+En PremiumFitness todo quedó corregido y con pruebas (criterios 2 y 3; P-02 y P-15), salvo los avisos de Addi y Sistecrédito, que siguen sin verificar quién los envía por decisión de P-02: un aviso aprueba el pedido solo si el valor cubre el pedido, y el call center confirma el pago en la plataforma. **`backend-radical-nutrition` tiene los puntos 1 a 3 en producción.** No se toca desde este repo.
 
 ## Plan
 
@@ -94,6 +94,9 @@ Contratos: [03-api-de-premiumfitness.plan.md](03-api-de-premiumfitness.plan.md).
 - [x] `users.num_cell` único y actualizar `firebase/php-jwt` a la 7 (B-10)
 - [x] Limpieza diaria de refresh tokens y códigos (`POST /cron-job/auth/cleanup`)
 - [x] Reemplazar el checkout y las pasarelas heredadas: `POST /checkout` calcula y firma el pago en el servidor; se retiraron `/checkout/finalize` y `/payment-gateway/consume/*`
+- [x] Habilitar Addi y Sistecrédito (P-02): `GatewayPayment` arma su pago con el pedido guardado y devuelve `redirect_url`, que vuelve a `/pago/resultado`; webhooks `/payment-gateway/webhook/addi` y `/sistecredito`, con pruebas de aprobación, rechazo, valor que no cubre el pedido y aviso repetido. El servicio de Sistecrédito de radical leía la respuesta fuera de `data` y le faltaban headers: se corrige con la integración de producción (api.megaplexstars) (16 nov 2026)
+- [ ] Probar un pago real de Bold, Addi y Sistecrédito con las llaves de prueba de PremiumFitness y una URL pública para los webhooks
+  > Falta: las llaves (`BOLD_*`, `ADDI_*`, `SISTECREDITO_*` del `.env`) y las URL de webhook y retorno de cada pasarela apuntando al hosting.
 
 Resultado de la fase (15 nov 2026): 293 pruebas pasan, 62 de ellas nuevas de sesión, registro, referidos por enlace y cupón, recuperación y sesión del admin. Probado también a mano contra el servidor local, con la cookie real.
 

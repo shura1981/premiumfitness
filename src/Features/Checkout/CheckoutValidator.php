@@ -14,7 +14,7 @@ class CheckoutValidator extends AbstractValidator
         return [
             'items'           => ['required'],
             'address_id'      => ['required', 'int'],
-            'payment_gateway' => ['required', 'in:bold'],
+            'payment_gateway' => ['required', 'in:bold,addi,sistecredito'],
             'notes'           => ['string', 'max:500'],
         ];
     }

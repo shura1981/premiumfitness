@@ -12,16 +12,12 @@ use App\Features\PaymentGateway\Events\Handlers\EmitClientPurchaseStatusHandler;
 use App\Features\PaymentGateway\Events\Handlers\EnqueuePaymentEventJobHandler;
 use App\Features\PaymentGateway\Events\Handlers\PaymentEventHandlerInterface;
 use App\Features\PaymentGateway\Events\PaymentEventDispatcher;
-use App\Features\PaymentGateway\Gateways\Addi\AddiCheckoutService;
 use App\Features\PaymentGateway\Gateways\Addi\AddiWebhookProcessor;
-use App\Features\PaymentGateway\Gateways\Bold\BoldCheckoutService;
 use App\Features\PaymentGateway\Gateways\Bold\BoldPendingCronService;
 use App\Features\PaymentGateway\Gateways\Bold\BoldReconciliationService;
 use App\Features\PaymentGateway\Gateways\Bold\BoldSignatureVerifier;
 use App\Features\PaymentGateway\Gateways\Bold\BoldWebhookProcessor;
-use App\Features\PaymentGateway\Gateways\Sistecredito\SistecreditoCheckoutService;
 use App\Features\PaymentGateway\Gateways\Sistecredito\SistecreditoWebhookProcessor;
-use App\Features\PaymentGateway\Logging\PaymentGatewayLogService;
 use App\Features\Reward\PurchaseApproval;
 use App\Features\PaymentGateway\Validators\BoldStateQueryValidator;
 use App\Features\User\UserRepository;
@@ -35,8 +31,7 @@ use Throwable;
  * Orquestador único de los endpoints `/api/payment-gateway/*`.
  *
  * Responsabilidades:
- *   - Consume: invocar el `*CheckoutService` correspondiente y devolver
- *     `redirect_url` o la configuración `checkout` (Bold).
+ *   - El pago se abre desde el checkout (`GatewayPayment`), con los datos del pedido guardado.
  *   - Webhook: parsear payload, verificar firma (Bold `x-bold-signature`),
  *     pasar al `*WebhookProcessor`, despachar vía `PaymentEventDispatcher` y
  *     encolar efectos diferidos. Siempre responde 200 OK aunque haya errores.
@@ -48,105 +43,11 @@ use Throwable;
 class PaymentGatewayController
 {
     private const string TEMPLATES_PATH = __DIR__ . '/../../../views/payment-response';
-    private const string PAYMENT_METHOD_ADDI = 'addi';
-    private const string PAYMENT_METHOD_SISTECREDITO = 'sistecredito';
     private const string PAYMENT_METHOD_BOLD = 'bold';
-    private const string LOG_SOURCE_CONSUME_ENDPOINT = 'payment_gateway_consume_endpoint';
 
     public function __construct(
         private ?PaymentEventDispatcher $dispatcher = null,
-        private ?PaymentGatewayLogService $paymentGatewayLogs = null,
     ) {}
-
-    // =========================================================================
-    // CONSUME — generan URL/payload de checkout de cada pasarela
-    // =========================================================================
-
-    public function consumeAddi(Request $request, Response $response): Response
-    {
-        /** @var array<string, mixed> $body */
-        $body = (array) ($request->getParsedBody() ?? []);
-        $orderId = $this->orderIdFromPayload($body);
-        $startedAt = microtime(true);
-
-        try {
-            $url = AddiCheckoutService::fromEnv()->obtainRedirectUrl($body);
-            $result = ['gateway' => self::PAYMENT_METHOD_ADDI, 'redirect_url' => $url];
-
-            return $this->json($response, $result);
-        } catch (Throwable $e) {
-            $this->getPaymentGatewayLogs()->consumeFailed(
-                self::PAYMENT_METHOD_ADDI,
-                self::LOG_SOURCE_CONSUME_ENDPOINT,
-                $orderId,
-                $e,
-                $this->elapsedMs($startedAt),
-                ['payload' => $body]
-            );
-
-            return $this->jsonError($response, 'Addi consume failed: ' . $e->getMessage(), 502);
-        }
-    }
-
-    public function consumeSistecredito(Request $request, Response $response): Response
-    {
-        /** @var array<string, mixed> $body */
-        $body = (array) ($request->getParsedBody() ?? []);
-        $orderId = $this->orderIdFromPayload($body);
-        $startedAt = microtime(true);
-
-        try {
-            $result = SistecreditoCheckoutService::fromEnv()->createOrder($body);
-            $responseBody = [
-                'gateway'        => self::PAYMENT_METHOD_SISTECREDITO,
-                'transaction_id' => $result['idTransaccion'],
-                'redirect_url'   => $result['paymentRedirectUrl'],
-            ];
-
-            return $this->json($response, $responseBody);
-        } catch (Throwable $e) {
-            $this->getPaymentGatewayLogs()->consumeFailed(
-                self::PAYMENT_METHOD_SISTECREDITO,
-                self::LOG_SOURCE_CONSUME_ENDPOINT,
-                $orderId,
-                $e,
-                $this->elapsedMs($startedAt),
-                ['payload' => $body]
-            );
-
-            return $this->jsonError($response, 'Sistecredito consume failed: ' . $e->getMessage(), 502);
-        }
-    }
-
-    public function consumeBold(Request $request, Response $response): Response
-    {
-        /** @var array<string, mixed> $body */
-        $body = (array) ($request->getParsedBody() ?? []);
-        $orderId = $this->orderIdFromPayload($body);
-        $startedAt = microtime(true);
-
-        try {
-            $checkout = BoldCheckoutService::fromEnv()->buildCheckoutConfig($body);
-            $result = [
-                'gateway'             => self::PAYMENT_METHOD_BOLD,
-                'integrity_signature' => $checkout['integritySignature'],
-                'checkout'            => $checkout,
-            ];
-
-            return $this->json($response, $result);
-        } catch (Throwable $e) {
-            $this->getPaymentGatewayLogs()->consumeFailed(
-                self::PAYMENT_METHOD_BOLD,
-                self::LOG_SOURCE_CONSUME_ENDPOINT,
-                $orderId,
-                $e,
-                $this->elapsedMs($startedAt),
-                ['payload' => $body]
-            );
-
-            return $this->jsonError($response, 'Bold consume failed: ' . $e->getMessage(), 502);
-        }
-    }
 
     // =========================================================================
     // WEBHOOKS — server-to-server. Siempre responden 200.
@@ -347,30 +248,6 @@ class PaymentGatewayController
         ];
 
         return $this->dispatcher = new PaymentEventDispatcher($orders, $statuses, $handlers, new PurchaseApproval());
-    }
-
-    private function getPaymentGatewayLogs(): PaymentGatewayLogService
-    {
-        return $this->paymentGatewayLogs ??= PaymentGatewayLogService::default();
-    }
-
-    /** @param array<string, mixed> $payload */
-    private function orderIdFromPayload(array $payload): ?int
-    {
-        foreach (['orderId', 'order_id', 'id_order', 'invoice', 'Invoice', 'Reference'] as $key) {
-            $value = $payload[$key] ?? null;
-
-            if (is_numeric($value)) {
-                return (int) $value;
-            }
-        }
-
-        return null;
-    }
-
-    private function elapsedMs(float $startedAt): float
-    {
-        return (microtime(true) - $startedAt) * 1000;
     }
 
     /**

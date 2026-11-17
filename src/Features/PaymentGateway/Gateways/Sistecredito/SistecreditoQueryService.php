@@ -44,20 +44,18 @@ final readonly class SistecreditoQueryService
     {
         $response = $this->http->request($this->queryUrl, [
             'method'  => 'GET',
-            'headers' => [
-                'Accept'                    => 'application/json',
-                'Ocp-Apim-Subscription-Key' => $this->subscriptionKey,
-                'ApplicationKey'            => $this->applicationKey,
-                'ApplicationToken'          => $this->applicationToken,
-            ],
+            'headers' => self::headers($this->subscriptionKey, $this->applicationKey, $this->applicationToken),
             'query'   => ['transactionId' => $transactionId],
             'timeout' => $this->timeout,
         ]);
 
-        /** @var array<string, mixed> $decoded */
         $decoded = json_decode($response, true, 512, JSON_THROW_ON_ERROR);
 
-        return $decoded;
+        // Credinet envuelve la transacción en `data`.
+        /** @var array<string, mixed> $data */
+        $data = is_array($decoded) && is_array($decoded['data'] ?? null) ? $decoded['data'] : [];
+
+        return $data;
     }
 
     /**
@@ -66,8 +64,29 @@ final readonly class SistecreditoQueryService
      */
     public function fetchPaymentUrl(string $transactionId): string
     {
-        $data = $this->fetchTransaction($transactionId);
+        $data   = $this->fetchTransaction($transactionId);
+        $method = is_array($data['paymentMethodResponse'] ?? null) ? $data['paymentMethodResponse'] : [];
 
-        return (string) ($data['paymentRedirectUrl'] ?? '');
+        return (string) ($method['paymentRedirectUrl'] ?? '');
+    }
+
+    /**
+     * Headers de Credinet, los mismos de la integración que ya funciona en producción
+     * (api.megaplexstars). Sin las tres llaves responde 401 sin detalle.
+     *
+     * @return array<string, string>
+     */
+    public static function headers(string $subscriptionKey, string $applicationKey, string $applicationToken): array
+    {
+        return [
+            'Content-Type'              => 'application/json',
+            'Accept'                    => 'application/json',
+            'SCOrigen'                  => 'Production',
+            'country'                   => 'co',
+            'SCLocation'                => '0,0',
+            'Ocp-Apim-Subscription-Key' => $subscriptionKey,
+            'ApplicationKey'            => $applicationKey,
+            'ApplicationToken'          => $applicationToken,
+        ];
     }
 }

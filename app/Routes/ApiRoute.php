@@ -246,11 +246,16 @@ return static function (\Slim\App $app): void {
             ->add(new RateLimitMiddleware($factory, id: 'diet-access-document', limit: 30, interval: '1 minute', bodyField: 'document'))
             ->add($limitByIp('diet-access', 300));
 
-        // Webhook de pago de Bold: se verifica su firma y que lo pagado cubra el pedido.
-        // No existen aquí el webhook genérico de radical (`/webhooks/orders`), que cambiaba el estado
-        // de un pedido sin firma, ni los de Addi y Sistecrédito, que aceptaban el aviso sin verificarlo.
+        // Webhooks de pago. En los tres, lo pagado debe cubrir el valor del pedido; el de Bold además
+        // verifica su firma. El call center confirma cada pago en la plataforma de la pasarela.
+        // No existe aquí el webhook genérico de radical (`/webhooks/orders`), que cambiaba el estado
+        // de un pedido sin firma.
         $group->post('/payment-gateway/webhook/bold', [$pgController, 'webhookBold'])
             ->add($limitByIp('pg-wh-bold', 60));
+        $group->post('/payment-gateway/webhook/addi', [$pgController, 'webhookAddi'])
+            ->add($limitByIp('pg-wh-addi', 60));
+        $group->post('/payment-gateway/webhook/sistecredito', [$pgController, 'webhookSistecredito'])
+            ->add($limitByIp('pg-wh-sistecredito', 60));
 
         // Crons: el cron de cPanel llama con `X-Cron-Job-Token`. Nunca se programan dentro de la app.
         $cronToken         = CronJobTokenMiddleware::fromEnv($factory);

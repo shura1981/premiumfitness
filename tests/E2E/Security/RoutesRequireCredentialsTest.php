@@ -26,8 +26,11 @@ const PUBLIC_ROUTES = [
     'GET /api/document-types',
     'GET /api/cities/search',
     'GET /api/referrals/trainers/{id:[A-Za-z0-9_=-]{1,32}}',
-    // Lo llama la pasarela: se valida por su firma, no por sesión.
+    // Los llama la pasarela, no la app: no llevan sesión. Bold se valida por su firma; en los tres,
+    // lo pagado debe cubrir el pedido y el call center confirma el pago en la plataforma.
     'POST /api/payment-gateway/webhook/bold',
+    'POST /api/payment-gateway/webhook/addi',
+    'POST /api/payment-gateway/webhook/sistecredito',
     'POST /api/admin/auth/login',
     'POST /api/admin/auth/refresh',
     'POST /api/admin/auth/logout',
@@ -137,8 +140,6 @@ it('las rutas de radical sin sesión ya no existen', function (string $method, s
     ['PATCH', '/api/orders/1/status'],
     ['POST', '/api/credit-balances'],
     ['POST', '/api/retail/account/login'],
-    ['POST', '/api/payment-gateway/webhook/addi'],
-    ['POST', '/api/payment-gateway/webhook/sistecredito'],
     ['POST', '/api/payment-gateway/consume/bold'],
     ['POST', '/api/checkout/finalize'],
     ['POST', '/api/auth/verify-code'],

@@ -79,6 +79,26 @@ final class Shop
         return (array) AppFactory::json(AppFactory::dispatch($request));
     }
 
+    /**
+     * Aviso de una pasarela sin firma (Addi o Sistecrédito), con la forma que envía cada una.
+     *
+     * @return array<string, mixed> Cuerpo de la respuesta del webhook.
+     */
+    public static function gatewayWebhook(string $gateway, int $orderId, float $amount, string $status): array
+    {
+        $payload = $gateway === 'addi'
+            ? ['orderId' => (string) $orderId, 'applicationId' => 'APP-' . bin2hex(random_bytes(6)), 'status' => $status, 'approvedAmount' => $amount]
+            : ['Invoice' => (string) $orderId, 'Value' => $amount, 'Currency' => 'COP',
+               'PaymentMethodResponse' => ['TransactionId' => 'SC-' . bin2hex(random_bytes(6)), 'StatusResponse' => $status]];
+
+        $request = (new ServerRequestFactory())
+            ->createServerRequest('POST', "/api/payment-gateway/webhook/{$gateway}", ['REMOTE_ADDR' => AppFactory::randomIp()])
+            ->withHeader('Content-Type', 'application/json')
+            ->withBody((new StreamFactory())->createStream(json_encode($payload, JSON_THROW_ON_ERROR)));
+
+        return (array) AppFactory::json(AppFactory::dispatch($request));
+    }
+
     /** Paga un pedido completo: avisa a Bold por su valor. */
     public static function pay(int $orderId): array
     {

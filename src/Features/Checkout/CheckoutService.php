@@ -9,7 +9,6 @@ use App\Features\DiscountRule\Buyer;
 use App\Features\DiscountRule\DiscountPolicy;
 use App\Features\DiscountRule\DiscountRuleRepository;
 use App\Features\Order\VatPolicy;
-use App\Features\PaymentGateway\Gateways\Bold\BoldCheckoutService;
 use App\Features\Product\IntranetProductCatalog;
 use App\Features\Trainer\TrainerRepository;
 use App\Infrastructure\Config\BusinessConfig;
@@ -26,9 +25,11 @@ use PDO;
  */
 class CheckoutService
 {
-    /** Pasarelas habilitadas. Addi y Sistecrédito de radical quedan fuera hasta poder verificar sus avisos de pago. */
+    /** Pasarelas habilitadas. El call center confirma los pagos de cada una en su plataforma. */
     public const array GATEWAYS = [
         ['id' => 'bold', 'name' => 'Bold', 'description' => 'Tarjeta, PSE, Nequi y más medios de pago.'],
+        ['id' => 'addi', 'name' => 'Addi', 'description' => 'Paga a cuotas con Addi.'],
+        ['id' => 'sistecredito', 'name' => 'Sistecrédito', 'description' => 'Paga a cuotas con tu crédito de Sistecrédito.'],
     ];
 
     private readonly QuoteCalculator $calculator;
@@ -87,7 +88,7 @@ class CheckoutService
             $this->coupon($quote),
         );
 
-        return ['order_id' => $orderId, 'payment' => $this->boldPayment($orderId, $quote->total, $buyer)];
+        return ['order_id' => $orderId, 'payment' => $this->payment($orderId, $buyer)];
     }
 
     /**
@@ -100,7 +101,7 @@ class CheckoutService
     public function payAgain(int $userId, int $orderId): array
     {
         $stmt = DB::getInstance()->prepare(
-            "SELECT amount, approved_at, order_type, created_at FROM orders WHERE order_id = ? AND user_id = ?"
+            "SELECT approved_at, order_type, created_at FROM orders WHERE order_id = ? AND user_id = ?"
         );
         $stmt->execute([$orderId, $userId]);
         $order = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -118,7 +119,7 @@ class CheckoutService
             throw ApiException::conflict('order_not_payable', 'Este pedido ya no se puede pagar. Haz la compra de nuevo.');
         }
 
-        return ['order_id' => $orderId, 'payment' => $this->boldPayment($orderId, (int) round((float) $order['amount']), $this->buyer($userId))];
+        return ['order_id' => $orderId, 'payment' => $this->payment($orderId, $this->buyer($userId))];
     }
 
     /** @throws ApiException */
@@ -142,35 +143,17 @@ class CheckoutService
     }
 
     /**
-     * Datos del botón de Bold. La firma de integridad cubre el pedido, el valor y la moneda:
-     * Bold rechaza el pago si la app cambia cualquiera de los tres. La vuelta del pago abre el área
-     * de quien compra: la raíz para el cliente y `/coach` para el entrenador (spec seguridad/01, S-08).
+     * Datos de la pasarela del pedido, con lo que quedó guardado en él. La vuelta del pago abre el
+     * área de quien compra: la raíz para el cliente y `/coach` para el entrenador (spec seguridad/01, S-08).
      *
      * @return array<string, mixed>
+     * @throws ApiException
      */
-    private function boldPayment(int $orderId, int $amount, Buyer $buyer): array
+    private function payment(int $orderId, Buyer $buyer): array
     {
         $area = $buyer->isTrainer() ? '/coach' : '';
 
-        $config = BoldCheckoutService::fromEnv()->buildCheckoutConfig([
-            'order_id'        => (string) $orderId,
-            'amount'          => $amount,
-            'currency'        => 'COP',
-            'description'     => "Pedido PremiumFitness #{$orderId}",
-            'redirection_url' => $this->business->webAppUrl . $area . '/pago/resultado?pedido=' . $orderId,
-        ]);
-
-        return [
-            'gateway' => 'bold',
-            'bold'    => [
-                'order_id'            => (string) $config['orderId'],
-                'amount'              => (int) $config['amount'],
-                'currency'            => (string) $config['currency'],
-                'api_key'             => (string) $config['apiKey'],
-                'integrity_signature' => (string) $config['integritySignature'],
-                'description'         => (string) $config['description'],
-                'redirection_url'     => (string) $config['redirectionUrl'],
-            ],
-        ];
+        return (new GatewayPayment($this->business))
+            ->start($orderId, $this->business->webAppUrl . $area . '/pago/resultado?pedido=' . $orderId);
     }
 }

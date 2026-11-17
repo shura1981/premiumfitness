@@ -18,8 +18,8 @@ use RuntimeException;
  *      `paymentRedirectUrl`. Si llega vacía (caso documentado por Credinet),
  *      se reintenta una vez tras `sleep(5)`.
  *
- * Headers obligatorios (los 3): `Ocp-Apim-Subscription-Key`, `ApplicationKey`,
- * `ApplicationToken`. Falta de alguno produce 401 silencioso.
+ * El cuerpo y los headers siguen la integración que ya funciona en producción (api.megaplexstars):
+ * Credinet responde la transacción dentro de `data`.
  */
 final readonly class SistecreditoCheckoutService
 {
@@ -53,7 +53,7 @@ final readonly class SistecreditoCheckoutService
     }
 
     /**
-     * @param  array<string, mixed> $body Datos del pedido (invoice, value, customer…).
+     * @param  array{invoice: string, description: string, value: int, docType: string, document: string, urlResponse?: string} $body
      * @return array{idTransaccion: string, paymentRedirectUrl: string}
      * @throws HttpRequestException
      * @throws RuntimeException Si tras dos intentos la URL llega vacía.
@@ -69,10 +69,10 @@ final readonly class SistecreditoCheckoutService
             'timeout' => $this->timeout,
         ]);
 
-        /** @var array{_id?: string} $decoded */
         $decoded = json_decode($response, true, 512, JSON_THROW_ON_ERROR);
+        $data    = is_array($decoded) && is_array($decoded['data'] ?? null) ? $decoded['data'] : [];
 
-        $transactionId = (string) ($decoded['_id'] ?? '');
+        $transactionId = (string) ($data['_id'] ?? '');
         if ($transactionId === '') {
             throw new RuntimeException('Sistecredito did not return _id from /pay/create.');
         }
@@ -94,29 +94,29 @@ final readonly class SistecreditoCheckoutService
     }
 
     /**
-     * @param  array<string, mixed> $body
+     * @param  array{invoice: string, description: string, value: int, docType: string, document: string, urlResponse?: string} $body
      * @return array<string, mixed>
      */
     private function buildPayload(array $body): array
     {
-        $payload = $body;
-        $payload['paymentMethodId']      = 2;
-        $payload['urlResponse']          = $this->urlResponse;
-        $payload['urlConfirmation']      = $this->urlConfirmation;
-        $payload['sandbox']              = ['isActive' => $this->sandboxActive, 'status' => 'Approved'];
-
-        return $payload;
+        return [
+            'invoice'            => $body['invoice'],
+            'description'        => $body['description'],
+            'paymentMethod'      => ['paymentMethodId' => 2], // 2 = Sistecrédito en Credinet
+            'currency'           => 'COP',
+            'value'              => $body['value'],
+            'sandbox'            => ['isActive' => $this->sandboxActive, 'status' => 'Approved'],
+            'urlResponse'        => $body['urlResponse'] ?? $this->urlResponse,
+            'urlConfirmation'    => $this->urlConfirmation,
+            'methodConfirmation' => 'POST',
+            'client'             => ['docType' => $body['docType'], 'document' => $body['document']],
+            'extraData'          => ['Authentication' => ''],
+        ];
     }
 
     /** @return array<string, string> */
     private function headers(): array
     {
-        return [
-            'Content-Type'              => 'application/json',
-            'Accept'                    => 'application/json',
-            'Ocp-Apim-Subscription-Key' => $this->subscriptionKey,
-            'ApplicationKey'            => $this->applicationKey,
-            'ApplicationToken'          => $this->applicationToken,
-        ];
+        return SistecreditoQueryService::headers($this->subscriptionKey, $this->applicationKey, $this->applicationToken);
     }
 }
