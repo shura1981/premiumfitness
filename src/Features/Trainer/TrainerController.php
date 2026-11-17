@@ -65,13 +65,16 @@ class TrainerController
     {
         $trainerId = self::trainerId($request);
         $trainer   = $this->area->trainer($trainerId) ?? throw ApiException::forbidden();
-        $base      = BusinessConfig::fromEnv()->webAppUrl;
+        $business  = BusinessConfig::fromEnv();
+        $base      = $business->webAppUrl;
         $linkId    = ReferralLink::encodeId($trainerId);
 
         return $this->json($response, [
             'coupon_code'  => $trainer['coupon_code'],
             'client_link'  => "{$base}/r/c/{$linkId}",
             'trainer_link' => "{$base}/r/t/{$linkId}",
+            // Lo que gana por cada entrenador referido (regla 6): la pantalla lo explica al invitar.
+            'trainer_referral_points' => $business->trainerReferralPoints,
             'clients'      => $this->area->clients($trainerId),
             'trainers'     => $this->area->referredTrainers($trainerId),
         ]);

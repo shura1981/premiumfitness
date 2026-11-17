@@ -171,7 +171,7 @@ interface OrderDetail extends OrderSummary {
 | Método y ruta | Cuerpo | Respuesta |
 | --- | --- | --- |
 | `GET /trainer/dashboard` | — | `TrainerDashboard` |
-| `GET /trainer/referrals` | — | `TrainerReferrals` |
+| `GET /trainer/referrals` | — | `TrainerReferrals`, con `trainer_referral_points`: los puntos que gana por cada entrenador referido (`TRAINER_REFERRAL_POINTS`), para explicarlo al invitar. |
 | `GET /trainer/points?source=` | — | `TrainerPoints` |
 | `GET /trainer/commission` | — | `TrainerCommission` |
 | `GET /trainer/commission/conversion-preview` | — | `ConversionPreview`. 409 `conversion_blocked` o `nothing_to_convert`. |

@@ -125,6 +125,8 @@ Plan técnico: [01-apps-web-y-admin.plan.md](01-apps-web-y-admin.plan.md).
   - Falta revisarlo en el navegador: verificado con lint, build y las pruebas del carrito
 - [x] La dirección de entrega se elige en un modal (16 nov 2026, pedido de Steven): en `/pagar` y en el canje se ve solo la dirección elegida (al entrar, la principal) y «Cambiar» abre una hoja con todas las guardadas, con buscador desde 6 direcciones y «Agregar otra dirección». Elegir una cierra la hoja. La hoja inferior tiene alto máximo y desplazamiento, para listas largas
   - Falta revisarlo en el navegador: verificado con lint, build y las pruebas del selector
+- [x] Referidos más claro (16 nov 2026, pedido de Steven): los dos enlaces siempre a la vista, en tarjetas «Invita a un cliente» e «Invita a otro entrenador», cada una con lo que recibe el invitado y lo que gana el entrenador (los puntos por entrenador referido llegan del backend en `trainer_referral_points`). Las fichas que escondían el enlace de entrenadores se retiran; las listas van debajo, en «Tus referidos», con pestañas Clientes (N) | Entrenadores (N)
+  - Falta revisarlo en el navegador: verificado con lint, build y pruebas
 - [ ] Bandeja de notificaciones del entrenador. La campana ya está en el Inicio (arriba a la derecha) y por ahora abre Cuenta → Notificaciones; al tener el módulo solo cambia su destino
 - [ ] Pantalla para canjear el acceso del mes a la app de dietas (`POST /trainer/diet-access/redeem`): Inicio solo muestra el estado
 - [ ] Pruebas unitarias de las pantallas de `features/` (hoy se verifican en el navegador; `core/` y `shared/` sí tienen)
