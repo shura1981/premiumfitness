@@ -215,7 +215,7 @@ interface Agent {
 
 **Cargos:** pedidos, agentes y reportes los usa cualquier agente con sesión. Entrenadores, estrategias, cierre mensual y registrar ajustes exigen uno de los cargos de `ADMIN_MANAGER_ROLES` (ROOT, GERENTE COMERCIAL y ADMINISTRADOR); a los demás responden 403. Los ajustes de un pedido los ve quien ve el pedido.
 
-Pedidos, agentes y reportes (`/admin/orders`, `/admin/agents` y `/admin/reports/*`) siguen como en radical, sin los de saldo a favor (`/admin/reports/credit-balances/*`).
+Pedidos, agentes y reportes (`/admin/orders`, `/admin/agents` y `/admin/reports/*`) siguen como en radical, sin los de saldo a favor (`/admin/reports/credit-balances/*`). Cada pedido de `/admin/orders` (lista y detalle) y de los reportes de pedidos trae además `order_type` (`client_purchase`, `trainer_purchase` o `redemption`) y `redemption_points` (los puntos de un canje; `null` en una compra): un canje tiene `amount` 0 y `payment_gateway` `null`, y el admin lo muestra en puntos y con la forma de pago «Canje con puntos».
 
 ### Entrenadores
 

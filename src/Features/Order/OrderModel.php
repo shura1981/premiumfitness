@@ -10,6 +10,10 @@ class OrderModel
     public int     $user_id;
     public ?int    $agent_id          = null;
     public string  $amount;
+    /** `client_purchase`, `trainer_purchase` o `redemption` (canje con puntos). */
+    public string  $order_type = 'client_purchase';
+    /** Puntos que costó un canje; null en una compra. */
+    public ?int    $redemption_points = null;
     /** null en un canje con puntos: no pasa por la pasarela. */
     public ?string $payment_gateway = null;
     public ?string $payment_state_json = null;

@@ -145,6 +145,9 @@ Plan técnico: [01-apps-web-y-admin.plan.md](01-apps-web-y-admin.plan.md).
 - [x] Añadir pruebas al admin: 127 pruebas (sesión, guards, validación del comprobante, estrategias, ajustes y API simulada)
 - [x] Conectar el admin al backend real (`npm run start:api`, puerto 4201) y recorrer sus flujos (16 nov 2026)
   - Tras las correcciones del backend falta repetir en el navegador: la lista de pedidos al entrar, el detalle de un canje y «Corregir pago».
+- [x] Que el admin muestre que un canje se pagó con puntos (23 nov 2026, pedido de Steven): la lista de pedidos, el reporte de pedidos y el de operaciones muestran su valor en puntos con la etiqueta «Canje», en lugar de $0; el detalle dice «Valor del canje: N pts», cada línea en puntos y «Forma de pago: Canje con puntos». El backend envía `order_type` y `redemption_points` en esas respuestas (componente `app-order-value`, con pruebas)
+  - Falta revisarlo en el navegador
+- [ ] Decidir si los reportes de ventas (diario, mensual, por hora, por ciudad, por departamento, por pasarela y clientes principales) dejan fuera los canjes: hoy los cuentan como pedidos de $0, lo que sube el número de pedidos y baja el ticket promedio
 - [x] Que buscadores no indexen el admin: `noindex` en `index.html` y `X-Robots-Tag` en el `.htaccess` (F-11)
 - [x] Con un modal abierto, la página del fondo no se desplaza: clase `pf-modal` en los 7 modales y regla `html:has(.pf-modal)` en `styles.css`; en móvil también con el menú lateral abierto (16 nov 2026)
 - [ ] Reducir el bundle inicial: pesa 515 kB y el aviso salta a los 500 kB

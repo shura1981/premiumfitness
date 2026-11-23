@@ -534,7 +534,7 @@ class ReportsRepository extends AbstractRepository
         }
 
         $params['limit'] = $limit;
-        $sql = "SELECT o.order_id, o.user_id, u.full_name, u.email, o.amount,
+        $sql = "SELECT o.order_id, o.user_id, u.full_name, u.email, o.amount, o.order_type, o.redemption_points,
                        o.payment_gateway, s.value AS status, o.sap_order_code,
                        o.tracking_number, o.carrier_name, o.created_at,
                        COALESCE(c.name, '') AS city, COALESCE(c.department, '') AS department
@@ -640,8 +640,8 @@ class ReportsRepository extends AbstractRepository
     public function approvedOrdersWithAgents(string $dateFrom, string $dateTo): array
     {
         $sql = "SELECT o.order_id, o.user_id, u.full_name AS user_full_name, u.email AS user_email,
-                       o.amount, o.payment_gateway, o.sap_order_code, o.tracking_number, o.carrier_name,
-                       s.value AS status_value, o.created_at,
+                       o.amount, o.order_type, o.redemption_points, o.payment_gateway, o.sap_order_code,
+                       o.tracking_number, o.carrier_name, s.value AS status_value, o.created_at,
                        o.agent_id, e.usuario AS agent_usuario, e.email AS agent_email,
                        e.cargo AS agent_cargo, e.departamento AS agent_departamento,
                        e.foto AS agent_foto

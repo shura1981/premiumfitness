@@ -358,6 +358,22 @@ it('cancelar un canje devuelve los puntos en un lote nuevo', function (): void {
         ->and(Shop::rows("SELECT source, initial_points FROM point_lots WHERE trainer_id = ? AND source = 'restitution'", [$trainer]))->toBe([['source' => 'restitution', 'initial_points' => 100000]]);
 });
 
+it('el pedido de un canje dice que se pagó con puntos, en la lista y en el detalle', function (): void {
+    $trainer = Seed::trainer();
+    Seed::pointLot($trainer, 300000);
+    $orderId = AppFactory::json(AppFactory::dispatch(AppFactory::request('POST', '/api/trainer/redemptions', [
+        'items' => [['code' => Seed::catalogProduct(['valor' => 100000]), 'quantity' => 2]], 'address_id' => Shop::address($trainer), 'idempotency_key' => bin2hex(random_bytes(16)),
+    ], JwtFactory::authHeader($trainer))))['order_id'];
+    [$purchase] = approvedPurchase();
+
+    $list   = array_column(AppFactory::json(admin('GET', 'orders?per_page=100'))['data'], null, 'order_id');
+    $detail = AppFactory::json(admin('GET', "orders/{$orderId}"));
+
+    expect($list[$orderId])->toMatchArray(['order_type' => 'redemption', 'redemption_points' => 200000, 'payment_gateway' => null])
+        ->and($list[$purchase])->toMatchArray(['order_type' => 'client_purchase', 'redemption_points' => null])
+        ->and($detail)->toMatchArray(['order_type' => 'redemption', 'redemption_points' => 200000]);
+});
+
 it('no ajusta un pedido sin pagar ni sin motivo', function (): void {
     $pending = Shop::order(Seed::user(), [['code' => Seed::catalogProduct(), 'quantity' => 1]]);
     [$paid]  = approvedPurchase();

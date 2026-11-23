@@ -29,7 +29,7 @@ class OrderRepository extends AbstractRepository
     }
 
     private const string SELECT_LIST_BASE = <<<'SQL'
-        SELECT o.order_id, o.user_id, o.agent_id, o.amount, o.payment_gateway, o.payment_state_json,
+        SELECT o.order_id, o.user_id, o.agent_id, o.amount, o.order_type, o.redemption_points, o.payment_gateway, o.payment_state_json,
                o.sap_order_code, o.tracking_number, o.carrier_name,
                o.status_id, o.address_id, o.order_notes,
                o.created_at, o.updated_at,
@@ -64,7 +64,7 @@ class OrderRepository extends AbstractRepository
         $employees = IntranetTables::fromEnv()->employees;
 
         return <<<SQL
-        SELECT o.order_id, o.user_id, o.agent_id, o.amount, o.payment_gateway, o.payment_state_json,
+        SELECT o.order_id, o.user_id, o.agent_id, o.amount, o.order_type, o.redemption_points, o.payment_gateway, o.payment_state_json,
                o.sap_order_code, o.tracking_number, o.carrier_name,
                o.status_id, o.address_id, o.order_notes,
                o.created_at, o.updated_at,
