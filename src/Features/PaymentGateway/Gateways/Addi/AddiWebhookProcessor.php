@@ -56,6 +56,8 @@ final class AddiWebhookProcessor
             statusText:    $statusText,
             amount:        (float) ($payload['approvedAmount'] ?? 0),
             rawPayload:    $payload,
+            reference:     $reference,
+            paymentMethod: 'Addi',
         );
     }
 }

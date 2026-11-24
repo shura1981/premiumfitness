@@ -6,7 +6,8 @@ namespace App\Features\PaymentGateway\Events\Handlers;
 
 use App\Features\PaymentGateway\Events\PaymentEvent;
 use App\Features\User\UserRepository;
-use App\Infrastructure\Notification\SocketGatewayClient;
+use App\Infrastructure\Notification\RealtimeGateway;
+use App\Features\Order\OrderStatusMapper;
 
 /**
  * Emite `purchase.status.changed` al socket del cliente final tras cualquier
@@ -18,7 +19,7 @@ use App\Infrastructure\Notification\SocketGatewayClient;
 final class EmitClientPurchaseStatusHandler implements PaymentEventHandlerInterface
 {
     public function __construct(
-        private readonly SocketGatewayClient $socket,
+        private readonly RealtimeGateway $socket,
         private readonly UserRepository $users,
     ) {}
 
@@ -40,6 +41,9 @@ final class EmitClientPurchaseStatusHandler implements PaymentEventHandlerInterf
                 'payload' => [
                     'order_id'       => $event->order->order_id,
                     'user_id'        => $event->order->user_id,
+                    // El id de pago del intento (`pf-<n>`) y el estado tal como lo muestra la app.
+                    'reference'      => $event->result->reference,
+                    'order_status'   => OrderStatusMapper::forUser($event->result->statusText, $event->result->isApproved(), false, false),
                     'status'         => $event->result->statusText,
                     'status_id'      => $event->result->codStatus,
                     'gateway'        => $event->result->gateway,

@@ -43,7 +43,8 @@ final class GatewayPayment
     ) {}
 
     /**
-     * @param string $returnUrl A donde vuelve el usuario después de pagar (`/pago/resultado?pedido=`).
+     * @param string $returnUrl Página de respuesta de la app (`…/pago/resultado`). Se le agrega el id de pago
+     *                          (`?pago=pf-<n>`): con él la página consulta el resultado (spec integraciones/03).
      * @return array<string, mixed> El `payment` del contrato `CheckoutResult`.
      * @throws ApiException 502 si la pasarela no entrega su página de pago.
      */
@@ -52,9 +53,10 @@ final class GatewayPayment
         $order     = $this->order($orderId);
         $gateway   = (string) $order['payment_gateway'];
         $reference = $this->attempts->create($orderId, $gateway, (float) $order['amount']);
+        $returnUrl .= (str_contains($returnUrl, '?') ? '&' : '?') . 'pago=' . rawurlencode($reference);
 
         if ($gateway === 'bold') {
-            return $this->bold($order, $reference, $returnUrl);
+            return $this->bold($order, $reference, $returnUrl) + ['reference' => $reference];
         }
 
         try {
@@ -76,7 +78,7 @@ final class GatewayPayment
             );
         }
 
-        return ['gateway' => $gateway, 'redirect_url' => $url];
+        return ['gateway' => $gateway, 'redirect_url' => $url, 'reference' => $reference];
     }
 
     /**

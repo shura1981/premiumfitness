@@ -7,6 +7,7 @@ namespace App\Features\Redemption;
 use App\Features\Account\AddressBook;
 use App\Features\Checkout\CartInput;
 use App\Features\Notification\PushOutbox;
+use App\Features\Order\OrderRealtime;
 use App\Features\Order\StatusOrderRepository;
 use App\Features\Order\VatPolicy;
 use App\Features\PaymentGateway\Normalizer\PaymentStatus;
@@ -17,7 +18,6 @@ use App\Features\Product\CatalogProduct;
 use App\Features\Product\IntranetProductCatalog;
 use App\Features\Product\ProductCatalog;
 use App\Infrastructure\Database\DB;
-use App\Infrastructure\Notification\SocketGatewayClient;
 use App\Shared\Exceptions\ApiException;
 use PDO;
 use Throwable;
@@ -122,30 +122,10 @@ class RedemptionService
             throw $e;
         }
 
-        $this->notifyCallCenter($orderId);
+        // El call center ve el canje nuevo sin recargar (spec integraciones/03).
+        (new OrderRealtime())->created($orderId);
 
         return $orderId;
-    }
-
-    /**
-     * Avisa al admin en tiempo real, como cuando se aprueba el pago de una compra: la lista de pedidos
-     * del call center se actualiza sola. Si el aviso falla, el canje ya está hecho; el agente lo ve al
-     * recargar.
-     */
-    private function notifyCallCenter(int $orderId): void
-    {
-        try {
-            SocketGatewayClient::fromEnv()->broadcastToAdmin([[
-                'event'   => 'order.status.changed',
-                'payload' => [
-                    'order_id'     => $orderId,
-                    'status_id'    => new StatusOrderRepository()->findOrCreateIdByValue(PaymentStatus::TEXT_APROBADA),
-                    'status_value' => PaymentStatus::TEXT_APROBADA,
-                ],
-            ]]);
-        } catch (Throwable) {
-            // No crítico.
-        }
     }
 
     /**

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Features\Order;
 
-use App\Infrastructure\Notification\SocketGatewayClient;
 use App\Features\PaymentGateway\Normalizer\PaymentStatus;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -166,6 +165,7 @@ class OrderController
         }
 
         $this->repository->updateSapOrderCode($id, (int) $body['sap_order_code']);
+        (new OrderRealtime())->processed($id);
 
         return $this->json($response, $this->repository->findById($id));
     }
@@ -195,7 +195,7 @@ class OrderController
             return $this->jsonError($response, 'Order not found', 404);
         }
 
-        $this->broadcastOrderProcessed($id);
+        (new OrderRealtime())->processed($id);
 
         return $this->json($response, $current);
     }
@@ -286,6 +286,7 @@ class OrderController
             (string) $body['tracking_number'],
             (string) $body['carrier_name']
         );
+        (new OrderRealtime())->trackingUpdated($id);
 
         return $this->json($response, $this->repository->findById($id));
     }
@@ -310,18 +311,6 @@ class OrderController
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
-
-    private function broadcastOrderProcessed(int $orderId): void
-    {
-        try {
-            SocketGatewayClient::fromEnv()->broadcastToAdmin([[
-                'event'   => 'order.processed',
-                'payload' => ['order_id' => $orderId],
-            ]]);
-        } catch (\Throwable) {
-            // Non-critical
-        }
-    }
 
     /**
      * @return array{0: int, 1: int}

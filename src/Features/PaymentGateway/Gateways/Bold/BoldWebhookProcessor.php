@@ -109,7 +109,24 @@ final class BoldWebhookProcessor
             statusText:    $statusText,
             amount:        (float) $rawTotal,
             rawPayload:    $payload,
+            reference:     $reference,
+            paymentMethod: self::paymentMethod($data),
         );
+    }
+
+    /** @param array<string, mixed> $data `CARD` → «Tarjeta»; el resto como lo manda Bold (PSE, NEQUI…). */
+    private static function paymentMethod(array $data): string
+    {
+        $method = is_string($data['payment_method'] ?? null) ? strtoupper(trim($data['payment_method'])) : '';
+
+        return match ($method) {
+            ''                  => 'Bold',
+            'CARD', 'CARD_WEB'  => 'Tarjeta',
+            'NEQUI'             => 'Nequi',
+            'DAVIPLATA'         => 'Daviplata',
+            'BOTON_BANCOLOMBIA' => 'Botón Bancolombia',
+            default             => $method,
+        };
     }
 
     private function references(): PaymentReferenceResolver

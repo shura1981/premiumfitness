@@ -27,6 +27,10 @@ final readonly class PaymentResult
         public string $statusText,
         public float  $amount,
         public array  $rawPayload,
+        /** Id del intento de pago (`pf-<n>`) que reportó la pasarela; null en los resultados reconstruidos. */
+        public ?string $reference = null,
+        /** Medio de pago que reportó la pasarela (tarjeta, PSE, Nequi…) o el nombre de la pasarela. */
+        public ?string $paymentMethod = null,
     ) {}
 
     public function isApproved(): bool

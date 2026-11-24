@@ -102,7 +102,7 @@ function gatewayOrder(): array
 
 it('arma la solicitud de Addi con el pedido guardado y la vuelta a la app', function (): void {
     $items   = [['product_sku' => 103040, 'product_name' => 'NUTRA C', 'quantity' => 2, 'unit_price' => '112455.00', 'tax_amount' => '35910.08']];
-    $payload = (new GatewayPayment(BusinessConfig::fromEnv()))->addiPayload(gatewayOrder(), 'pf-77', $items, 'https://app.test/pago/resultado?pedido=901');
+    $payload = (new GatewayPayment(BusinessConfig::fromEnv()))->addiPayload(gatewayOrder(), 'pf-77', $items, 'https://app.test/pago/resultado?pago=pf-77');
 
     expect($payload)->toMatchArray([
         'orderId' => 'pf-77', 'totalAmount' => '224910.0', 'shippingAmount' => '0.0', 'totalTaxesAmount' => '35910.1', 'currency' => 'COP',
@@ -113,16 +113,16 @@ it('arma la solicitud de Addi con el pedido guardado y la vuelta a la app', func
             'cellphone' => '3009000001', 'cellphoneCountryCode' => '+57',
         ])
         ->and($payload['shippingAddress'])->toBe(['lineOne' => 'CL 1 2 3', 'city' => 'Cali', 'country' => 'CO'])
-        ->and($payload['allyUrlRedirection']['redirectionUrl'])->toBe('https://app.test/pago/resultado?pedido=901');
+        ->and($payload['allyUrlRedirection']['redirectionUrl'])->toBe('https://app.test/pago/resultado?pago=pf-77');
 });
 
 it('arma la orden de Sistecrédito con el pedido guardado y la vuelta a la app', function (): void {
-    expect(GatewayPayment::sistecreditoPayload(gatewayOrder(), 'pf-77', 'https://app.test/pago/resultado?pedido=901'))->toBe([
+    expect(GatewayPayment::sistecreditoPayload(gatewayOrder(), 'pf-77', 'https://app.test/pago/resultado?pago=pf-77'))->toBe([
         'invoice'     => 'pf-77',
         'description' => 'Pedido PremiumFitness #901',
         'value'       => 224910,
         'docType'     => 'CE',
         'document'    => '1234567',
-        'urlResponse' => 'https://app.test/pago/resultado?pedido=901',
+        'urlResponse' => 'https://app.test/pago/resultado?pago=pf-77',
     ]);
 });

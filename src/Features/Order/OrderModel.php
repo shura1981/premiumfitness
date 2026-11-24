@@ -27,6 +27,8 @@ class OrderModel
     public ?string $order_notes       = null;
     public string  $created_at;
     public ?string $updated_at        = null;
+    /** Cuándo se aprobó el pago (o se creó el canje); null mientras no se aprueba. */
+    public ?string $approved_at       = null;
 
     /** Nombre del estado (JOIN status_orders.value). Null si sin status. */
     public ?string $status_value      = null;

@@ -15,6 +15,7 @@ use App\Infrastructure\Database\IntranetTables;
 use App\Shared\Exceptions\ApiException;
 use PDO;
 use Throwable;
+use App\Features\Order\OrderRealtime;
 
 /**
  * Ajustes por cancelación o devolución de un pedido aprobado (RF-17; PRD §7.4).
@@ -144,6 +145,8 @@ class AdjustmentService
             AuditLog::byAgent($agentId, 'order.adjustment', 'order', $orderId, ['adjustment_id' => $adjustmentId, 'type' => $type, 'reason' => $reason, 'items' => $items, 'effect' => $effect]);
 
             $this->pdo->commit();
+            // Cancelación o devolución: el dueño y el admin ven el cambio sin recargar (spec integraciones/03).
+            (new OrderRealtime())->statusChanged($orderId);
 
             return $adjustmentId;
         } catch (Throwable $e) {

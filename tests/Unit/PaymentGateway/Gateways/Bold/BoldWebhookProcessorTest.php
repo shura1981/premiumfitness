@@ -99,3 +99,20 @@ it('marca como ajena una referencia que no es pf-<id>, como las numéricas del s
     expect(fn () => (new BoldWebhookProcessor(references: new FakePaymentReferences()))->process($payload))
         ->toThrow(ForeignPaymentReferenceException::class);
 })->with(['863', 'PF-863', 'pf-', 'pf-863-1']);
+
+it('lleva el id de pago y el medio que reporta Bold', function (?string $method, string $expected): void {
+    $data = ['payment_id' => 'PAY-1', 'amount' => ['total' => 1000, 'currency' => 'COP'], 'metadata' => ['reference' => 'pf-7']];
+    if ($method !== null) {
+        $data['payment_method'] = $method;
+    }
+
+    $result = (new BoldWebhookProcessor(references: new FakePaymentReferences()))->process(['type' => 'SALE_APPROVED', 'data' => $data]);
+
+    expect($result->reference)->toBe('pf-7')
+        ->and($result->paymentMethod)->toBe($expected);
+})->with([
+    'tarjeta'           => ['CARD', 'Tarjeta'],
+    'PSE'               => ['PSE', 'PSE'],
+    'Nequi'             => ['NEQUI', 'Nequi'],
+    'sin medio en aviso' => [null, 'Bold'],
+]);

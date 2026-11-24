@@ -120,6 +120,8 @@ interface ProductDetail extends Product {
 | `GET /orders` | — | `{ data: OrderSummary[] }`, los propios |
 | `GET /orders/:id` | — | `OrderDetail`; 404 si no es de quien consulta |
 | `POST /orders/:id/pay` | — | `CheckoutResult` de un pedido propio que sigue pendiente, con el valor guardado. 409 `order_not_payable` si ya se pagó, es un canje o tiene más de un día. |
+| `GET /payments/:reference` | — | `PaymentStatusResult` de un intento de pago propio (`pf-<n>`), para la página de respuesta (spec `integraciones/03`). 404 si no es suyo o no existe. Solo informa: el estado lo cambia el webhook. |
+| `PUT /account/socket` | `{ socket_token }` | 204. Registra la conexión de esta sesión en el gateway de sockets; ahí llegan `purchase.status.changed` y `order.updated`. 422 si no es válida. |
 
 ```ts
 interface CheckoutPreview {
@@ -136,10 +138,25 @@ interface CheckoutPreview {
 interface CheckoutResult {
   order_id: number;
   payment:
-    | { gateway: 'bold'; bold: { order_id: string; amount: number; currency: 'COP'; api_key: string;
+    | { gateway: 'bold'; reference: string; bold: { order_id: string; amount: number; currency: 'COP'; api_key: string;
         integrity_signature: string; description: string; redirection_url: string } }
-    | { gateway: 'addi' | 'sistecredito'; redirect_url: string };
+    | { gateway: 'addi' | 'sistecredito'; reference: string; redirect_url: string };
+  // `reference`: id de pago del intento (`pf-<n>`). La pasarela devuelve al cliente a
+  // `/pago/resultado?pago=<reference>` (o `/coach/pago/resultado`).
 }
+interface PaymentStatusResult {
+  reference: string; order_id: number; gateway: string; gateway_name: string;
+  status: OrderStatus;                                 // del pedido; lo decide el webhook
+  gateway_status: string | null;                       // lo que reportó la pasarela (APROBADA, PAGO RECHAZADO…); null sin aviso
+  transaction_id: string | null; payment_method: string | null;
+  amount: number;                                      // lo pagado según la pasarela, o lo enviado mientras no avisa
+  created_at: string; notified_at: string | null;
+}
+// Socket de elinut (spec integraciones/03). A la conexión del dueño del pedido:
+//   purchase.status.changed { order_id, reference, order_status, status, gateway, transaction_id, amount, occurred_at }
+//   order.updated           { order_id, status, tracking_number, carrier_name, occurred_at }
+// Al admin (todos los agentes): order.created (el pedido), order.status.changed { order_id, status_id, status_value },
+//   order.processed { order_id }, order.tracking.updated { order_id, tracking_number, carrier_name }
 type OrderStatus = 'pendiente' | 'aprobado' | 'en_proceso' | 'en_camino' | 'rechazado' | 'cancelado';
 interface OrderSummary {
   id: number; created_at: string; status: OrderStatus; total: number; items_count: number; first_item: string;

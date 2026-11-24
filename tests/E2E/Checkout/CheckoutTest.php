@@ -232,7 +232,7 @@ it('firma el pago en el servidor con el valor del pedido', function (): void {
         ->and($bold['currency'])->toBe('COP')
         // Firma de integridad de Bold: sha256(id de pago + valor + moneda + secreto).
         ->and($bold['integrity_signature'])->toBe(hash('sha256', $bold['order_id'] . $amount . 'COP' . trim($_ENV['BOLD_SECRET_KEY'])))
-        ->and($bold['redirection_url'])->toStartWith(rtrim($_ENV['WEB_APP_URL'], '/') . '/pago/resultado?pedido=' . $body['order_id'])
+        ->and($bold['redirection_url'])->toStartWith(rtrim($_ENV['WEB_APP_URL'], '/') . '/pago/resultado?pago=' . $bold['order_id'])
         ->and($bold['description'])->toContain('PremiumFitness')
         // A la app solo viaja la llave pública (`api_key`), nunca el secreto.
         ->and($bold['api_key'])->toBe(trim($_ENV['BOLD_IDENTITY_KEY']))
@@ -245,7 +245,7 @@ it('la vuelta del pago de un entrenador abre su área, /coach', function (): voi
     $body     = AppFactory::json(Shop::checkout($trainer, [['code' => $code, 'quantity' => 1]]));
 
     expect($body['payment']['bold']['redirection_url'])
-        ->toStartWith(rtrim($_ENV['WEB_APP_URL'], '/') . '/coach/pago/resultado?pedido=' . $body['order_id']);
+        ->toStartWith(rtrim($_ENV['WEB_APP_URL'], '/') . '/coach/pago/resultado?pago=' . Shop::reference($body['order_id']));
 });
 
 it('ignora los precios que envíe la app', function (): void {

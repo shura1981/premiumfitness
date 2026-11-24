@@ -17,6 +17,7 @@ use App\Infrastructure\Config\BusinessConfig;
 use App\Infrastructure\Database\DB;
 use App\Shared\Exceptions\ApiException;
 use PDO;
+use App\Features\Order\OrderRealtime;
 
 /**
  * Compra de la app web (contrato: specs/backend/03-api-de-premiumfitness.plan.md).
@@ -98,7 +99,11 @@ class CheckoutService
             $this->coupon($quote),
         );
 
-        return ['order_id' => $orderId, 'payment' => $this->payment($orderId, $buyer)];
+        $payment = $this->payment($orderId, $buyer);
+        // El admin ve el pedido nuevo sin recargar (spec integraciones/03).
+        (new OrderRealtime())->created($orderId);
+
+        return ['order_id' => $orderId, 'payment' => $payment];
     }
 
     /**
@@ -172,7 +177,8 @@ class CheckoutService
     {
         $area = $buyer->isTrainer() ? '/coach' : '';
 
+        // La página de respuesta de su área; `GatewayPayment` le agrega el id de pago del intento.
         return (new GatewayPayment($this->business))
-            ->start($orderId, $this->business->webAppUrl . $area . '/pago/resultado?pedido=' . $orderId);
+            ->start($orderId, $this->business->webAppUrl . $area . '/pago/resultado');
     }
 }

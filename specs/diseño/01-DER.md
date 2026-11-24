@@ -63,6 +63,8 @@
 - **IVA:** ya no hay tasa por producto. Cada línea toma `VAT_PERCENTAGE` (19), salvo los códigos de `VAT_EXEMPT_PRODUCT_CODES` (Nutra C, código 103040), y guarda tasa, base e IVA.
 - **Tipos:** la tabla externa se dibuja con los tipos reales (`SHOW COLUMNS`, 15 nov 2026).
 
+**Revisión v0.18, 24 de noviembre de 2026:** `payment_attempts` guarda lo que reportó la pasarela en su webhook: `status`, `transaction_id`, `payment_method`, `paid_amount` y `notified_at`. Con ellos la página de respuesta muestra el resultado consultando el id de pago (spec `integraciones/03`).
+
 **Revisión v0.17, 16 de noviembre de 2026:** cada intento de pago tiene su propio id. Se añade `payment_attempts`: su `id` da la referencia `pf-<id>` que recibe la pasarela (spec `backend/03`, P-24; S-49).
 
 **Revisión v0.16, 15 de noviembre de 2026:** la app de dietas es Nutrition & Fitness Plus, con su propio login y backend, desacoplada de PremiumFitness. Su backend consulta a PremiumFitness por el documento del entrenador, con una credencial de servicio (spec `integraciones/02`, revisado).
@@ -221,7 +223,7 @@ Diagrama editable: [diagrama-entidad-relacion.drawio](../../docs/img/diagrama-en
 | Pedidos y catálogo | `orders` | Adaptada | Conserva `agent_id` y `sap_order_code`. Añade tipo de pedido, totales de descuento e IVA, puntos ganados por el pedido (`reward_points`), puntos del canje, referencia de pago y versión de regla. El entrenador se toma de `orders_coupons`. |
 | Pedidos y catálogo | `orders_items` | Adaptada | Copia del catálogo el código, el nombre (`product_name`), el precio y `sap_code`, sin FK. Usa `discount_percentage` para el descuento vigente del producto. Añade tasa, base e IVA; porcentaje y monto de comisión, y puntos del canje. |
 | Pedidos y catálogo | `status_orders` | Existente | Estados del pedido. |
-| Pedidos y catálogo | `payment_attempts` | Nueva | Intentos de pago de un pedido. Su `id` es el consecutivo del id de pago `pf-<id>` que recibe la pasarela; guarda la pasarela y el valor enviado. |
+| Pedidos y catálogo | `payment_attempts` | Nueva | Intentos de pago de un pedido. Su `id` es el consecutivo del id de pago `pf-<id>` que recibe la pasarela; guarda la pasarela y el valor enviado, y lo que reportó la pasarela en su webhook (estado, transacción, medio, valor y fecha del aviso). |
 | Pedidos y catálogo | `payment_event_jobs` | Existente | Reintento de webhooks que llegan antes que el pedido. |
 | Recompensas y operación | `commission_movements` | Nueva | Abono de comisión del pedido (suma de líneas), débitos por conversión y ajustes. |
 | Recompensas y operación | `commission_conversions` | Nueva | Conversión del total de comisión a puntos: comisión, puntos base, adicional con tope y total. |
@@ -287,5 +289,6 @@ Diagrama editable: [diagrama-entidad-relacion.drawio](../../docs/img/diagrama-en
 - [x] Leer el catálogo de la intranet: quitar las tablas de catálogo de radical, copiar el producto en `orders_items` y sacar el IVA del catálogo (v0.15)
 - [x] Quitar la app `diets`: la app de dietas consulta el acceso por documento (v0.16)
 - [x] Añadir `payment_attempts`: un id de pago por intento (v0.17)
+- [x] Columnas del resultado de la pasarela en `payment_attempts` (v0.18, spec `integraciones/03`)
 - [ ] Dibujar `payment_attempts` en el diagrama (`.drawio` y PNG)
 - [ ] Revisión y aprobación del modelo por negocio y tecnología

@@ -25,6 +25,7 @@ use App\Features\DietAccess\DietAccessIntegrationController;
 use App\Features\Notification\PushDeviceController;
 use App\Features\Order\UserOrderController;
 use App\Features\PaymentGateway\PaymentGatewayController;
+use App\Features\PaymentGateway\PaymentStatusController;
 use App\Features\Product\ProductController;
 use App\Features\Reference\ReferenceController;
 use App\Features\Referral\ReferralController;
@@ -143,6 +144,10 @@ return static function (\Slim\App $app): void {
         $group->put('/account', [$accountController, 'update'])
             ->add($validate(new ProfileValidator()))
             ->add($jwt);
+        // Conexión de la app web al socket de elinut: ahí le llegan los cambios de sus pedidos.
+        $group->put('/account/socket', [$accountController, 'registerSocket'])
+            ->add($limitByIp('account-socket', 60))
+            ->add($jwt);
 
         $group->get('/localities', [$referenceController, 'localities'])->add($jwt);
 
@@ -250,6 +255,11 @@ return static function (\Slim\App $app): void {
         // verifica su firma. El call center confirma cada pago en la plataforma de la pasarela.
         // No existe aquí el webhook genérico de radical (`/webhooks/orders`), que cambiaba el estado
         // de un pedido sin firma.
+        // Resultado de un intento de pago para la página de respuesta de la app (spec integraciones/03).
+        $group->get('/payments/{reference:[A-Za-z0-9_-]{1,40}}', [new PaymentStatusController(), 'show'])
+            ->add($limitByIp('payment-status', 120))
+            ->add($jwt);
+
         $group->post('/payment-gateway/webhook/bold', [$pgController, 'webhookBold'])
             ->add($limitByIp('pg-wh-bold', 60));
         $group->post('/payment-gateway/webhook/addi', [$pgController, 'webhookAddi'])

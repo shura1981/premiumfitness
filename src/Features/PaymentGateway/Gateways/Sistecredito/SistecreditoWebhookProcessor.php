@@ -69,6 +69,8 @@ final class SistecreditoWebhookProcessor
             statusText:    $statusText,
             amount:        (float) ($payload['Value'] ?? 0),
             rawPayload:    $payload,
+            reference:     $reference,
+            paymentMethod: 'Sistecrédito',
         );
     }
 }
