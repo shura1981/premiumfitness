@@ -15,11 +15,35 @@ class ReportsRepository extends AbstractRepository
      * El catálogo de la intranet (solo lectura) con los nombres de columna que usan los reportes.
      * Sin los productos en promoción, que no se venden en la app (spec catalogo/01).
      */
+    /**
+     * Solo ventas: compras de clientes y de entrenadores. Un canje se paga con puntos, no es una venta
+     * y nunca entra en estos reportes: su `amount` es 0 y sus líneas guardan el precio completo en
+     * `line_total`, que no se cobró.
+     */
+    private const string SALE = "o.order_type IN ('client_purchase', 'trainer_purchase')";
+
     private static function catalog(): string
     {
         return '(SELECT codigo AS sku, producto AS name, category AS category_name, valor + 0 AS price,
             agotado + 0 AS is_out_of_stock, COALESCE(activo, 0) + 0 AS is_active
          FROM ' . IntranetTables::fromEnv()->products . ' WHERE promo = 0)';
+    }
+
+    /**
+     * Unidades y valor vendidos de cada producto entre :date_from y :date_to: solo líneas de ventas
+     * aprobadas. Las condiciones van aquí, no en el JOIN con el catálogo: antes estaban en el JOIN con
+     * el estado y se sumaban también los pedidos pendientes, rechazados y de cualquier fecha.
+     */
+    private static function approvedSalesByProduct(): string
+    {
+        return "(SELECT oi.product_sku, SUM(oi.quantity) AS total_sold, SUM(oi.line_total) AS revenue
+                 FROM orders_items oi
+                 JOIN orders o ON o.order_id = oi.order_id
+                 JOIN status_orders s ON s.status_id = o.status_id
+                 WHERE s.value = 'APROBADA' AND " . self::SALE . "
+                   AND DATE(o.created_at) >= :date_from
+                   AND DATE(o.created_at) <= :date_to
+                 GROUP BY oi.product_sku)";
     }
 
     public function __construct()
@@ -35,38 +59,38 @@ class ReportsRepository extends AbstractRepository
     {
         $sql = 'SELECT
             (SELECT COUNT(*) FROM users) AS total_users,
-            (SELECT COUNT(*) FROM orders) AS total_orders,
+            (SELECT COUNT(*) FROM orders o WHERE ' . self::SALE . ') AS total_orders,
             COALESCE((SELECT SUM(o.amount)
              FROM orders o
              JOIN status_orders s ON o.status_id = s.status_id
-             WHERE s.value = \'APROBADA\'), 0) AS revenue_approved,
-            COALESCE((SELECT SUM(amount) FROM orders), 0) AS revenue_total,
+             WHERE s.value = \'APROBADA\' AND ' . self::SALE . '), 0) AS revenue_approved,
+            COALESCE((SELECT SUM(o.amount) FROM orders o WHERE ' . self::SALE . '), 0) AS revenue_total,
             (SELECT COUNT(*)
              FROM orders o
              JOIN status_orders s ON o.status_id = s.status_id
-             WHERE s.value LIKE \'PENDIENTE%\') AS pending_orders,
+             WHERE s.value LIKE \'PENDIENTE%\' AND ' . self::SALE . ') AS pending_orders,
             (SELECT COUNT(*)
              FROM orders o
              JOIN status_orders s ON o.status_id = s.status_id
-             WHERE s.value LIKE \'%RECHAZAD%\' OR s.value LIKE \'%CANCELAD%\') AS rejected_orders,
+             WHERE (s.value LIKE \'%RECHAZAD%\' OR s.value LIKE \'%CANCELAD%\') AND ' . self::SALE . ') AS rejected_orders,
             (SELECT COUNT(*)
              FROM orders o
              JOIN status_orders s ON o.status_id = s.status_id
-             WHERE s.value = \'APROBADA\') AS approved_orders,
+             WHERE s.value = \'APROBADA\' AND ' . self::SALE . ') AS approved_orders,
             (SELECT COUNT(*) FROM ' . self::catalog() . ' p WHERE p.is_active = 1) AS total_products,
             (SELECT COUNT(*) FROM users WHERE created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)) AS new_users_this_month,
             (SELECT COUNT(*) FROM orders o
              JOIN status_orders s ON o.status_id = s.status_id
-             WHERE s.value = \'APROBADA\'
+             WHERE s.value = \'APROBADA\' AND ' . self::SALE . '
                AND o.created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)) AS orders_this_month,
             COALESCE((SELECT SUM(o.amount) FROM orders o
              JOIN status_orders s ON o.status_id = s.status_id
-             WHERE s.value = \'APROBADA\'
+             WHERE s.value = \'APROBADA\' AND ' . self::SALE . '
                AND o.created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)), 0) AS revenue_this_month,
             COALESCE((SELECT ROUND(AVG(o.amount))
              FROM orders o
              JOIN status_orders s ON o.status_id = s.status_id
-             WHERE s.value = \'APROBADA\'), 0) AS avg_ticket';
+             WHERE s.value = \'APROBADA\' AND ' . self::SALE . '), 0) AS avg_ticket';
 
         /** @var DashboardKpiModel|false $result */
         $result = $this->fetchOne($sql, DashboardKpiModel::class);
@@ -90,7 +114,7 @@ class ReportsRepository extends AbstractRepository
                     COALESCE(SUM(o.amount), 0) AS revenue
              FROM orders o
              JOIN status_orders s ON o.status_id = s.status_id
-             WHERE s.value = 'APROBADA' AND YEAR(o.created_at) = :year
+             WHERE s.value = 'APROBADA' AND " . self::SALE . " AND YEAR(o.created_at) = :year
              GROUP BY DATE_FORMAT(o.created_at, '%m')
              ORDER BY period",
             SalesByPeriodModel::class,
@@ -110,7 +134,7 @@ class ReportsRepository extends AbstractRepository
                     COALESCE(SUM(o.amount), 0) AS revenue
              FROM orders o
              JOIN status_orders s ON o.status_id = s.status_id
-             WHERE s.value = 'APROBADA'
+             WHERE s.value = 'APROBADA' AND " . self::SALE . "
                AND DATE(o.created_at) >= :date_from
                AND DATE(o.created_at) <= :date_to
              GROUP BY DATE(o.created_at)
@@ -130,13 +154,13 @@ class ReportsRepository extends AbstractRepository
     public function salesByGateway(string $dateFrom, string $dateTo): array
     {
         return $this->fetchAll(
-            "SELECT COALESCE(o.payment_gateway, 'canje con puntos') AS payment_gateway,
+            "SELECT COALESCE(o.payment_gateway, '') AS payment_gateway,
                     COUNT(*) AS order_count,
                     COALESCE(SUM(o.amount), 0) AS revenue,
                     COALESCE(AVG(o.amount), 0) AS avg_ticket
              FROM orders o
              JOIN status_orders s ON o.status_id = s.status_id
-             WHERE s.value = 'APROBADA'
+             WHERE s.value = 'APROBADA' AND " . self::SALE . "
                AND DATE(o.created_at) >= :date_from
                AND DATE(o.created_at) <= :date_to
              GROUP BY o.payment_gateway
@@ -159,7 +183,8 @@ class ReportsRepository extends AbstractRepository
             "SELECT s.value AS status_value, COUNT(*) AS order_count
              FROM orders o
              JOIN status_orders s ON o.status_id = s.status_id
-             WHERE DATE(o.created_at) >= :date_from
+             WHERE " . self::SALE . "
+               AND DATE(o.created_at) >= :date_from
                AND DATE(o.created_at) <= :date_to
              GROUP BY s.value
              ORDER BY order_count DESC",
@@ -183,7 +208,7 @@ class ReportsRepository extends AbstractRepository
                     COALESCE(SUM(o.amount), 0) AS revenue
              FROM orders o
              JOIN status_orders s ON o.status_id = s.status_id
-             WHERE s.value = 'APROBADA' AND DATE(o.created_at) = :date
+             WHERE s.value = 'APROBADA' AND " . self::SALE . " AND DATE(o.created_at) = :date
              GROUP BY HOUR(o.created_at)
              ORDER BY period",
             SalesByPeriodModel::class,
@@ -211,7 +236,7 @@ class ReportsRepository extends AbstractRepository
              JOIN orders o ON oi.order_id = o.order_id
              JOIN status_orders s ON o.status_id = s.status_id
              LEFT JOIN " . self::catalog() . " p ON oi.product_sku = p.sku
-             WHERE s.value = 'APROBADA'
+             WHERE s.value = 'APROBADA' AND " . self::SALE . "
                AND DATE(o.created_at) >= :date_from
                AND DATE(o.created_at) <= :date_to
              GROUP BY oi.product_sku
@@ -241,7 +266,7 @@ class ReportsRepository extends AbstractRepository
              FROM orders o
              JOIN status_orders s ON o.status_id = s.status_id
              JOIN users u ON o.user_id = u.id
-             WHERE s.value = 'APROBADA'
+             WHERE s.value = 'APROBADA' AND " . self::SALE . "
                AND DATE(o.created_at) >= :date_from
                AND DATE(o.created_at) <= :date_to
              GROUP BY o.user_id, u.full_name, u.email
@@ -270,7 +295,7 @@ class ReportsRepository extends AbstractRepository
              JOIN orders o ON oi.order_id = o.order_id
              JOIN status_orders s ON o.status_id = s.status_id
              JOIN " . self::catalog() . " p ON oi.product_sku = p.sku
-             WHERE s.value = 'APROBADA'
+             WHERE s.value = 'APROBADA' AND " . self::SALE . "
                AND DATE(o.created_at) >= :date_from
                AND DATE(o.created_at) <= :date_to
              GROUP BY p.category_name
@@ -299,7 +324,7 @@ class ReportsRepository extends AbstractRepository
              JOIN status_orders s ON o.status_id = s.status_id
              LEFT JOIN addresses a ON o.address_id = a.id
              LEFT JOIN cities c ON a.city_id = c.id
-             WHERE s.value = 'APROBADA'
+             WHERE s.value = 'APROBADA' AND " . self::SALE . "
                AND DATE(o.created_at) >= :date_from
                AND DATE(o.created_at) <= :date_to
              GROUP BY c.id, c.name, c.department
@@ -324,7 +349,7 @@ class ReportsRepository extends AbstractRepository
              JOIN status_orders s ON o.status_id = s.status_id
              LEFT JOIN addresses a ON o.address_id = a.id
              LEFT JOIN cities c ON a.city_id = c.id
-             WHERE s.value = 'APROBADA'
+             WHERE s.value = 'APROBADA' AND " . self::SALE . "
                AND DATE(o.created_at) >= :date_from
                AND DATE(o.created_at) <= :date_to
              GROUP BY c.department
@@ -353,7 +378,7 @@ class ReportsRepository extends AbstractRepository
                  SELECT o.user_id, COUNT(*) AS order_count_total
                  FROM orders o
                  JOIN status_orders s ON o.status_id = s.status_id
-                 WHERE s.value = 'APROBADA'
+                 WHERE s.value = 'APROBADA' AND " . self::SALE . "
                    AND DATE(o.created_at) >= :date_from
                    AND DATE(o.created_at) <= :date_to
                  GROUP BY o.user_id
@@ -380,7 +405,7 @@ class ReportsRepository extends AbstractRepository
                      SELECT user_id, COUNT(*) AS order_count_total
                      FROM orders o
                      JOIN status_orders s ON o.status_id = s.status_id
-                     WHERE s.value = 'APROBADA'
+                     WHERE s.value = 'APROBADA' AND " . self::SALE . "
                        AND DATE(o.created_at) >= :date_from
                        AND DATE(o.created_at) <= :date_to
                      GROUP BY user_id
@@ -405,24 +430,17 @@ class ReportsRepository extends AbstractRepository
     {
         $baseSelect = 'p.sku, p.name AS product_name, p.category_name,
                        p.price, p.is_out_of_stock, p.is_active,
-                       COALESCE(SUM(oi.quantity), 0) AS total_sold,
-                       COALESCE(SUM(oi.line_total), 0) AS revenue';
-        $baseFrom = 'FROM ' . self::catalog() . ' p
-                     LEFT JOIN orders_items oi ON p.sku = oi.product_sku
-                     LEFT JOIN orders o ON oi.order_id = o.order_id
-                     LEFT JOIN status_orders s ON o.status_id = s.status_id
-                     AND s.value = \'APROBADA\'
-                     AND DATE(o.created_at) >= :date_from
-                     AND DATE(o.created_at) <= :date_to';
-        $groupBy = 'GROUP BY p.sku, p.name, p.category_name, p.price, p.is_out_of_stock, p.is_active';
+                       COALESCE(v.total_sold, 0) AS total_sold,
+                       COALESCE(v.revenue, 0) AS revenue';
+        $baseFrom = 'FROM ' . self::catalog() . ' p LEFT JOIN ' . self::approvedSalesByProduct() . ' v ON v.product_sku = p.sku';
 
-        $countSql = "SELECT COUNT(*) FROM (SELECT p.sku {$baseFrom} {$groupBy}) sub";
+        $countSql = "SELECT COUNT(*) {$baseFrom}";
         $countStmt = $this->pdo->prepare($countSql);
         $countStmt->execute(['date_from' => $dateFrom, 'date_to' => $dateTo]);
         $total = (int) $countStmt->fetchColumn();
 
         $offset = ($page - 1) * $perPage;
-        $sql = "SELECT {$baseSelect} {$baseFrom} {$groupBy} ORDER BY revenue DESC LIMIT {$offset}, {$perPage}";
+        $sql = "SELECT {$baseSelect} {$baseFrom} ORDER BY revenue DESC LIMIT {$offset}, {$perPage}";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute(['date_from' => $dateFrom, 'date_to' => $dateTo]);
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -467,7 +485,7 @@ class ReportsRepository extends AbstractRepository
                 FROM orders_items oi
                 JOIN orders o ON oi.order_id = o.order_id
                 JOIN status_orders s ON o.status_id = s.status_id
-                WHERE s.value = 'APROBADA'
+                WHERE s.value = 'APROBADA' AND " . self::SALE . "
                   AND DATE(o.created_at) >= :date_from
                   AND DATE(o.created_at) <= :date_to";
 
@@ -513,7 +531,7 @@ class ReportsRepository extends AbstractRepository
      */
     public function ordersDownload(string $dateFrom, string $dateTo, string $status = '', string $gateway = '', int $limit = 5000): array
     {
-        $where = "WHERE s.value = 'APROBADA'";
+        $where = "WHERE s.value = 'APROBADA' AND " . self::SALE;
         $params = [];
 
         if ($dateFrom !== '') {
@@ -560,16 +578,10 @@ class ReportsRepository extends AbstractRepository
     {
         $sql = "SELECT p.sku, p.name, p.category_name, p.price,
                        p.is_out_of_stock, p.is_active,
-                       COALESCE(SUM(oi.quantity), 0) AS total_sold,
-                       COALESCE(SUM(oi.line_total), 0) AS revenue
+                       COALESCE(v.total_sold, 0) AS total_sold,
+                       COALESCE(v.revenue, 0) AS revenue
                 FROM " . self::catalog() . " p
-                LEFT JOIN orders_items oi ON p.sku = oi.product_sku
-                LEFT JOIN orders o ON oi.order_id = o.order_id
-                LEFT JOIN status_orders s ON o.status_id = s.status_id
-                AND s.value = 'APROBADA'
-                AND DATE(o.created_at) >= :date_from
-                AND DATE(o.created_at) <= :date_to
-                GROUP BY p.sku, p.name, p.category_name, p.price, p.is_out_of_stock, p.is_active
+                LEFT JOIN " . self::approvedSalesByProduct() . " v ON v.product_sku = p.sku
                 ORDER BY revenue DESC
                 LIMIT :limit";
 
