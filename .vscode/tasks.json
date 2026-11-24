@@ -1,0 +1,181 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "🚀 Iniciar Servidor (PHP Dev Server)",
+      "type": "shell",
+      "command": "composer run start --timeout=0",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "problemMatcher": [
+        {
+          "pattern": {
+            "regexp": "^(.*):(\\d+): (.*)$",
+            "file": 1,
+            "line": 2,
+            "message": 3
+          },
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": ".*Development Server.*",
+            "endsPattern": ".*Development Server.*started.*"
+          }
+        }
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "group": "build",
+      "detail": "Levanta el servidor local de PHP embebido.",
+      "runOptions": {
+        "instanceLimit": 1
+      }
+    },
+    {
+      "label": "✨ Linter: Revisar Código con PHPStan",
+      "dependsOn": "📦 Composer: Instalar COMPLETO (Prod + Dev)",
+      "type": "shell",
+      "command": "composer run lint",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "group": "test",
+      "detail": "Analiza src/ con PHPStan; instala primero las dependencias completas."
+    },
+    {
+      "label": "📦 Composer: Instalar COMPLETO (Prod + Dev)",
+      "type": "shell",
+      "command": "composer run install:dev",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "group": "build",
+      "detail": "Instala todas las dependencias incluyendo PHPStan (recomendado en local)."
+    },
+    {
+      "label": "🚀 Composer: Instalar LIGERO (Solo Producción)",
+      "type": "shell",
+      "command": "composer run build",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "group": "build",
+      "detail": "Instala dependencias de producción en vendor/. Para recuperar Pest y PHPStan: composer run install:dev."
+    },
+    {
+      "label": "🔄 Composer: Regenerar Autoloader (PSR-4)",
+      "type": "shell",
+      "command": "composer run dump",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "group": "build",
+      "detail": "Actualiza el mapa de clases si creaste nuevas carpetas o modificaste el namespace raíz."
+    },
+    {
+      "label": "🧪 Tests: Ejecutar Todos (Pest)",
+      "type": "shell",
+      "command": "composer run test",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "detail": "Ejecuta todas las suites de Pest: Unit, Integration y E2E. Escriben en la base local."
+    },
+    {
+      "label": "🧪 Tests: Solo Unit",
+      "type": "shell",
+      "command": "composer run test:unit",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "group": "test",
+      "detail": "Pruebas unitarias de validadores y lógica; el bootstrap requiere la base local."
+    },
+    {
+      "label": "🧪 Tests: Solo Integration",
+      "type": "shell",
+      "command": "composer run test:integration",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "group": "test",
+      "detail": "Tests de repositorios contra MariaDB real."
+    },
+    {
+      "label": "🧪 Tests: Solo E2E",
+      "type": "shell",
+      "command": "composer run test:e2e",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "group": "test",
+      "detail": "Tests E2E: HTTP end-to-end contra Slim real (Pest)."
+    },
+    {
+      "label": "📦 Generar Build de Producción",
+      "type": "shell",
+      "command": "composer run build:prod",
+      "isBackground": false,
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "detail": "Genera build/ con .env.prod y dependencias de producción sin modificar el vendor/ local."
+    }
+  ]
+}
