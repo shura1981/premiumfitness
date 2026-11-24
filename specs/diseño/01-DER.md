@@ -1,6 +1,6 @@
 # 01 — Diagrama entidad relación (DER)
 
-**Estado:** propuesta v0.17 lista para revisión · **Creado:** 7 de noviembre de 2026
+**Estado:** propuesta v0.19 lista para revisión · **Creado:** 7 de noviembre de 2026
 
 ## Petición original
 
@@ -62,6 +62,8 @@
 - **Sin FK al catálogo:** `orders_items.product_sku` y `product_discount_rules.product_sku` guardan el `codigo` de la intranet, sin FK. `orders_items` añade `product_name` y copia al comprar el nombre, el precio y el `sap_code`.
 - **IVA:** ya no hay tasa por producto. Cada línea toma `VAT_PERCENTAGE` (19), salvo los códigos de `VAT_EXEMPT_PRODUCT_CODES` (Nutra C, código 103040), y guarda tasa, base e IVA.
 - **Tipos:** la tabla externa se dibuja con los tipos reales (`SHOW COLUMNS`, 15 nov 2026).
+
+**Revisión v0.19, 24 de noviembre de 2026:** los pagos vuelven al diseño de radical: un pedido = un pago. Se **elimina `payment_attempts`** (v0.17 y v0.18) y se añade `orders.payment_code` (`varchar(30)`, única, comparada exacta): el id de pago que recibe la pasarela, `pf-<order_id>`. El prefijo evita que choque con los pedidos de otros proyectos que comparten las cuentas de las pasarelas. Lo que manda la pasarela queda en el pedido (`payment_state_json`), como en radical (spec `backend/03`, P-24).
 
 **Revisión v0.18, 24 de noviembre de 2026:** `payment_attempts` guarda lo que reportó la pasarela en su webhook: `status`, `transaction_id`, `payment_method`, `paid_amount` y `notified_at`. Con ellos la página de respuesta muestra el resultado consultando el id de pago (spec `integraciones/03`).
 
@@ -184,7 +186,7 @@ Proponer el modelo de datos del MVP comercial para revisarlo con negocio y tecno
 | S-30 | No se usan los tramos por cantidad de radical (`products.discount_list`): los descuentos de PremiumFitness dependen del rol y de `product_discount_rules`. Antes decía: se conserva por la integración. | Derivado | Spec `catalogo/01`. |
 | S-47 | El catálogo es `crisenri_intranet.tb_productos_megaplexstars`, externa y de solo lectura. Entran los productos con `activo = 1` y `promo = 0`; no se leen `descuento` ni `old_price`. Los combos son productos con su propio artículo SAP; si tienen `promo = 1`, no entran. El nombre es `producto`. La app la lee por la interfaz `ProductCatalog`. | Confirmado (15 nov 2026) | Spec `catalogo/01`. |
 | S-48 | `orders_items.product_sku` y `product_discount_rules.product_sku` guardan el `codigo` de la intranet sin FK, porque la tabla vive en otra base. Al comprar, la línea copia `product_name`, `product_full_price` (el `valor`) y `sap_code`. | Derivado | Spec `catalogo/01`; mismo criterio que `tb_empleados` (S-31). |
-| S-49 | `payment_attempts` registra cada intento de pago: un pedido puede tener varios y cada uno tiene su propio id, `pf-<id>`, que es la referencia que recibe la pasarela y con la que el webhook encuentra el pedido. `orders.payment_reference` sigue guardando el id de la transacción que informa la pasarela al aprobar. | Confirmado (16 nov 2026, Steven) | Spec `backend/03`, P-24. La cuenta de Bold se comparte con el sitio web de Nutramerican: el prefijo con letras evita que sus referencias numéricas choquen. |
+| S-49 | ~~`payment_attempts` registra cada intento de pago.~~ **Reemplazado (v0.19):** un pedido = un pago, como en radical. `orders.payment_code` (`pf-<order_id>`, única) es el id que recibe la pasarela y con el que el webhook encuentra el pedido. `orders.payment_reference` sigue guardando la transacción aprobada, para que un mismo pago no apruebe dos pedidos. | Confirmado | 24 nov 2026, Steven |
 
 ## Plan
 
@@ -223,7 +225,6 @@ Diagrama editable: [diagrama-entidad-relacion.drawio](../../docs/img/diagrama-en
 | Pedidos y catálogo | `orders` | Adaptada | Conserva `agent_id` y `sap_order_code`. Añade tipo de pedido, totales de descuento e IVA, puntos ganados por el pedido (`reward_points`), puntos del canje, referencia de pago y versión de regla. El entrenador se toma de `orders_coupons`. |
 | Pedidos y catálogo | `orders_items` | Adaptada | Copia del catálogo el código, el nombre (`product_name`), el precio y `sap_code`, sin FK. Usa `discount_percentage` para el descuento vigente del producto. Añade tasa, base e IVA; porcentaje y monto de comisión, y puntos del canje. |
 | Pedidos y catálogo | `status_orders` | Existente | Estados del pedido. |
-| Pedidos y catálogo | `payment_attempts` | Nueva | Intentos de pago de un pedido. Su `id` es el consecutivo del id de pago `pf-<id>` que recibe la pasarela; guarda la pasarela y el valor enviado, y lo que reportó la pasarela en su webhook (estado, transacción, medio, valor y fecha del aviso). |
 | Pedidos y catálogo | `payment_event_jobs` | Existente | Reintento de webhooks que llegan antes que el pedido. |
 | Recompensas y operación | `commission_movements` | Nueva | Abono de comisión del pedido (suma de líneas), débitos por conversión y ajustes. |
 | Recompensas y operación | `commission_conversions` | Nueva | Conversión del total de comisión a puntos: comisión, puntos base, adicional con tope y total. |
@@ -288,7 +289,9 @@ Diagrama editable: [diagrama-entidad-relacion.drawio](../../docs/img/diagrama-en
 - [x] Registrar el pago de la liquidación con comprobante (v0.14)
 - [x] Leer el catálogo de la intranet: quitar las tablas de catálogo de radical, copiar el producto en `orders_items` y sacar el IVA del catálogo (v0.15)
 - [x] Quitar la app `diets`: la app de dietas consulta el acceso por documento (v0.16)
-- [x] Añadir `payment_attempts`: un id de pago por intento (v0.17)
-- [x] Columnas del resultado de la pasarela en `payment_attempts` (v0.18, spec `integraciones/03`)
-- [ ] Dibujar `payment_attempts` en el diagrama (`.drawio` y PNG)
+- [~] Añadir `payment_attempts`: un id de pago por intento (v0.17). Eliminada en la v0.19
+- [~] Columnas del resultado de la pasarela en `payment_attempts` (v0.18). Eliminadas en la v0.19
+- [~] Dibujar `payment_attempts` en el diagrama: ya no existe
+- [x] `orders.payment_code` y eliminación de `payment_attempts` en el `.sql` y la base local (v0.19)
+- [ ] Añadir `payment_code` a `orders` en el diagrama (`.drawio` y PNG)
 - [ ] Revisión y aprobación del modelo por negocio y tecnología

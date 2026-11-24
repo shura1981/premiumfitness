@@ -119,8 +119,8 @@ interface ProductDetail extends Product {
 | `POST /checkout` | `{ items, address_id, payment_gateway, notes? }` | 201 `CheckoutResult`. 409 `out_of_stock`, `price_changed` o `shipping_unavailable` (Servientrega no llega a la ciudad de la dirección). |
 | `GET /orders` | — | `{ data: OrderSummary[] }`, los propios |
 | `GET /orders/:id` | — | `OrderDetail`; 404 si no es de quien consulta |
-| `POST /orders/:id/pay` | — | `CheckoutResult` de un pedido propio que sigue pendiente, con el valor guardado. 409 `order_not_payable` si ya se pagó, es un canje o tiene más de un día. |
-| `GET /payments/:reference` | — | `PaymentStatusResult` de un intento de pago propio (`pf-<n>`), para la página de respuesta (spec `integraciones/03`). 404 si no es suyo o no existe. Solo informa: el estado lo cambia el webhook. |
+| ~~`POST /orders/:id/pay`~~ | — | **Retirado (24 nov 2026):** no existe pagar de nuevo un pedido ya creado. Si el pago no se aprueba, el cliente vuelve al checkout y `POST /checkout` crea un pedido nuevo, como en radical (spec `backend/03`, P-19 y P-24). |
+| `GET /payments/:reference` | — | `PaymentStatusResult` del pedido propio con ese id de pago (`pf-<pedido>`, `orders.payment_code`), para la página de respuesta (spec `integraciones/03`). 404 si no es suyo o no existe. Solo informa: el estado lo cambia el webhook. |
 | `PUT /account/socket` | `{ socket_token }` | 204. Registra la conexión de esta sesión en el gateway de sockets; ahí llegan `purchase.status.changed` y `order.updated`. 422 si no es válida. |
 
 ```ts
@@ -141,19 +141,22 @@ interface CheckoutResult {
     | { gateway: 'bold'; reference: string; bold: { order_id: string; amount: number; currency: 'COP'; api_key: string;
         integrity_signature: string; description: string; redirection_url: string } }
     | { gateway: 'addi' | 'sistecredito'; reference: string; redirect_url: string };
-  // `reference`: id de pago del intento (`pf-<n>`). La pasarela devuelve al cliente a
-  // `/pago/resultado?pago=<reference>` (o `/coach/pago/resultado`).
+  // `reference`: id de pago del pedido (`pf-<pedido>`, `orders.payment_code`). Cada pasarela devuelve al
+  // cliente a su página de la app (o `/coach/pago/resultado/…`), con el id en su parámetro:
+  //   /pago/resultado/bold?orderId=<reference>   (Bold agrega `bold-order-id` y `bold-tx-status`)
+  //   /pago/resultado/addi?id_order=<reference>
+  //   /pago/resultado/sistecredito?orderId=<reference>
 }
 interface PaymentStatusResult {
   reference: string; order_id: number; gateway: string; gateway_name: string;
   status: OrderStatus;                                 // del pedido; lo decide el webhook
-  gateway_status: string | null;                       // lo que reportó la pasarela (APROBADA, PAGO RECHAZADO…); null sin aviso
-  transaction_id: string | null; payment_method: string | null;
-  amount: number;                                      // lo pagado según la pasarela, o lo enviado mientras no avisa
-  created_at: string; notified_at: string | null;
+  gateway_status: string | null;                       // el estado que dejó el webhook (APROBADA, PAGO RECHAZADO…); null sin aviso
+  transaction_id: string | null;                       // número de la transacción en la pasarela; llega al aprobar
+  amount: number;                                      // valor del pedido
+  created_at: string; approved_at: string | null;
 }
 // Socket de elinut (spec integraciones/03). A la conexión del dueño del pedido:
-//   purchase.status.changed { order_id, reference, order_status, status, gateway, transaction_id, amount, occurred_at }
+//   purchase.status.changed { order_id, order_status, status, status_id, gateway, transaction_id, amount, occurred_at }
 //   order.updated           { order_id, status, tracking_number, carrier_name, occurred_at }
 // Al admin (todos los agentes): order.created (el pedido), order.status.changed { order_id, status_id, status_value },
 //   order.processed { order_id }, order.tracking.updated { order_id, tracking_number, carrier_name }
@@ -176,10 +179,10 @@ interface OrderDetail extends OrderSummary {
 }
 ```
 
-- El pago con Bold usa el botón de Bold en la app (`bold`), con los datos firmados por el backend. Con Addi y Sistecrédito, la app abre `redirect_url`, la página de pago de la pasarela, que el backend pidió con el pedido guardado. Al volver, la app abre `/pago/resultado?pedido=<id>` y consulta `GET /orders/:id` hasta que el estado deje de ser `pendiente`.
+- El pago con Bold usa el botón de Bold en la app (`bold`), con los datos firmados por el backend. Con Addi y Sistecrédito, la app abre `redirect_url`, la página de pago de la pasarela, que el backend pidió con el pedido guardado. Al volver, la página de respuesta de esa pasarela consulta una vez `GET /payments/:reference` y muestra; si el webhook llega después, el socket la actualiza (spec `integraciones/03`).
 - El pedido se aprueba por el webhook de la pasarela, nunca por la app.
-- `bold.order_id` es el id del intento de pago (`pf-<consecutivo>`), no el número del pedido: cada «Pagar» (`POST /checkout` o `POST /orders/:id/pay`) crea un intento nuevo (spec `backend/03`, P-24). El número del pedido es `order_id` y la vuelta usa `?pedido=<order_id>`.
-- `payment_gateway` admite `bold`, `addi` y `sistecredito` (spec `backend/03`, P-02). Si la pasarela no entrega su página de pago, responde 502 `payment_unavailable` y el pedido queda pendiente para pagarlo desde el detalle.
+- `bold.order_id` es el id de pago del pedido, `pf-<número del pedido>` (`orders.payment_code`; spec `backend/03`, P-24): un pedido = un pago = un id, como en radical. El webhook busca el pedido por ese id.
+- `payment_gateway` admite `bold`, `addi` y `sistecredito` (spec `backend/03`, P-02). Si la pasarela no entrega su página de pago, responde 502 `payment_unavailable`; el pedido queda pendiente y el cliente lo intenta de nuevo desde el checkout (otro pedido), como en radical.
 - `total` incluye el IVA y el envío; `tax_amount` es informativo («incluye $X de IVA»).
 - En un canje, `total` es 0, `redemption_points` es el total de puntos y `items[].redemption_points` es el de la línea completa (precio × cantidad). Su línea de tiempo empieza en «Canje confirmado», sin pasos de pago. Los importes en dinero de un canje son informativos (el precio completo): la app muestra los puntos.
 

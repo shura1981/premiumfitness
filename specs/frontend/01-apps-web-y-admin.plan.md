@@ -54,7 +54,7 @@ La app tiene dos áreas con el mismo `Shell` y las mismas pantallas compartidas 
 | `/verificar` | `/coach/verificar` | Código SMS |
 | `/recuperar` | `/coach/recuperar` | Recuperar la contraseña |
 | `/tienda`, `/producto/:code` | `/coach/tienda`, `/coach/producto/:code` | Tienda y detalle |
-| `/carrito`, `/pagar`, `/pago/resultado` | `/coach/carrito`, `/coach/pagar`, `/coach/pago/resultado` | Compra |
+| `/carrito`, `/pagar`, `/pago/resultado/<pasarela>` | `/coach/carrito`, `/coach/pagar`, `/coach/pago/resultado/<pasarela>` | Compra (la respuesta tiene una dirección por pasarela: `bold`, `addi`, `sistecredito`) |
 | `/pedidos`, `/pedidos/:id` | `/coach/pedidos`, `/coach/pedidos/:id` | Pedidos |
 | `/cuenta/**` | `/coach/cuenta/**` | Cuenta |
 | `/cupon` | — | Asociar cupón (cliente sin entrenador) |
