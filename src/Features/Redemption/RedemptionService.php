@@ -17,6 +17,7 @@ use App\Features\Product\CatalogProduct;
 use App\Features\Product\IntranetProductCatalog;
 use App\Features\Product\ProductCatalog;
 use App\Infrastructure\Database\DB;
+use App\Infrastructure\Notification\SocketGatewayClient;
 use App\Shared\Exceptions\ApiException;
 use PDO;
 use Throwable;
@@ -113,14 +114,37 @@ class RedemptionService
             );
 
             $pdo->commit();
-
-            return $orderId;
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
             }
 
             throw $e;
+        }
+
+        $this->notifyCallCenter($orderId);
+
+        return $orderId;
+    }
+
+    /**
+     * Avisa al admin en tiempo real, como cuando se aprueba el pago de una compra: la lista de pedidos
+     * del call center se actualiza sola. Si el aviso falla, el canje ya está hecho; el agente lo ve al
+     * recargar.
+     */
+    private function notifyCallCenter(int $orderId): void
+    {
+        try {
+            SocketGatewayClient::fromEnv()->broadcastToAdmin([[
+                'event'   => 'order.status.changed',
+                'payload' => [
+                    'order_id'     => $orderId,
+                    'status_id'    => new StatusOrderRepository()->findOrCreateIdByValue(PaymentStatus::TEXT_APROBADA),
+                    'status_value' => PaymentStatus::TEXT_APROBADA,
+                ],
+            ]]);
+        } catch (Throwable) {
+            // No crítico.
         }
     }
 

@@ -9,6 +9,10 @@ require_once __DIR__ . '/../load/bootstrap.php';
 // Las pruebas nunca envían SMS reales: los mensajes quedan en memoria (InMemorySmsChannel).
 $_ENV['SMS_DRIVER'] = 'memory';
 
+// Los avisos en tiempo real (gateway de sockets) nunca salen de la máquina: el puerto 9 de la propia
+// máquina rechaza la conexión al instante, y el aviso, que no es crítico, se descarta.
+$_ENV['SOCKET_NOTIFICATION_URL'] = 'http://127.0.0.1:9';
+
 // Sin caché del catálogo: las pruebas cambian productos y leen el resultado de inmediato.
 $_ENV['PRODUCT_CATALOG_CACHE_SECONDS'] = '0';
 

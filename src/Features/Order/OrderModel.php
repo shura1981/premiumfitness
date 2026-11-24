@@ -14,6 +14,8 @@ class OrderModel
     public string  $order_type = 'client_purchase';
     /** Puntos que costó un canje; null en una compra. */
     public ?int    $redemption_points = null;
+    /** «Puntos» en un canje; «Dinero (Bold)», «Dinero (Addi)»… en una compra (`PaymentMethod`). */
+    public ?string $payment_method = null;
     /** null en un canje con puntos: no pasa por la pasarela. */
     public ?string $payment_gateway = null;
     public ?string $payment_state_json = null;

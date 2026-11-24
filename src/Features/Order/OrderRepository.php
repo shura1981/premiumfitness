@@ -28,8 +28,13 @@ class OrderRepository extends AbstractRepository
         parent::__construct(DB::getInstance());
     }
 
-    private const string SELECT_LIST_BASE = <<<'SQL'
-        SELECT o.order_id, o.user_id, o.agent_id, o.amount, o.order_type, o.redemption_points, o.payment_gateway, o.payment_state_json,
+    private static function selectListBase(): string
+    {
+        $paymentMethod = PaymentMethod::SQL;
+
+        return <<<SQL
+        SELECT o.order_id, o.user_id, o.agent_id, o.amount, o.order_type, o.redemption_points,
+               {$paymentMethod} AS payment_method, o.payment_gateway, o.payment_state_json,
                o.sap_order_code, o.tracking_number, o.carrier_name,
                o.status_id, o.address_id, o.order_notes,
                o.created_at, o.updated_at,
@@ -58,13 +63,16 @@ class OrderRepository extends AbstractRepository
         LEFT JOIN address_locality_map alm ON alm.address_id = a.id
         LEFT JOIN localities l ON l.id = alm.locality_id
         SQL;
+    }
 
     private static function selectDetailBase(): string
     {
-        $employees = IntranetTables::fromEnv()->employees;
+        $employees     = IntranetTables::fromEnv()->employees;
+        $paymentMethod = PaymentMethod::SQL;
 
         return <<<SQL
-        SELECT o.order_id, o.user_id, o.agent_id, o.amount, o.order_type, o.redemption_points, o.payment_gateway, o.payment_state_json,
+        SELECT o.order_id, o.user_id, o.agent_id, o.amount, o.order_type, o.redemption_points,
+               {$paymentMethod} AS payment_method, o.payment_gateway, o.payment_state_json,
                o.sap_order_code, o.tracking_number, o.carrier_name,
                o.status_id, o.address_id, o.order_notes,
                o.created_at, o.updated_at,
@@ -315,7 +323,7 @@ class OrderRepository extends AbstractRepository
         // Columna de ordenamiento: validar contra whitelist
         $sortColumn = self::SORT_COLUMNS[$filters['sort_by'] ?? 'order_id'] ?? 'o.order_id';
 
-        $sql = self::SELECT_LIST_BASE . " {$where} ORDER BY {$sortColumn} {$sortOrder}";
+        $sql = self::selectListBase() . " {$where} ORDER BY {$sortColumn} {$sortOrder}";
 
         return $this->paginated($sql, $params, $page, $perPage, 'orders', $countWhere, $countParams);
     }
@@ -506,6 +514,9 @@ class OrderRepository extends AbstractRepository
                     c.name AS ciudad,
                     c.department AS departamento,
                     ROUND(o.amount) AS total_pedido,
+                    " . PaymentMethod::SQL . " AS forma_pago,
+                    oi.redemption_points AS puntos_linea,
+                    o.redemption_points AS puntos_pedido,
                     s.value AS estado,
                     ROUND(o.sap_order_code) AS sap_order_code,
                     o.tracking_number AS tracking_number,

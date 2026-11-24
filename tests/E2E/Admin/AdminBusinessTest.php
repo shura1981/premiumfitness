@@ -369,9 +369,17 @@ it('el pedido de un canje dice que se pagó con puntos, en la lista y en el deta
     $list   = array_column(AppFactory::json(admin('GET', 'orders?per_page=100'))['data'], null, 'order_id');
     $detail = AppFactory::json(admin('GET', "orders/{$orderId}"));
 
-    expect($list[$orderId])->toMatchArray(['order_type' => 'redemption', 'redemption_points' => 200000, 'payment_gateway' => null])
-        ->and($list[$purchase])->toMatchArray(['order_type' => 'client_purchase', 'redemption_points' => null])
-        ->and($detail)->toMatchArray(['order_type' => 'redemption', 'redemption_points' => 200000]);
+    expect($list[$orderId])->toMatchArray(['order_type' => 'redemption', 'redemption_points' => 200000, 'payment_gateway' => null, 'payment_method' => 'Puntos'])
+        ->and($list[$purchase])->toMatchArray(['order_type' => 'client_purchase', 'redemption_points' => null, 'payment_method' => 'Dinero (Bold)'])
+        ->and($detail)->toMatchArray(['order_type' => 'redemption', 'redemption_points' => 200000, 'payment_method' => 'Puntos']);
+
+    // El Excel del reporte de pedidos (los que ya tienen pedido de SAP) dice cómo se pagó cada uno.
+    Seed::pdo()->prepare('UPDATE orders SET sap_order_code = 990001 WHERE order_id IN (?, ?)')->execute([$orderId, $purchase]);
+    $day  = (string) Seed::pdo()->query('SELECT CURDATE()')->fetchColumn();
+    $rows = array_column(AppFactory::json(admin('GET', "reports/orders/export?date_from={$day}&date_to={$day}")), null, 'pedido_id');
+
+    expect($rows[$orderId])->toMatchArray(['forma_pago' => 'Puntos', 'puntos_linea' => 200000, 'puntos_pedido' => 200000])
+        ->and($rows[$purchase])->toMatchArray(['forma_pago' => 'Dinero (Bold)', 'puntos_linea' => null, 'puntos_pedido' => null]);
 });
 
 it('no ajusta un pedido sin pagar ni sin motivo', function (): void {
