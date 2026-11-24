@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace App\Features\PaymentGateway\Gateways\Addi;
 
+use App\Features\Order\OrderRepository;
 use App\Features\PaymentGateway\ForeignPaymentReferenceException;
 use App\Features\PaymentGateway\Normalizer\PaymentStatusNormalizer;
-use App\Features\PaymentGateway\PaymentAttemptRepository;
-use App\Features\PaymentGateway\PaymentReferenceResolver;
 use App\Features\PaymentGateway\Result\PaymentResult;
 use RuntimeException;
 
@@ -15,7 +14,7 @@ use RuntimeException;
  * Convierte el payload JSON del webhook de Addi en un `PaymentResult`.
  *
  * Campos relevantes en el body de Addi:
- *  - `orderId`         → referencia del intento de pago (`pf-<id>`).
+ *  - `orderId`         → id de pago del pedido (`pf-<pedido>`, `orders.payment_code`).
  *  - `applicationId`   → id de transacción en Addi.
  *  - `status`          → string UPPERCASE: APPROVED / REJECTED / PENDING / …
  *  - `approvedAmount`  → monto aprobado.
@@ -24,7 +23,7 @@ final class AddiWebhookProcessor
 {
     public function __construct(
         private readonly PaymentStatusNormalizer $normalizer = new PaymentStatusNormalizer(),
-        private ?PaymentReferenceResolver $references = null,
+        private ?OrderRepository $orders = null,
     ) {}
 
     /**
@@ -43,7 +42,8 @@ final class AddiWebhookProcessor
             throw new RuntimeException('Addi webhook: missing status.');
         }
 
-        $orderId = ($this->references ??= new PaymentAttemptRepository())->orderIdFor($reference)
+        // El pedido se busca por su id de pago (`orders.payment_code`, P-24).
+        $orderId = ($this->orders ??= new OrderRepository())->findOrderIdByPaymentCode($reference)
             ?? throw ForeignPaymentReferenceException::for('Addi', $reference);
 
         [$codStatus, $statusText] = $this->normalizer->normalize('addi', $rawStatus);
@@ -56,8 +56,6 @@ final class AddiWebhookProcessor
             statusText:    $statusText,
             amount:        (float) ($payload['approvedAmount'] ?? 0),
             rawPayload:    $payload,
-            reference:     $reference,
-            paymentMethod: 'Addi',
         );
     }
 }

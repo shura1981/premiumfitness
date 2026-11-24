@@ -2,7 +2,7 @@
 
 ### Prerrequisitos
 ### Estos endpoints son PÚBLICOS (sin JWT). Solo rate limit 60/min.
-# Referencia del intento de pago (payment_attempts): pf-<id>. Ver spec backend/03, P-24.
+# Id de pago del pedido (orders.payment_code): pf-<número del pedido>. Ver spec backend/03, P-24.
 @reference = pf-1
 @amount = 120000
 

@@ -35,19 +35,18 @@ use Throwable;
  *   - Webhook: parsear payload, verificar firma (Bold `x-bold-signature`),
  *     pasar al `*WebhookProcessor`, despachar vía `PaymentEventDispatcher` y
  *     encolar efectos diferidos. Siempre responde 200 OK aunque haya errores.
- *   - Response: renderizar la página HTML que el usuario ve al volver de la
- *     pasarela y que rebota al SPA.
+ *   - La página de respuesta está en la app web (`/pago/resultado/<pasarela>`), que consulta
+ *     `GET /api/payments/{pf-N}`; el backend no sirve páginas.
  *   - State (Bold): consulta del respaldo de notificaciones, conciliación
  *     puntual y cron de órdenes pendientes.
  */
 class PaymentGatewayController
 {
-    private const string TEMPLATES_PATH = __DIR__ . '/../../../views/payment-response';
     private const string PAYMENT_METHOD_BOLD = 'bold';
 
     /**
-     * Aviso de un pago que no es de PremiumFitness (por ejemplo, del sitio web de Nutramerican, que
-     * comparte la cuenta de Bold): se responde 200 sin tocar nada, para que la pasarela no reintente.
+     * Aviso de un pago que no es de PremiumFitness (su id no está en `orders.payment_code`; por ejemplo,
+     * de otro proyecto que comparte la cuenta): se responde 200 sin tocar nada, para que la pasarela no reintente.
      */
     private const array FOREIGN_REFERENCE = ['ok' => true, 'processed' => false, 'reason' => 'foreign_reference'];
 
@@ -126,25 +125,6 @@ class PaymentGatewayController
     }
 
     // =========================================================================
-    // RESPONSE PAGES — HTML que ve el usuario al volver de la pasarela
-    // =========================================================================
-
-    public function responseAddi(Request $request, Response $response): Response
-    {
-        return $this->renderResponsePage($response, 'addi', $request, 'id_order');
-    }
-
-    public function responseSistecredito(Request $request, Response $response): Response
-    {
-        return $this->renderResponsePage($response, 'sistecredito', $request, 'orderId');
-    }
-
-    public function responseBold(Request $request, Response $response): Response
-    {
-        return $this->renderResponsePage($response, 'bold', $request, 'orderId');
-    }
-
-    // =========================================================================
     // STATE (Bold) — consulta de notificaciones + conciliación + cron
     // =========================================================================
 
@@ -163,7 +143,7 @@ class PaymentGatewayController
                 ? trim($query['payment_id'])
                 : '';
             $bold = BoldReconciliationService::fromEnv();
-            // Por pedido se consultan las referencias de sus intentos de pago (`pf-<id>`).
+            // Por pedido se consulta con su id de pago (`pf-<pedido>`).
             $notification = $paymentId !== ''
                 ? $bold->fetchNotification($paymentId, false)
                 : $bold->fetchForOrder((int) ($query['order_id'] ?? 0));
@@ -285,46 +265,6 @@ class PaymentGatewayController
         } catch (\JsonException) {
             return [];
         }
-    }
-
-    private function renderResponsePage(
-        Response $response,
-        string $gateway,
-        Request $request,
-        string $queryParamName,
-    ): Response {
-        $file = self::TEMPLATES_PATH . "/{$gateway}.html";
-        if (!is_file($file)) {
-            return $this->jsonError($response, "Response template not found: {$gateway}", 500);
-        }
-
-        $html        = (string) file_get_contents($file);
-        $queryParams = $request->getQueryParams();
-        $rawParam    = (string) ($queryParams[$queryParamName] ?? $queryParams['bold-order-id'] ?? '');
-        $txStatus    = (string) ($queryParams['bold-tx-status'] ?? '');
-        $spaUrl      = PaymentGatewayResponseConfig::fromEnv()->spaReturnUrl;
-
-        $html = str_replace(
-            [
-                '{{gateway}}',
-                '{{query_param}}',
-                '{{query_value}}',
-                '{{tx_status}}',
-                '{{spa_return_url}}',
-            ],
-            [
-                htmlspecialchars($gateway, ENT_QUOTES, 'UTF-8'),
-                htmlspecialchars($queryParamName, ENT_QUOTES, 'UTF-8'),
-                htmlspecialchars($rawParam, ENT_QUOTES, 'UTF-8'),
-                htmlspecialchars($txStatus, ENT_QUOTES, 'UTF-8'),
-                htmlspecialchars($spaUrl, ENT_QUOTES, 'UTF-8'),
-            ],
-            $html,
-        );
-
-        $response->getBody()->write($html);
-
-        return $response->withHeader('Content-Type', 'text/html; charset=utf-8');
     }
 
     private function json(Response $response, mixed $data, int $status = 200): Response

@@ -63,7 +63,7 @@ it('sin conexión registrada, el dueño no recibe nada; el admin sí', function 
         ->and($socket->named('order.status.changed'))->toHaveCount(1);
 });
 
-it('el aviso del pago al dueño lleva el id de pago y el estado de la app', function (): void {
+it('el aviso del pago al dueño lleva el pedido y el estado de la app', function (): void {
     $user = Seed::user();
     Seed::pdo()->prepare('UPDATE users SET socket_token = ? WHERE id = ?')->execute(['conexion-pago-1', $user]);
     $orderId = Shop::order($user, [['code' => Seed::catalogProduct(), 'quantity' => 1]]);
@@ -71,12 +71,12 @@ it('el aviso del pago al dueño lleva el id de pago y el estado de la app', func
     $order   = (new App\Features\Order\OrderRepository())->findById($orderId);
     $result  = new App\Features\PaymentGateway\Result\PaymentResult(
         gateway: 'bold', orderId: $orderId, transactionId: 'PAY-9', codStatus: App\Features\PaymentGateway\Normalizer\PaymentStatus::APROBADA,
-        statusText: App\Features\PaymentGateway\Normalizer\PaymentStatus::TEXT_APROBADA, amount: 100.0, rawPayload: [], reference: 'pf-9',
+        statusText: App\Features\PaymentGateway\Normalizer\PaymentStatus::TEXT_APROBADA, amount: 100.0, rawPayload: [],
     );
 
     (new App\Features\PaymentGateway\Events\Handlers\EmitClientPurchaseStatusHandler($socket, new App\Features\User\UserRepository()))
         ->handle(new App\Features\PaymentGateway\Events\PaymentEvent($order, $result));
 
     expect($socket->named('purchase.status.changed')[0])->toMatchArray(['to' => 'conexion-pago-1'])
-        ->and($socket->named('purchase.status.changed')[0]['payload'])->toMatchArray(['order_id' => $orderId, 'reference' => 'pf-9', 'order_status' => 'aprobado']);
+        ->and($socket->named('purchase.status.changed')[0]['payload'])->toMatchArray(['order_id' => $orderId, 'order_status' => 'aprobado', 'status' => 'APROBADA', 'gateway' => 'bold']);
 });

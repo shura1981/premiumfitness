@@ -16,7 +16,6 @@ use App\Features\Trainer\TrainerRepository;
 use App\Infrastructure\Config\BusinessConfig;
 use App\Infrastructure\Database\DB;
 use App\Shared\Exceptions\ApiException;
-use PDO;
 use App\Features\Order\OrderRealtime;
 
 /**
@@ -104,37 +103,6 @@ class CheckoutService
         (new OrderRealtime())->created($orderId);
 
         return ['order_id' => $orderId, 'payment' => $payment];
-    }
-
-    /**
-     * Datos de pago de un pedido propio que sigue sin pagar. El valor es el que quedó guardado al
-     * crearlo: no se recalcula ni se toma de la app.
-     *
-     * @return array<string, mixed> Contrato `CheckoutResult`.
-     * @throws ApiException 404 si no es suyo; 409 si ya no se puede pagar
-     */
-    public function payAgain(int $userId, int $orderId): array
-    {
-        $stmt = DB::getInstance()->prepare(
-            "SELECT approved_at, order_type, created_at FROM orders WHERE order_id = ? AND user_id = ?"
-        );
-        $stmt->execute([$orderId, $userId]);
-        $order = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if ($order === false) {
-            throw ApiException::notFound('No encontramos ese pedido.');
-        }
-
-        if ($order['approved_at'] !== null) {
-            throw ApiException::conflict('order_not_payable', 'Este pedido ya está pagado.');
-        }
-
-        // Pasado un día el precio pudo cambiar: se hace una compra nueva.
-        if ($order['order_type'] === 'redemption' || strtotime((string) $order['created_at']) < strtotime('-1 day')) {
-            throw ApiException::conflict('order_not_payable', 'Este pedido ya no se puede pagar. Haz la compra de nuevo.');
-        }
-
-        return ['order_id' => $orderId, 'payment' => $this->payment($orderId, $this->buyer($userId))];
     }
 
     /** @throws ApiException */

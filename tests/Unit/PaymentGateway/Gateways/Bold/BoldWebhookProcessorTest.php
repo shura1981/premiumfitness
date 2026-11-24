@@ -5,9 +5,12 @@ declare(strict_types=1);
 use App\Features\PaymentGateway\Gateways\Bold\BoldWebhookProcessor;
 use App\Features\PaymentGateway\ForeignPaymentReferenceException;
 use App\Features\PaymentGateway\Normalizer\PaymentStatus;
-use Tests\Support\FakePaymentReferences;
+use Tests\Support\Seed;
+use Tests\Support\Shop;
 
 it('processes a SALE_APPROVED Bold webhook payload as APROBADA', function (): void {
+    // El pedido se busca por su id de pago (`orders.payment_code`).
+    $orderId = Seed::order(Seed::user());
     $payload = [
         'type' => 'SALE_APPROVED',
         'data' => [
@@ -17,15 +20,15 @@ it('processes a SALE_APPROVED Bold webhook payload as APROBADA', function (): vo
                 'currency' => 'COP',
             ],
             'metadata' => [
-                'reference' => 'pf-5050',
+                'reference' => Shop::reference($orderId),
             ],
         ],
     ];
 
-    $result = (new BoldWebhookProcessor(references: new FakePaymentReferences()))->process($payload);
+    $result = (new BoldWebhookProcessor())->process($payload);
 
     expect($result->gateway)->toBe('bold')
-        ->and($result->orderId)->toBe(5050)
+        ->and($result->orderId)->toBe($orderId)
         ->and($result->transactionId)->toBe('BOLD-PAY-987654')
         ->and($result->codStatus)->toBe(PaymentStatus::APROBADA)
         ->and($result->statusText)->toBe(PaymentStatus::TEXT_APROBADA)
@@ -38,25 +41,25 @@ it('processes SALE_REJECTED and VOID_APPROVED as RECHAZADA', function (string $e
         'data' => [
             'payment_id' => 'BOLD-PAY-111',
             'amount' => ['total' => 95000, 'currency' => 'COP'],
-            'metadata' => ['reference' => 'pf-77'],
+            'metadata' => ['reference' => Shop::reference(Seed::order(Seed::user()))],
         ],
     ];
 
-    $result = (new BoldWebhookProcessor(references: new FakePaymentReferences()))->process($payload);
+    $result = (new BoldWebhookProcessor())->process($payload);
 
     expect($result->codStatus)->toBe(PaymentStatus::RECHAZADA)
         ->and($result->statusText)->toBe(PaymentStatus::TEXT_RECHAZADA);
 })->with(['SALE_REJECTED', 'VOID_APPROVED']);
 
 it('identifies VOID_REJECTED as a no-op event', function (): void {
-    $processor = new BoldWebhookProcessor(references: new FakePaymentReferences());
+    $processor = new BoldWebhookProcessor();
 
     expect($processor->isVoidRejected(['type' => 'VOID_REJECTED']))->toBeTrue()
         ->and($processor->isVoidRejected(['type' => 'SALE_APPROVED']))->toBeFalse();
 });
 
 it('throws when critical fields are missing or currency is not COP', function (array $invalidPayload): void {
-    expect(fn () => (new BoldWebhookProcessor(references: new FakePaymentReferences()))->process($invalidPayload))
+    expect(fn () => (new BoldWebhookProcessor())->process($invalidPayload))
         ->toThrow(RuntimeException::class);
 })->with([
     'missing type' => [['data' => []]],
@@ -86,33 +89,20 @@ it('throws when critical fields are missing or currency is not COP', function (a
 ]);
 
 
-it('marca como ajena una referencia que no es pf-<id>, como las numéricas del sitio web', function (string $reference): void {
-    $payload = [
-        'type' => 'SALE_APPROVED',
-        'data' => [
-            'payment_id' => 'BOLD-AJENO-1',
-            'amount'     => ['total' => 50000, 'currency' => 'COP'],
-            'metadata'   => ['reference' => $reference],
-        ],
-    ];
+it('marca como ajeno un id de pago que no es de un pedido de PremiumFitness, como los numéricos de otros proyectos', function (): void {
+    $orderId = Seed::order(Seed::user());
 
-    expect(fn () => (new BoldWebhookProcessor(references: new FakePaymentReferences()))->process($payload))
-        ->toThrow(ForeignPaymentReferenceException::class);
-})->with(['863', 'PF-863', 'pf-', 'pf-863-1']);
+    // El número solo, mayúsculas, sin número o con algo más: ninguno es el `payment_code` del pedido.
+    foreach ([(string) $orderId, 'PF-' . $orderId, 'pf-', "pf-{$orderId}-1", 'pf-999999999999'] as $foreign) {
+        $payload = [
+            'type' => 'SALE_APPROVED',
+            'data' => [
+                'payment_id' => 'BOLD-AJENO-1',
+                'amount'     => ['total' => 50000, 'currency' => 'COP'],
+                'metadata'   => ['reference' => $foreign],
+            ],
+        ];
 
-it('lleva el id de pago y el medio que reporta Bold', function (?string $method, string $expected): void {
-    $data = ['payment_id' => 'PAY-1', 'amount' => ['total' => 1000, 'currency' => 'COP'], 'metadata' => ['reference' => 'pf-7']];
-    if ($method !== null) {
-        $data['payment_method'] = $method;
+        expect(fn () => (new BoldWebhookProcessor())->process($payload))->toThrow(ForeignPaymentReferenceException::class);
     }
-
-    $result = (new BoldWebhookProcessor(references: new FakePaymentReferences()))->process(['type' => 'SALE_APPROVED', 'data' => $data]);
-
-    expect($result->reference)->toBe('pf-7')
-        ->and($result->paymentMethod)->toBe($expected);
-})->with([
-    'tarjeta'           => ['CARD', 'Tarjeta'],
-    'PSE'               => ['PSE', 'PSE'],
-    'Nequi'             => ['NEQUI', 'Nequi'],
-    'sin medio en aviso' => [null, 'Bold'],
-]);
+});

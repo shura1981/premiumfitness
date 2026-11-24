@@ -8,8 +8,9 @@ use Tests\Support\Seed;
 use Tests\Support\Shop;
 
 /*
- | Resultado de un intento de pago para la página de respuesta (spec integraciones/03): la app consulta
- | una vez con el id de pago (`pf-<n>`) y muestra lo que guardó el webhook. Solo el webhook cambia el estado.
+ | Estado del pago de un pedido para la página de respuesta (spec integraciones/03): la app consulta una
+ | vez con el id de pago (`pf-<pedido>`) y muestra lo que el webhook guardó en el pedido. Solo el webhook
+ | cambia el estado.
  */
 
 function paymentStatus(int $userId, string $reference): Psr\Http\Message\ResponseInterface
@@ -31,14 +32,16 @@ it('antes del webhook el pago está pendiente; con el webhook muestra lo que rep
 
     expect($pending)->toMatchArray([
         'reference' => $reference, 'order_id' => $orderId, 'gateway' => 'bold', 'gateway_name' => 'Bold',
-        'status' => 'pendiente', 'gateway_status' => null, 'transaction_id' => null, 'payment_method' => null,
-        'amount' => $amount, 'notified_at' => null,
+        'status' => 'pendiente', 'gateway_status' => null, 'transaction_id' => null,
+        'amount' => $amount, 'approved_at' => null,
     ])
         ->and($approved)->toMatchArray([
-            'status' => 'aprobado', 'gateway_status' => 'APROBADA', 'transaction_id' => $paymentId,
-            'payment_method' => 'Bold', 'amount' => $amount,
+            'reference' => 'pf-' . $orderId, 'status' => 'aprobado', 'gateway_status' => 'APROBADA',
+            'transaction_id' => $paymentId, 'amount' => $amount,
         ])
-        ->and($approved['notified_at'])->toMatch('/^\d{4}-\d{2}-\d{2}T/');
+        ->and($approved['approved_at'])->toMatch('/^\d{4}-\d{2}-\d{2}T/')
+        // Lo que mandó la pasarela queda en el pedido, como en radical.
+        ->and(json_decode((string) Shop::orderRow($orderId)['payment_state_json'], true)['data']['payment_id'])->toBe($paymentId);
 });
 
 it('un pago rechazado se ve rechazado, con lo que dijo la pasarela', function (): void {
@@ -50,7 +53,7 @@ it('un pago rechazado se ve rechazado, con lo que dijo la pasarela', function ()
     Shop::gatewayWebhook('addi', $orderId, $amount, 'REJECTED');
 
     expect(AppFactory::json(paymentStatus($user, Shop::reference($orderId))))->toMatchArray([
-        'status' => 'rechazado', 'gateway_status' => 'PAGO RECHAZADO', 'payment_method' => 'Addi',
+        'status' => 'rechazado', 'gateway_status' => 'PAGO RECHAZADO', 'gateway_name' => 'Addi', 'transaction_id' => null,
     ]);
 });
 

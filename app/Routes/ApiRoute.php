@@ -199,10 +199,6 @@ return static function (\Slim\App $app): void {
 
         $group->get('/orders', [$userOrderController, 'list'])->add($jwt);
         $group->get('/orders/{id:[0-9]+}', [$userOrderController, 'show'])->add($jwt);
-        // Volver a pagar un pedido propio que quedó pendiente (por ejemplo, si cerró la ventana de Bold).
-        $group->post('/orders/{id:[0-9]+}/pay', [$checkoutController, 'payAgain'])
-            ->add($limitByIp('orders-pay', 10))
-            ->add($jwt);
 
         $pgController = new PaymentGatewayController();
 
@@ -255,7 +251,7 @@ return static function (\Slim\App $app): void {
         // verifica su firma. El call center confirma cada pago en la plataforma de la pasarela.
         // No existe aquí el webhook genérico de radical (`/webhooks/orders`), que cambiaba el estado
         // de un pedido sin firma.
-        // Resultado de un intento de pago para la página de respuesta de la app (spec integraciones/03).
+        // Estado del pago de un pedido, por su id de pago, para la página de respuesta de la app (spec integraciones/03).
         $group->get('/payments/{reference:[A-Za-z0-9_-]{1,40}}', [new PaymentStatusController(), 'show'])
             ->add($limitByIp('payment-status', 120))
             ->add($jwt);

@@ -79,7 +79,7 @@ $dotenv->required([
 ])->notEmpty();
 
 // Payment Gateways — compartidas + socket post-pago
-$dotenv->required(['PAYMENT_GATEWAY_TIMEOUT_SECONDS', 'PAYMENT_GATEWAY_SPA_RETURN_URL'])->notEmpty();
+$dotenv->required(['PAYMENT_GATEWAY_TIMEOUT_SECONDS'])->notEmpty();
 $dotenv->required(['SOCKET_NOTIFICATION_URL', 'SOCKET_NOTIFICATION_TOKEN'])->notEmpty();
 $dotenv->required(['SOCKET_GATEWAY_PROJECT_ID_CLIENT', 'SOCKET_GATEWAY_PROJECT_ID_ADMIN', 'SOCKET_GATEWAY_KEY_ADMIN'])->notEmpty();
 

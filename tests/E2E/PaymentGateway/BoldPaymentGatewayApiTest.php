@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use App\Features\Order\OrderRepository;
 use App\Features\PaymentGateway\Normalizer\PaymentStatus;
-use App\Features\PaymentGateway\PaymentAttemptRepository;
 use App\Features\User\UserRepository;
 use Slim\Psr7\Factory\ServerRequestFactory;
 use Slim\Psr7\Factory\StreamFactory;
@@ -12,6 +11,7 @@ use Tests\Support\AppFactory;
 use Tests\Support\BoldTestSigner;
 use Tests\Support\JwtFactory;
 use Tests\Support\Seed;
+use Tests\Support\Shop;
 
 // `POST /api/payment-gateway/consume/bold` de radical no existe aquí: firmaba el valor que enviara
 // la app. El pago lo firma `POST /api/checkout` con el valor del pedido (tests/E2E/Checkout).
@@ -51,7 +51,7 @@ it('rejects POST /api/payment-gateway/webhook/bold with invalid signature', func
 it('treats signed VOID_REJECTED Bold webhook as a no-op and approves order on signed SALE_APPROVED', function (): void {
     $userId  = Seed::user();
     $orderId   = Seed::order($userId, amount: 185000);
-    $reference = (new PaymentAttemptRepository())->create($orderId, 'bold', 185000);
+    $reference = Shop::reference($orderId);
     $signer    = BoldTestSigner::fromEnv();
 
     try {
@@ -109,16 +109,8 @@ it('treats signed VOID_REJECTED Bold webhook as a no-op and approves order on si
     }
 });
 
-it('renders GET /response/bold HTML response page with orderId and status', function (): void {
-    $response = AppFactory::dispatch(AppFactory::request(
-        'GET',
-        '/response/bold?orderId=7890&bold-tx-status=approved',
-    ));
-    $html = (string) $response->getBody();
+it('el backend no sirve páginas de respuesta: están en la app web', function (string $gateway): void {
+    $response = AppFactory::dispatch(AppFactory::request('GET', "/response/{$gateway}?orderId=pf-7890"));
 
-    expect($response->getStatusCode())->toBe(200)
-        ->and($response->getHeaderLine('Content-Type'))->toContain('text/html')
-        ->and($html)->toContain('Bold')
-        ->and($html)->toContain('7890');
-});
-
+    expect($response->getStatusCode())->toBe(404);
+})->with(['bold', 'addi', 'sistecredito']);

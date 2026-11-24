@@ -177,11 +177,11 @@ Resultado de la fase (15 nov 2026): 293 pruebas pasan, 62 de ellas nuevas de ses
 Pedido de Steven: «el sistema de pagos está malo, vamos a reestructurarlo… te mostré cómo funciona radical». El módulo vuelve al diseño de radical (un pedido = un pago), con el prefijo en el id de pago (P-24). La lógica de negocio no se toca.
 
 - [x] Columna `orders.payment_code` (`pf-<pedido>`, única) en el `.sql` y en la base local; se llena al crear el pedido (`PurchaseRepository::create`, `PaymentCode`), con prueba en `DerSchemaTest`
-- [ ] El cobro de las tres pasarelas usa `payment_code`; cada pasarela vuelve a su dirección de la app con su parámetro (`orderId` en Bold y Sistecrédito, `id_order` en Addi)
-- [ ] Webhooks como radical: buscan el pedido por `payment_code`; el despachador solo guarda en el pedido (`status_id`, `payment_state_json`) y aprueba con `PurchaseApproval`
-- [ ] Conciliación de Bold y `scripts/dev-pagar-pedido.php` con `payment_code`
-- [ ] `GET /api/payments/{pf-N}` lee el pedido por `payment_code`
-- [ ] Se eliminan `payment_attempts`, `PaymentAttemptRepository`, `PaymentReferenceResolver`, `POST /api/orders/{id}/pay` (`payAgain`), `reference` y `paymentMethod` de `PaymentResult`, y las sobras de radical sin uso (`/response/bold`, `PAYMENT_GATEWAY_SPA_RETURN_URL`)
-- [ ] Pruebas: ids distintos por pedido, id ajeno o sin prefijo no toca nada, el webhook aprueba por `payment_code`; las 506 pruebas de antes siguen pasando
+- [x] El cobro de las tres pasarelas usa `payment_code`; cada pasarela vuelve a su dirección de la app con su parámetro (`orderId` en Bold y Sistecrédito, `id_order` en Addi): `GatewayPayment::returnUrl`
+- [x] Webhooks como radical: buscan el pedido por `payment_code` (comparado exacto: `PF-12` no es `pf-12`); el despachador solo guarda en el pedido (`status_id`, `payment_state_json`) y aprueba con `PurchaseApproval`. `PaymentResult` quedó idéntico al de radical
+- [x] Conciliación de Bold y `scripts/dev-pagar-pedido.php` con `payment_code`
+- [x] `GET /api/payments/{pf-N}` lee el pedido por `payment_code` (`UserOrderRepository::findByPaymentCode`): estado, total, fecha y número de transacción; ya no devuelve `payment_method` ni `notified_at`
+- [x] Se eliminan `payment_attempts`, `PaymentAttemptRepository`, `PaymentReferenceResolver`, `POST /api/orders/{id}/pay` (`payAgain`), `reference` y `paymentMethod` de `PaymentResult`, y las sobras de radical sin uso (`/response/bold`, `PAYMENT_GATEWAY_SPA_RETURN_URL`)
+- [x] Pruebas: ids distintos por pedido, id ajeno o sin prefijo no toca nada, el webhook aprueba por `payment_code`. Pasan 504 (salieron las del diseño anterior: intentos, volver a pagar, medio de pago y `/response/bold`); ninguna de reglas de negocio cambió
 - [ ] App web: sin «Pagar» en el detalle ni «pagar de nuevo» en el resultado; una dirección de respuesta por pasarela
 - [ ] Contrato (`.plan.md`), DER y specs `integraciones/03` y `frontend/01` al día, con la tabla «radical → PremiumFitness»

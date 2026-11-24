@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace App\Features\PaymentGateway\Gateways\Sistecredito;
 
+use App\Features\Order\OrderRepository;
 use App\Features\PaymentGateway\ForeignPaymentReferenceException;
 use App\Features\PaymentGateway\Normalizer\PaymentStatusNormalizer;
-use App\Features\PaymentGateway\PaymentAttemptRepository;
-use App\Features\PaymentGateway\PaymentReferenceResolver;
 use App\Features\PaymentGateway\Result\PaymentResult;
 use RuntimeException;
 
@@ -16,7 +15,7 @@ use RuntimeException;
  *
  * Estructura esperada (extracto):
  *   {
- *     "Invoice": "pf-1112",   // referencia del intento de pago
+ *     "Invoice": "pf-1112",   // id de pago del pedido (`orders.payment_code`)
  *     "Value": 128642,
  *     "Currency": "COP",
  *     "PaymentMethodResponse": {
@@ -32,7 +31,7 @@ final class SistecreditoWebhookProcessor
 {
     public function __construct(
         private readonly PaymentStatusNormalizer $normalizer = new PaymentStatusNormalizer(),
-        private ?PaymentReferenceResolver $references = null,
+        private ?OrderRepository $orders = null,
     ) {}
 
     /**
@@ -56,7 +55,8 @@ final class SistecreditoWebhookProcessor
             throw new RuntimeException('Sistecredito webhook: missing PaymentMethodResponse.StatusResponse.');
         }
 
-        $orderId = ($this->references ??= new PaymentAttemptRepository())->orderIdFor($reference)
+        // El pedido se busca por su id de pago (`orders.payment_code`, P-24).
+        $orderId = ($this->orders ??= new OrderRepository())->findOrderIdByPaymentCode($reference)
             ?? throw ForeignPaymentReferenceException::for('Sistecrédito', $reference);
 
         [$codStatus, $statusText] = $this->normalizer->normalize('sistecredito', $rawStatus);
@@ -69,8 +69,6 @@ final class SistecreditoWebhookProcessor
             statusText:    $statusText,
             amount:        (float) ($payload['Value'] ?? 0),
             rawPayload:    $payload,
-            reference:     $reference,
-            paymentMethod: 'Sistecrédito',
         );
     }
 }

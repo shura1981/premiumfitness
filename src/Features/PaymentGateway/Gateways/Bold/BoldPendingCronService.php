@@ -17,7 +17,7 @@ use Throwable;
  *
  * Consulta órdenes `payment_gateway = 'bold'` creadas en la fecha dada cuyo
  * estado sea `PENDIENTE%`, `INICIADA`, `ENVIADO` o `NULL`, consulta el respaldo
- * del webhook de Bold por las referencias de sus intentos de pago (`pf-<id>`,
+ * del webhook de Bold por el id de pago de cada pedido (`pf-<pedido>`,
  * `is_external_reference=true`) y despacha el evento encontrado mediante
  * `PaymentEventDispatcher`.
  */

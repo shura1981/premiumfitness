@@ -7,7 +7,6 @@ namespace App\Features\Checkout;
 use App\Features\PaymentGateway\Gateways\Addi\AddiCheckoutService;
 use App\Features\PaymentGateway\Gateways\Bold\BoldCheckoutService;
 use App\Features\PaymentGateway\Gateways\Sistecredito\SistecreditoCheckoutService;
-use App\Features\PaymentGateway\PaymentAttemptRepository;
 use App\Infrastructure\Config\BusinessConfig;
 use App\Infrastructure\Database\DB;
 use App\Shared\Exceptions\ApiException;
@@ -21,9 +20,9 @@ use Throwable;
  * - Bold: los datos del botón, con la firma de integridad.
  * - Addi y Sistecrédito: la URL de su página de pago, que la app abre.
  *
- * Cada llamada es un intento de pago con su propio id, `pf-<consecutivo>` (spec backend/03, P-24):
- * es la referencia que recibe la pasarela y con la que su webhook encuentra el pedido. En todas, el
- * pedido lo aprueba el webhook, nunca la vuelta del usuario.
+ * El id que recibe la pasarela es el `payment_code` del pedido, `pf-<número del pedido>` (spec
+ * backend/03, P-24): un pedido = un pago, como en radical. Con ese id el webhook encuentra el pedido.
+ * En todas, el pedido lo aprueba el webhook, nunca la vuelta del usuario.
  */
 final class GatewayPayment
 {
@@ -39,12 +38,12 @@ final class GatewayPayment
 
     public function __construct(
         private readonly BusinessConfig $business,
-        private readonly PaymentAttemptRepository $attempts = new PaymentAttemptRepository(),
     ) {}
 
     /**
-     * @param string $returnUrl Página de respuesta de la app (`…/pago/resultado`). Se le agrega el id de pago
-     *                          (`?pago=pf-<n>`): con él la página consulta el resultado (spec integraciones/03).
+     * @param string $returnUrl Página de respuesta de la app (`…/pago/resultado`). Cada pasarela vuelve a la
+     *                          suya con el id de pago en su parámetro, como en radical y en el sitio:
+     *                          `/bold?orderId=`, `/addi?id_order=` y `/sistecredito?orderId=`.
      * @return array<string, mixed> El `payment` del contrato `CheckoutResult`.
      * @throws ApiException 502 si la pasarela no entrega su página de pago.
      */
@@ -52,8 +51,8 @@ final class GatewayPayment
     {
         $order     = $this->order($orderId);
         $gateway   = (string) $order['payment_gateway'];
-        $reference = $this->attempts->create($orderId, $gateway, (float) $order['amount']);
-        $returnUrl .= (str_contains($returnUrl, '?') ? '&' : '?') . 'pago=' . rawurlencode($reference);
+        $reference = (string) $order['payment_code'];
+        $returnUrl = self::returnUrl($gateway, $returnUrl, $reference);
 
         if ($gateway === 'bold') {
             return $this->bold($order, $reference, $returnUrl) + ['reference' => $reference];
@@ -82,11 +81,25 @@ final class GatewayPayment
     }
 
     /**
+     * Página de respuesta de cada pasarela en la app, con el id de pago en el parámetro que usa cada una
+     * en radical y en el sitio: `orderId` en Bold y Sistecrédito, `id_order` en Addi.
+     */
+    public static function returnUrl(string $gateway, string $resultUrl, string $reference): string
+    {
+        return match ($gateway) {
+            // A la de Bold le agrega `?orderId=` su servicio (`BoldCheckoutService`), y Bold suma los suyos.
+            'bold'  => $resultUrl . '/bold',
+            'addi'  => $resultUrl . '/addi?id_order=' . rawurlencode($reference),
+            default => $resultUrl . '/' . $gateway . '?orderId=' . rawurlencode($reference),
+        };
+    }
+
+    /**
      * Cuerpo de la solicitud de crédito de Addi. Los importes van como texto con decimal, como en su
      * documentación; la URL del webhook la pone `AddiCheckoutService`.
      *
      * @param array<string, mixed>       $order
-     * @param string                     $reference Id del intento de pago (`pf-<id>`).
+     * @param string                     $reference Id de pago del pedido (`pf-<pedido>`).
      * @param list<array<string, mixed>> $items
      * @return array<string, mixed>
      */
@@ -141,7 +154,7 @@ final class GatewayPayment
      * Datos de la orden de Sistecrédito (Credinet); el resto del cuerpo lo pone su servicio.
      *
      * @param array<string, mixed> $order
-     * @param string               $reference Id del intento de pago (`pf-<id>`).
+     * @param string               $reference Id de pago del pedido (`pf-<pedido>`).
      * @return array{invoice: string, description: string, value: int, docType: string, document: string, urlResponse: string}
      */
     public static function sistecreditoPayload(array $order, string $reference, string $returnUrl): array
@@ -192,7 +205,7 @@ final class GatewayPayment
     private function order(int $orderId): array
     {
         $stmt = DB::getInstance()->prepare(
-            'SELECT o.order_id, o.amount, o.shipping_amount, o.tax_amount, o.payment_gateway,
+            'SELECT o.order_id, o.payment_code, o.amount, o.shipping_amount, o.tax_amount, o.payment_gateway,
                     u.full_name, u.email, u.num_cell, u.document_id, u.document_type_id,
                     a.address, c.name AS city_name
              FROM orders o

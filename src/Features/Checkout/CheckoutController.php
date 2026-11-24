@@ -13,7 +13,6 @@ use Psr\Http\Message\ServerRequestInterface as Request;
  *   POST /api/checkout/preview            → la compra calculada, sin crear nada
  *   GET  /api/checkout/payment-gateways   → pasarelas habilitadas
  *   POST /api/checkout                    → crea el pedido y devuelve el pago firmado
- *   POST /api/orders/{id}/pay             → vuelve a dar el pago firmado de un pedido pendiente
  */
 class CheckoutController
 {
@@ -57,12 +56,6 @@ class CheckoutController
         );
 
         return $this->json($response, $result, 201);
-    }
-
-    /** POST /api/orders/{id}/pay — datos de pago firmados de un pedido propio aún sin pagar. */
-    public function payAgain(Request $request, Response $response, int $id): Response
-    {
-        return $this->json($response, $this->checkout->payAgain(self::userId($request), $id));
     }
 
     private static function userId(Request $request): int

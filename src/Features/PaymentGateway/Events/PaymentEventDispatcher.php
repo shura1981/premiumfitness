@@ -8,7 +8,6 @@ use App\Features\Order\OrderRepository;
 use App\Features\Order\StatusOrderRepository;
 use App\Features\PaymentGateway\Events\Handlers\PaymentEventHandlerInterface;
 use App\Features\PaymentGateway\Normalizer\PaymentStatus;
-use App\Features\PaymentGateway\PaymentAttemptRepository;
 use App\Features\PaymentGateway\Result\PaymentResult;
 use App\Features\Reward\AmountMismatchException;
 use App\Features\Reward\PurchaseApproval;
@@ -37,7 +36,6 @@ final class PaymentEventDispatcher
         private readonly StatusOrderRepository $statuses,
         private readonly array $handlers = [],
         private readonly ?PurchaseApproval $approval = null,
-        private readonly ?PaymentAttemptRepository $attempts = null,
     ) {}
 
     /**
@@ -48,18 +46,6 @@ final class PaymentEventDispatcher
         $order = $this->orders->findById($result->orderId);
         if ($order === false) {
             return ['processed' => false, 'reason' => 'order_not_found'];
-        }
-
-        // El intento guarda lo que reportó la pasarela, aunque el pedido ya esté aprobado o el valor no coincida:
-        // es lo que muestra la página de respuesta con el id de pago (spec integraciones/03).
-        if ($result->reference !== null) {
-            ($this->attempts ?? new PaymentAttemptRepository())->recordResult(
-                $result->reference,
-                $result->statusText,
-                $result->transactionId,
-                $result->paymentMethod,
-                $result->amount,
-            );
         }
 
         if ($order->status_value === PaymentStatus::TEXT_APROBADA) {

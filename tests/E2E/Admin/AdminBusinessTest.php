@@ -392,26 +392,6 @@ it('no ajusta un pedido sin pagar ni sin motivo', function (): void {
         ->and(admin('POST', "orders/{$paid}/adjustments", ['type' => 'regalo', 'reason' => 'Motivo suficiente'])->getStatusCode())->toBe(422);
 });
 
-// ── Volver a pagar ────────────────────────────────────────────────────────
-
-it('vuelve a dar el pago firmado de un pedido propio pendiente, con el valor guardado', function (): void {
-    $user    = Seed::user();
-    $code    = Seed::catalogProduct(['valor' => 100000]);
-    $orderId = Shop::order($user, [['code' => $code, 'quantity' => 1]]);
-    Seed::updateCatalogProduct($code, ['valor' => 999999]);
-    $path = "/api/orders/{$orderId}/pay";
-
-    $retry   = AppFactory::dispatch(AppFactory::request('POST', $path, [], JwtFactory::authHeader($user)));
-    $foreign = AppFactory::dispatch(AppFactory::request('POST', $path, [], JwtFactory::authHeader(Seed::user())));
-    Shop::pay($orderId);
-    $paid = AppFactory::dispatch(AppFactory::request('POST', $path, [], JwtFactory::authHeader($user)));
-
-    expect($retry->getStatusCode())->toBe(200)
-        ->and(AppFactory::json($retry)['payment']['bold']['amount'])->toBe(100000 + Shop::SHIPPING)
-        ->and($foreign->getStatusCode())->toBe(404)
-        ->and($paid->getStatusCode())->toBe(409);
-});
-
 // ── Hallados al conectar el admin al backend real (16 nov 2026) ────────────
 
 it('la lista y el detalle de pedidos del admin funcionan cuando hay un canje (sin pasarela)', function (): void {

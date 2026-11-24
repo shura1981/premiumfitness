@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use App\Features\Checkout\GatewayPayment;
-use App\Features\PaymentGateway\PaymentAttemptRepository;
 use App\Infrastructure\Config\BusinessConfig;
 use Tests\Support\Seed;
 use Tests\Support\Shop;
@@ -14,14 +13,12 @@ use Tests\Support\Shop;
  */
 
 /**
- * Pedido sin pagar con la pasarela indicada y un intento de pago suyo. Se crea con Bold para no
- * llamar a la pasarela real.
+ * Pedido sin pagar con la pasarela indicada. Se crea con Bold para no llamar a la pasarela real.
  */
 function orderWithGateway(int $userId, string $gateway, int $price = 100000): int
 {
     $orderId = Shop::order($userId, [['code' => Seed::catalogProduct(['valor' => $price]), 'quantity' => 1]]);
     Seed::pdo()->prepare('UPDATE orders SET payment_gateway = ? WHERE order_id = ?')->execute([$gateway, $orderId]);
-    (new PaymentAttemptRepository())->create($orderId, $gateway, orderAmount($orderId));
 
     return $orderId;
 }
@@ -102,7 +99,7 @@ function gatewayOrder(): array
 
 it('arma la solicitud de Addi con el pedido guardado y la vuelta a la app', function (): void {
     $items   = [['product_sku' => 103040, 'product_name' => 'NUTRA C', 'quantity' => 2, 'unit_price' => '112455.00', 'tax_amount' => '35910.08']];
-    $payload = (new GatewayPayment(BusinessConfig::fromEnv()))->addiPayload(gatewayOrder(), 'pf-77', $items, 'https://app.test/pago/resultado?pago=pf-77');
+    $payload = (new GatewayPayment(BusinessConfig::fromEnv()))->addiPayload(gatewayOrder(), 'pf-77', $items, GatewayPayment::returnUrl('addi', 'https://app.test/pago/resultado', 'pf-77'));
 
     expect($payload)->toMatchArray([
         'orderId' => 'pf-77', 'totalAmount' => '224910.0', 'shippingAmount' => '0.0', 'totalTaxesAmount' => '35910.1', 'currency' => 'COP',
@@ -113,16 +110,18 @@ it('arma la solicitud de Addi con el pedido guardado y la vuelta a la app', func
             'cellphone' => '3009000001', 'cellphoneCountryCode' => '+57',
         ])
         ->and($payload['shippingAddress'])->toBe(['lineOne' => 'CL 1 2 3', 'city' => 'Cali', 'country' => 'CO'])
-        ->and($payload['allyUrlRedirection']['redirectionUrl'])->toBe('https://app.test/pago/resultado?pago=pf-77');
+        // Addi vuelve con el id de pago en `id_order`, como en radical y en el sitio.
+        ->and($payload['allyUrlRedirection']['redirectionUrl'])->toBe('https://app.test/pago/resultado/addi?id_order=pf-77');
 });
 
 it('arma la orden de Sistecrédito con el pedido guardado y la vuelta a la app', function (): void {
-    expect(GatewayPayment::sistecreditoPayload(gatewayOrder(), 'pf-77', 'https://app.test/pago/resultado?pago=pf-77'))->toBe([
+    expect(GatewayPayment::sistecreditoPayload(gatewayOrder(), 'pf-77', GatewayPayment::returnUrl('sistecredito', 'https://app.test/pago/resultado', 'pf-77')))->toBe([
         'invoice'     => 'pf-77',
         'description' => 'Pedido PremiumFitness #901',
         'value'       => 224910,
         'docType'     => 'CE',
         'document'    => '1234567',
-        'urlResponse' => 'https://app.test/pago/resultado?pago=pf-77',
+        // Sistecrédito vuelve con el id de pago en `orderId`.
+        'urlResponse' => 'https://app.test/pago/resultado/sistecredito?orderId=pf-77',
     ]);
 });

@@ -41,8 +41,7 @@ final class EmitClientPurchaseStatusHandler implements PaymentEventHandlerInterf
                 'payload' => [
                     'order_id'       => $event->order->order_id,
                     'user_id'        => $event->order->user_id,
-                    // El id de pago del intento (`pf-<n>`) y el estado tal como lo muestra la app.
-                    'reference'      => $event->result->reference,
+                    // El estado tal como lo muestra la app.
                     'order_status'   => OrderStatusMapper::forUser($event->result->statusText, $event->result->isApproved(), false, false),
                     'status'         => $event->result->statusText,
                     'status_id'      => $event->result->codStatus,
