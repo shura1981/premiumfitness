@@ -47,11 +47,26 @@ it('normalizes Bold statuses', function (string $raw, int $cod, string $text): v
         ->and($gotText)->toBe($text);
 })->with('bold_statuses');
 
-it('returns ERROR/DESCONOCIDO for unknown status', function (): void {
-    [$cod, $text] = (new PaymentStatusNormalizer())->normalize('addi', 'WHATEVER');
+it('un estado que no está en la tabla se guarda con el nombre que mandó la pasarela, sin aprobar', function (string $gateway, string $raw): void {
+    [$cod, $text] = (new PaymentStatusNormalizer())->normalize($gateway, $raw);
     expect($cod)->toBe(PaymentStatus::ERROR)
-        ->and($text)->toBe(PaymentStatus::TEXT_DESCONOCIDO);
+        ->and($text)->toBe($raw);
+})->with([
+    'Addi'         => ['addi', 'EXPIRED'],
+    'Sistecrédito' => ['sistecredito', 'Expired'],
+    'Bold'         => ['bold', 'SALE_PENDING'],
+]);
+
+it('corta el nombre al largo de la columna y deja DESCONOCIDO si viene vacío', function (): void {
+    $normalizer = new PaymentStatusNormalizer();
+
+    expect($normalizer->normalize('addi', str_repeat('X', 80))[1])->toBe(str_repeat('X', 50))
+        ->and($normalizer->normalize('bold', '   '))->toBe([PaymentStatus::ERROR, PaymentStatus::TEXT_DESCONOCIDO]);
 });
+
+it('un nombre desconocido nunca toma un estado que pone la app (aprobado o ajuste)', function (string $raw): void {
+    expect((new PaymentStatusNormalizer())->normalize('addi', $raw))->toBe([PaymentStatus::ERROR, PaymentStatus::TEXT_DESCONOCIDO]);
+})->with(['aprobada', 'APROBADA', 'Reversada', 'devolución']);
 
 it('returns ERROR/DESCONOCIDO for unknown gateway', function (): void {
     [$cod, $text] = (new PaymentStatusNormalizer())->normalize('paypal', 'APPROVED');

@@ -97,6 +97,37 @@ it('un pago que la pasarela cancela queda CANCELADA, distinto de un pedido rever
         ->and(Shop::orderRow($orderId)['status_value'])->not->toBe('REVERSADA');
 })->with(['Addi' => ['addi', 'DECLINED'], 'Sistecrédito' => ['sistecredito', 'Cancelled']]);
 
+it('un estado que no está en la tabla queda en el pedido con su nombre y no lo aprueba', function (string $gateway, string $raw): void {
+    $orderId = orderWithGateway(Seed::user(), $gateway);
+    $name    = $raw . '_' . strtoupper(bin2hex(random_bytes(4)));
+
+    $result = Shop::gatewayWebhook($gateway, $orderId, orderAmount($orderId), $name);
+
+    expect($result)->toMatchArray(['processed' => true, 'status' => $name])
+        ->and(Shop::orderRow($orderId))->toMatchArray(['status_value' => $name, 'approved_at' => null])
+        ->and(Shop::rows('SELECT COUNT(*) n FROM status_orders WHERE value = ?', [$name])[0]['n'])->toBe(1);
+})->with(['Addi' => ['addi', 'EXPIRED'], 'Sistecrédito' => ['sistecredito', 'Expired']]);
+
+it('un evento de Bold que no está en la tabla queda en el pedido con su nombre y no lo aprueba', function (): void {
+    $orderId = Shop::order(Seed::user(), [['code' => Seed::catalogProduct(['valor' => 100000]), 'quantity' => 1]]);
+    $name    = 'SALE_PENDING_' . strtoupper(bin2hex(random_bytes(4)));
+
+    $result = Shop::boldWebhook($orderId, orderAmount($orderId), type: $name);
+
+    expect($result)->toMatchArray(['processed' => true, 'status' => $name])
+        ->and(Shop::orderRow($orderId))->toMatchArray(['status_value' => $name, 'approved_at' => null]);
+});
+
+it('un pago que llega después de un estado desconocido sí aprueba el pedido', function (): void {
+    $orderId = Shop::order(Seed::user(), [['code' => Seed::catalogProduct(['valor' => 100000]), 'quantity' => 1]]);
+
+    Shop::boldWebhook($orderId, orderAmount($orderId), type: 'aprobada');
+    $paid = Shop::boldWebhook($orderId, orderAmount($orderId));
+
+    expect($paid)->toMatchArray(['processed' => true, 'status' => 'APROBADA'])
+        ->and(Shop::orderRow($orderId)['approved_at'])->not->toBeNull();
+});
+
 // ── Datos que se envían a cada pasarela ───────────────────────────────────
 
 /** @return array<string, mixed> */
