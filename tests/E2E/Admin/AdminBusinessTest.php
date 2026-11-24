@@ -338,7 +338,10 @@ it('de los puntos solo retira lo que queda en el lote del pedido; lo ya usado no
     expect($preview['points'])->toBe(-2000)
         // Los otros lotes del entrenador no se tocan.
         ->and(trainerBalances($trainer)[0])->toBe(50000)
-        ->and(Shop::orderRow($orderId)['status_value'])->toBe('CANCELADA');
+        // REVERSADA, no CANCELADA: ese estado es de las pasarelas, para un pago que nunca se aprobó.
+        ->and(Shop::orderRow($orderId)['status_value'])->toBe('REVERSADA')
+        // El cliente lo ve cancelado.
+        ->and(AppFactory::json(AppFactory::dispatch(AppFactory::request('GET', '/api/orders/' . $orderId, headers: JwtFactory::authHeader((int) Shop::orderRow($orderId)['user_id']))))['status'])->toBe('cancelado');
 });
 
 it('cancelar un canje devuelve los puntos en un lote nuevo', function (): void {
@@ -355,6 +358,7 @@ it('cancelar un canje devuelve los puntos en un lote nuevo', function (): void {
     expect($create->getStatusCode())->toBe(201)
         ->and(AppFactory::json($create)['effect'])->toMatchArray(['commission_amount' => 0, 'points' => 100000])
         ->and(trainerBalances($trainer)[0])->toBe(300000)
+        ->and(Shop::orderRow($orderId)['status_value'])->toBe('REVERSADA')
         ->and(Shop::rows("SELECT source, initial_points FROM point_lots WHERE trainer_id = ? AND source = 'restitution'", [$trainer]))->toBe([['source' => 'restitution', 'initial_points' => 100000]]);
 });
 

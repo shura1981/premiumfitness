@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Features\Reports;
 
+use App\Features\Adjustment\AdjustmentService;
 use App\Features\Order\PaymentMethod;
 use App\Infrastructure\Database\AbstractRepository;
 use App\Infrastructure\Database\DB;
@@ -11,14 +12,15 @@ use PDO;
 
 /**
  * Reporte de canjes con puntos (spec negocio/07). Solo pedidos de canje, nunca ventas, por fecha de
- * aprobación. Efectivo es un canje «APROBADA»; uno «CANCELADA» devolvió sus puntos y va aparte. Los
+ * aprobación. Efectivo es un canje «APROBADA»; uno «REVERSADA» (cancelado por un gerente) devolvió sus
+ * puntos y va aparte. Los
  * puntos son los guardados en el pedido y en cada línea: no se recalculan.
  */
 final class RedemptionReportRepository extends AbstractRepository
 {
     private const string RANGE = "o.order_type = 'redemption' AND DATE(o.approved_at) BETWEEN :date_from AND :date_to";
     private const string EFFECTIVE = "s.value = 'APROBADA'";
-    private const string CANCELLED = "s.value = 'CANCELADA'";
+    private const string CANCELLED = "s.value = '" . AdjustmentService::STATUS_REVERTED . "'";
 
     public function __construct()
     {

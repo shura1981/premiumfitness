@@ -26,7 +26,7 @@ Que la gerencia vea en el admin los canjes de productos con puntos (CU-12), apar
 ## Criterios de aceptación
 
 1. Solo aparecen pedidos de canje (`order_type = 'redemption'`); ninguna compra.
-2. Un canje efectivo es uno en estado «APROBADA»; uno cancelado (estado «CANCELADA») no suma a los puntos canjeados y aparece aparte, con sus puntos devueltos.
+2. Un canje efectivo es uno en estado «APROBADA»; uno cancelado por un gerente (estado «REVERSADA», spec `backend/03` P-26) no suma a los puntos canjeados y aparece aparte, con sus puntos devueltos.
 3. Los puntos salen de lo guardado en cada pedido y línea (`redemption_points`); el reporte no recalcula precios.
 4. Un agente del call center recibe 403; un gerente ve el reporte.
 5. Un rango de fechas inválido o con «desde» mayor que «hasta» responde 422.

@@ -33,6 +33,16 @@ class AdjustmentService
 {
     public const array TYPES = ['cancellation', 'full_return', 'partial_return'];
 
+    /**
+     * Estado de un pedido aprobado o de un canje que un gerente cancela (`cancellation`). No es `CANCELADA`:
+     * ese estado lo mandan las pasarelas para un pago que nunca se aprobó, sin dinero ni puntos de por medio.
+     * `REVERSADA` ya está en `status_orders` (id 5) y ninguna de las tres pasarelas lo manda.
+     */
+    public const string STATUS_REVERTED = 'REVERSADA';
+
+    /** Estado de un pedido con devolución total. La parcial deja el pedido «APROBADA». */
+    public const string STATUS_RETURNED = 'DEVOLUCIÓN';
+
     private readonly PDO $pdo;
 
     public function __construct()
@@ -137,7 +147,7 @@ class AdjustmentService
             }
 
             if ($type !== 'partial_return') {
-                $status = $type === 'cancellation' ? 'CANCELADA' : 'DEVOLUCIÓN';
+                $status = $type === 'cancellation' ? self::STATUS_REVERTED : self::STATUS_RETURNED;
                 $this->pdo->prepare('UPDATE orders SET status_id = ? WHERE order_id = ?')
                     ->execute([new StatusOrderRepository()->findOrCreateIdByValue($status), $orderId]);
             }

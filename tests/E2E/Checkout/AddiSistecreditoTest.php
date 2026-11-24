@@ -87,6 +87,16 @@ it('ignora el aviso con una referencia ajena', function (string $gateway, string
         ->and(Shop::orderRow($orderId)['approved_at'])->toBeNull();
 })->with('pasarelas sin firma');
 
+it('un pago que la pasarela cancela queda CANCELADA, distinto de un pedido reversado por un gerente', function (string $gateway, string $cancelled): void {
+    $orderId = orderWithGateway(Seed::user(), $gateway);
+
+    Shop::gatewayWebhook($gateway, $orderId, orderAmount($orderId), $cancelled);
+
+    // Nunca se aprobó: no hay dinero, puntos ni comisión que revertir.
+    expect(Shop::orderRow($orderId))->toMatchArray(['status_value' => 'CANCELADA', 'approved_at' => null])
+        ->and(Shop::orderRow($orderId)['status_value'])->not->toBe('REVERSADA');
+})->with(['Addi' => ['addi', 'DECLINED'], 'Sistecrédito' => ['sistecredito', 'Cancelled']]);
+
 // ── Datos que se envían a cada pasarela ───────────────────────────────────
 
 /** @return array<string, mixed> */
