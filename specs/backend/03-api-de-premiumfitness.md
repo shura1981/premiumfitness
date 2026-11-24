@@ -186,4 +186,6 @@ Pedido de Steven: «el sistema de pagos está malo, vamos a reestructurarlo… t
 - [x] App web: sin «Pagar» en el detalle ni «pagar de nuevo» en el resultado; una dirección de respuesta por pasarela (`/pago/resultado/bold|addi|sistecredito`), cada una con su parámetro. 169 pruebas, lint y build pasan
   - Falta probarla en el navegador y con un pago real de cada pasarela en modo de pruebas (Steven)
 - [x] Contrato (`.plan.md`), DER (v0.19) y specs `integraciones/03` y `frontend/01` al día, con la tabla «Comparación con radical» en `integraciones/03`
-- [ ] Decisiones de Steven sobre dos diferencias con radical que ya existían y no se tocaron: el log de fallos de las pasarelas (`PaymentGatewayLogService`, quitado el 16 nov) y el servicio de Sistecrédito (rehecho el 16 nov con la forma de la integración del sitio)
+- [x] Log de errores de las pasarelas restaurado de radical, solo cuando falla: `GatewayPayment` escribe en `logs/payment-gateway/` si la pasarela no abre (Steven, 24 nov 2026). Con pruebas: el fallo deja una línea sin datos sensibles y un pago que abre bien no escribe nada
+- [x] Servicio de Sistecrédito: queda como la integración del sitio de Nutramerican, que comparte la cuenta (Steven, 24 nov 2026)
+- [x] Credenciales de Addi y Sistecrédito en el `.env` local, tomadas del de `api.megaplexstars` (Nutramerican); las URL de respuesta y de webhook son las de PremiumFitness. Las pruebas apuntan las API de las pasarelas a un puerto cerrado (`tests/bootstrap.php`) para no llamarlas nunca

@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Features\Checkout\GatewayPayment;
+use App\Features\PaymentGateway\Logging\PaymentGatewayLogService;
+use App\Shared\Exceptions\ApiException;
 use App\Infrastructure\Config\BusinessConfig;
 use Tests\Support\Seed;
 use Tests\Support\Shop;
@@ -124,4 +126,36 @@ it('arma la orden de Sistecrédito con el pedido guardado y la vuelta a la app',
         // Sistecrédito vuelve con el id de pago en `orderId`.
         'urlResponse' => 'https://app.test/pago/resultado/sistecredito?orderId=pf-77',
     ]);
+});
+
+// ── Log de errores de las pasarelas, como en radical: solo cuando falla ───
+
+it('si la pasarela no abre, responde 502 y deja una línea en el log de errores, sin datos sensibles', function (string $gateway): void {
+    $directory = sys_get_temp_dir() . '/pf-payment-log-' . bin2hex(random_bytes(6));
+    $orderId   = orderWithGateway(Seed::user(), $gateway);
+    $payment   = new GatewayPayment(BusinessConfig::fromEnv(), new PaymentGatewayLogService($directory));
+
+    // En las pruebas la API de la pasarela apunta a un puerto cerrado (tests/bootstrap.php).
+    expect(fn () => $payment->start($orderId, 'https://app.test/pago/resultado'))
+        ->toThrow(fn (ApiException $e) => expect($e->getMessage())->toContain('siguen en el carrito'));
+
+    $files = glob($directory . '/errors-*.log') ?: [];
+    $entry = json_decode((string) file_get_contents($files[0]), true);
+
+    expect($files)->toHaveCount(1)
+        ->and($entry)->toMatchArray(['level' => 'error', 'gateway' => $gateway, 'source' => 'checkout', 'order_id' => $orderId])
+        ->and($entry['context']['payment_code'])->toBe('pf-' . $orderId)
+        ->and((string) file_get_contents($files[0]))->not->toContain((string) Shop::rows('SELECT u.email FROM orders o JOIN users u ON u.id = o.user_id WHERE o.order_id = ?', [$orderId])[0]['email']);
+
+    array_map('unlink', $files);
+    rmdir($directory);
+})->with(['addi', 'sistecredito']);
+
+it('un pago que abre bien no escribe nada en el log', function (): void {
+    $directory = sys_get_temp_dir() . '/pf-payment-log-' . bin2hex(random_bytes(6));
+    $orderId   = Shop::order(Seed::user(), [['code' => Seed::catalogProduct(['valor' => 100000]), 'quantity' => 1]]);
+
+    (new GatewayPayment(BusinessConfig::fromEnv(), new PaymentGatewayLogService($directory)))->start($orderId, 'https://app.test/pago/resultado');
+
+    expect(is_dir($directory))->toBeFalse();
 });

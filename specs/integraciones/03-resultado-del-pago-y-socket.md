@@ -74,8 +74,8 @@ Módulo `src/Features/PaymentGateway/` de este repo frente al de `backend-radica
 | `PaymentCode.php`, `ForeignPaymentReferenceException.php`, `PaymentStatusController.php` | Nuevos | Prefijo `pf-` y consulta del pago por su id |
 | `ApplyCreditBalanceHandler`, `BroadcastCreditBalanceAppliedHandler` | No están | PremiumFitness no tiene saldo a favor |
 | `Validators/*ConsumeValidator.php` | No están | No existen los endpoints `consume/*` (P-02) |
-| `Logging/PaymentGatewayLogService.php` | No está (se quitó el 16 nov) | **Por confirmar con Steven:** radical guarda en `logs/payment-gateway/` los fallos al abrir una pasarela |
-| `Gateways/Sistecredito/SistecreditoCheckoutService.php`, `SistecreditoQueryService.php` | Distintos desde el 16 nov: el cuerpo de la orden y las cabeceras se armaron con la forma de la integración del sitio | **Por confirmar con Steven:** no se revisaron en esta reestructuración |
+| `Logging/PaymentGatewayLogService.php` | Igual. Lo usa `GatewayPayment` cuando una pasarela no abre: una línea en `logs/payment-gateway/errors-<fecha>.log`, sin secretos ni datos personales | Steven (24 nov 2026): «los log solo si hay error» |
+| `Gateways/Sistecredito/SistecreditoCheckoutService.php`, `SistecreditoQueryService.php` | Distintos: el cuerpo de la orden y las cabeceras son los de la integración del sitio de Nutramerican (`api.megaplexstars`) | Confirmado por Steven (24 nov 2026): las pasarelas y sus credenciales vienen de Nutramerican, que es la misma cuenta; no de radical |
 
 ## Plan
 

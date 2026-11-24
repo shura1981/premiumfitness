@@ -7,6 +7,7 @@ namespace App\Features\Checkout;
 use App\Features\PaymentGateway\Gateways\Addi\AddiCheckoutService;
 use App\Features\PaymentGateway\Gateways\Bold\BoldCheckoutService;
 use App\Features\PaymentGateway\Gateways\Sistecredito\SistecreditoCheckoutService;
+use App\Features\PaymentGateway\Logging\PaymentGatewayLogService;
 use App\Infrastructure\Config\BusinessConfig;
 use App\Infrastructure\Database\DB;
 use App\Shared\Exceptions\ApiException;
@@ -36,16 +37,25 @@ final class GatewayPayment
 
     private const array NAMES = ['bold' => 'Bold', 'addi' => 'Addi', 'sistecredito' => 'Sistecrédito'];
 
+    /** Origen de las líneas del log de errores de las pasarelas. */
+    private const string LOG_SOURCE = 'checkout';
+
+    private readonly PaymentGatewayLogService $logs;
+
     public function __construct(
         private readonly BusinessConfig $business,
-    ) {}
+        ?PaymentGatewayLogService $logs = null,
+    ) {
+        $this->logs = $logs ?? PaymentGatewayLogService::default();
+    }
 
     /**
      * @param string $returnUrl Página de respuesta de la app (`…/pago/resultado`). Cada pasarela vuelve a la
      *                          suya con el id de pago en su parámetro, como en radical y en el sitio:
      *                          `/bold?orderId=`, `/addi?id_order=` y `/sistecredito?orderId=`.
      * @return array<string, mixed> El `payment` del contrato `CheckoutResult`.
-     * @throws ApiException 502 si la pasarela no entrega su página de pago.
+     * @throws ApiException 502 si la pasarela no entrega su página de pago. El fallo queda en el log
+     *                      de errores (`logs/payment-gateway/`), como en radical; lo que sale bien no se registra.
      */
     public function start(int $orderId, string $returnUrl): array
     {
@@ -53,27 +63,37 @@ final class GatewayPayment
         $gateway   = (string) $order['payment_gateway'];
         $reference = (string) $order['payment_code'];
         $returnUrl = self::returnUrl($gateway, $returnUrl, $reference);
-
-        if ($gateway === 'bold') {
-            return $this->bold($order, $reference, $returnUrl) + ['reference' => $reference];
-        }
+        $startedAt = microtime(true);
+        $payload   = [];
 
         try {
+            if ($gateway === 'bold') {
+                return $this->bold($order, $reference, $returnUrl) + ['reference' => $reference];
+            }
+
             $url = match ($gateway) {
                 'addi'         => AddiCheckoutService::fromEnv()->obtainRedirectUrl(
-                    $this->addiPayload($order, $reference, $this->items($orderId), $returnUrl)
+                    $payload = $this->addiPayload($order, $reference, $this->items($orderId), $returnUrl)
                 ),
                 'sistecredito' => SistecreditoCheckoutService::fromEnv()->createOrder(
-                    self::sistecreditoPayload($order, $reference, $returnUrl)
+                    $payload = self::sistecreditoPayload($order, $reference, $returnUrl)
                 )['paymentRedirectUrl'],
                 default        => throw new \LogicException("Pasarela no soportada: {$gateway}"),
             };
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            $this->logs->consumeFailed(
+                $gateway,
+                self::LOG_SOURCE,
+                $orderId,
+                $e,
+                (microtime(true) - $startedAt) * 1000,
+                ['payment_code' => $reference, 'payload' => $payload],
+            );
             $name = self::NAMES[$gateway] ?? $gateway;
             throw new ApiException(
                 502,
                 'payment_unavailable',
-                "No pudimos abrir el pago con {$name}. Tu pedido quedó pendiente: puedes pagarlo desde tus pedidos.",
+                "No pudimos abrir el pago con {$name}. Tus productos siguen en el carrito: inténtalo de nuevo.",
             );
         }
 
