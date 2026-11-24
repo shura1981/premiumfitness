@@ -196,6 +196,16 @@ class OrderRepository extends AbstractRepository
         }
     }
 
+    /** Pedido con ese id de pago (`orders.payment_code`, P-24); null si no es de PremiumFitness o no existe. */
+    public function findOrderIdByPaymentCode(string $paymentCode): ?int
+    {
+        $stmt = $this->pdo->prepare('SELECT order_id FROM orders WHERE payment_code = ?');
+        $stmt->execute([trim($paymentCode)]);
+        $orderId = $stmt->fetchColumn();
+
+        return $orderId === false ? null : (int) $orderId;
+    }
+
     public function findById(int $orderId): OrderModel|false
     {
         /** @var OrderModel|false $order */

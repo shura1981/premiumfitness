@@ -68,7 +68,7 @@ it('añade las columnas nuevas a las tablas heredadas', function (string $table,
     'users' => ['users', ['phone_verified_at', 'role', 'status']],
     'verification_codes' => ['verification_codes', ['purpose', 'destination', 'attempts']],
     'orders' => ['orders', [
-        'order_type', 'payment_reference', 'subtotal_full', 'discount_amount', 'tax_base', 'tax_amount',
+        'order_type', 'payment_code', 'payment_reference', 'subtotal_full', 'discount_amount', 'tax_base', 'tax_amount',
         'reward_percentage', 'reward_points', 'redemption_points', 'approved_at',
     ]],
     'orders_items' => ['orders_items', [
@@ -150,6 +150,18 @@ it('no repite la referencia de pago en dos pedidos', function (): void {
 
     $second = Seed::order($user);
     expect(fn () => $update->execute([$reference, $second]))->toThrow(PDOException::class, 'uk_orders_payment_reference');
+});
+
+it('el id de pago de un pedido es su número con el prefijo y no se repite', function (): void {
+    $user   = Seed::user();
+    $first  = Seed::order($user);
+    $second = Seed::order($user);
+    $code   = static fn (int $orderId): mixed => Seed::pdo()->query("SELECT payment_code FROM orders WHERE order_id = {$orderId}")->fetchColumn();
+
+    expect($code($first))->toBe('pf-' . $first)
+        ->and($code($second))->toBe('pf-' . $second)
+        ->and(fn () => Seed::pdo()->prepare('UPDATE orders SET payment_code = ? WHERE order_id = ?')->execute(['pf-' . $first, $second]))
+        ->toThrow(PDOException::class, 'uk_orders_payment_code');
 });
 
 it('un refresh token es de un usuario de la web o de un agente del admin, no de los dos', function (): void {
