@@ -110,7 +110,7 @@ Contratos: [03-api-de-premiumfitness.plan.md](03-api-de-premiumfitness.plan.md).
 - [ ] Decidir la fecha de una venta en los reportes: hoy es la de creación del pedido (`created_at`), no la del pago aprobado (`approved_at`), que es la que usan la comisión y el cierre; un pedido creado el 31 y pagado el 1 cae en meses distintos. Pendiente
 - [ ] Decidir si «ingresos» en los reportes es lo cobrado (con IVA y flete, como hoy) o solo los productos. Pendiente
 - [ ] Dashboard del admin: el «Total histórico» junta los pedidos de todos los estados con el dinero solo de los aprobados, y la ficha «Pendientes envío» cuenta en realidad pagos pendientes. Corregir los rótulos o los datos. Pendiente
-- [ ] Reporte de canjes con puntos (pedidos, puntos y productos canjeados), aparte de los de ventas. Pendiente
+- [x] Reporte de canjes con puntos (pedidos, puntos y productos canjeados), aparte de los de ventas: spec `negocio/07` (24 nov 2026)
 - [ ] Ejecutar en la intranet (`crisenri_intranet`, desde phpMyAdmin) `docs/database/intranet/2026-11-16-corrige-enes-tb-servientrega.sql`: corrige «EL PEÐOL (NAR)», «EL PEÐON (SAN)» y «EL PIÐON (MAG)» a «Ñ» en `tb_servientrega` y `tb_servientrega_v2`. PremiumFitness no escribe en la intranet: lo ejecuta quien la administra. Mientras tanto, la búsqueda de la tarifa ya tolera la «Ð»
 - [ ] Probar un pago real de Bold, Addi y Sistecrédito con las llaves de prueba de PremiumFitness y una URL pública para los webhooks
   > Falta: las llaves (`BOLD_*`, `ADDI_*`, `SISTECREDITO_*` del `.env`) y las URL de webhook y retorno de cada pasarela apuntando al hosting.

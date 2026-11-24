@@ -17,6 +17,7 @@ use App\Features\Order\OrderStatusUpdateValidator;
 use App\Features\Order\OrderTrackingValidator;
 use App\Features\PaymentGateway\PaymentGatewayController;
 use App\Features\Reports\ReportsController;
+use App\Features\Reports\RedemptionReportController;
 use App\Infrastructure\Auth\JwtService;
 use App\Infrastructure\Middlewares\AdminMiddleware;
 use App\Infrastructure\Middlewares\AdminRoleMiddleware;
@@ -228,6 +229,12 @@ return static function (\Slim\App $app): void {
         $group->get('/trainers', [$trainerController, 'list'])->add($managersOnly)->add($adminMiddleware);
         $group->get('/trainers/{id:[0-9]+}', [$trainerController, 'show'])->add($managersOnly)->add($adminMiddleware);
         $group->patch('/trainers/{id:[0-9]+}/status', [$trainerController, 'updateStatus'])->add($managersOnly)->add($adminMiddleware);
+
+        // Reporte de canjes con puntos (spec negocio/07): muestra lo que gasta cada entrenador.
+        $redemptionReport = new RedemptionReportController();
+
+        $group->get('/reports/redemptions', [$redemptionReport, 'summary'])->add($managersOnly)->add($adminMiddleware);
+        $group->get('/reports/redemptions/export', [$redemptionReport, 'export'])->add($managersOnly)->add($adminMiddleware);
 
         // Estrategias por producto (spec negocio/01)
         $discountRules = new DiscountRuleAdminController();
