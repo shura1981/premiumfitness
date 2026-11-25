@@ -84,7 +84,7 @@ Adaptar la UX de comisiones y onboarding de `join.nutramerican.com`, la compra d
 | A-13 | Confirmar dos canjes que juntos exceden el saldo | Solo se confirman operaciones cubiertas; no hay sobregiro ni doble consumo. |
 | A-14 | Convertir total de comisión y repetir la solicitud | 100.000 puntos y 100.000 de comisión → 250.000 puntos; 1.000.000 y 1.000 → recibe 2.000; una sola conversión; ambos saldos consistentes ante fallo. |
 | A-15 | Vencer lote al corte de seis meses definido | Su remanente deja de estar disponible; se conserva historial y no vence dos veces. |
-| A-16 | Cancelación/devolución o canje no entregable | Se aplica la política acordada con ajustes/restituciones trazables y sin duplicados. |
+| A-16 | Pedido pagado o canje que se reversa | Queda «REVERSADA» con un ajuste trazable y sin duplicados: se revierten la comisión y los puntos, o se devuelven los puntos del canje. No hay devoluciones. |
 | A-17 | Consultar reportes | IVA de ventas y canjes, comisiones y puntos coinciden con operaciones y movimientos de cada entrenador. |
 | A-18 | Intentar consultar pedido o saldo de otro usuario | Acceso rechazado; operación autorizada sigue disponible para su dueño. |
 | A-19 | Recuperar cuenta y usar los flujos en móvil | Recuperación correcta y navegación/formularios utilizables; verificar instalación según dispositivo si se adopta PWA. |
@@ -96,7 +96,7 @@ A-05 parte de un valor ya pagado, con el descuento aplicado y sin envío; los pu
 - Definir orden de cálculo, cargos elegibles y redondeo; cargar catálogo con IVA y precios correctos.
 - Redactar los términos y condiciones del pago mensual de la comisión.
 - Definir política de cookie, referencia existente y continuidad del descuento del cliente.
-- Seleccionar/verificar pagos y SMS; definir entrega, devoluciones, restituciones y responsables de operación.
+- Seleccionar/verificar pagos y SMS; definir entrega, reversiones y responsables de operación.
 - Preparar entornos, permisos, copias y restauración; conciliar un conjunto de compras y canjes de prueba.
 
 Estas dependencias corresponden a §14 del PRD. La revisión de repositorios y la arquitectura pueden avanzar mientras se precisan los parámetros comerciales.

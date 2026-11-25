@@ -64,9 +64,9 @@ it('corta el nombre al largo de la columna y deja DESCONOCIDO si viene vacío', 
         ->and($normalizer->normalize('bold', '   '))->toBe([PaymentStatus::ERROR, PaymentStatus::TEXT_DESCONOCIDO]);
 });
 
-it('un nombre desconocido nunca toma un estado que pone la app (aprobado o ajuste)', function (string $raw): void {
+it('un nombre desconocido nunca toma un estado que pone la app (aprobado o reversado)', function (string $raw): void {
     expect((new PaymentStatusNormalizer())->normalize('addi', $raw))->toBe([PaymentStatus::ERROR, PaymentStatus::TEXT_DESCONOCIDO]);
-})->with(['aprobada', 'APROBADA', 'Reversada', 'devolución']);
+})->with(['aprobada', 'APROBADA', 'Reversada', 'REVERSADA']);
 
 it('returns ERROR/DESCONOCIDO for unknown gateway', function (): void {
     [$cod, $text] = (new PaymentStatusNormalizer())->normalize('paypal', 'APPROVED');

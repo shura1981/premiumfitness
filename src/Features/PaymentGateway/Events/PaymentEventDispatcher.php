@@ -51,8 +51,8 @@ final class PaymentEventDispatcher
             return ['processed' => false, 'reason' => 'order_not_found'];
         }
 
-        // Un pedido que ya se aprobó no vuelve a cambiar con un aviso, aunque después un ajuste lo haya dejado
-        // «REVERSADA» o «DEVOLUCIÓN». La excepción es la anulación de Bold, que lo revierte una sola vez.
+        // Un pedido que ya se aprobó no vuelve a cambiar con un aviso, aunque después se haya reversado.
+        // La excepción es la anulación de Bold, que lo reversa una sola vez.
         $wasApproved = $order->status_value === PaymentStatus::TEXT_APROBADA || $order->approved_at !== null;
 
         if ($wasApproved && self::isBoldVoid($result)) {

@@ -327,23 +327,23 @@ El cierre lo dispara el cron (`POST /cron-job/commission/close`, día 1 a la 01:
 | `GET /admin/reports/redemptions?date_from=&date_to=` | — | Reporte de canjes (spec `negocio/07`), solo gerentes: `{ date_from, date_to, totals: { redemptions, points, units, trainers, cancelled, cancelled_points }, days: [{ date, redemptions, points }], products: [{ code, name, units, points }], trainers: [{ id, full_name, redemptions, points }], redemptions: [{ order_id, approved_at, trainer_id, trainer_name, city, units, points, status, sap_order_code, tracking_number }] }`. Sin fechas, los últimos 30 días; 422 si una fecha no es válida o «desde» es mayor que «hasta». |
 | `GET /admin/reports/redemptions/export?date_from=&date_to=` | — | Una fila por producto canjeado para Excel: `pedido_id, fecha, hora, entrenador, documento_entrenador, ciudad, departamento, codigo_producto, producto, cantidad, puntos_linea, puntos_pedido, forma_pago, precio_completo_referencia, valor_linea_referencia, base_sin_iva_referencia, iva_referencia, estado, pedido_sap, guia`. Solo gerentes. |
 | `GET /admin/orders/:id/adjustments` | — | `{ data: Adjustment[], preview: AdjustmentEffect, can_adjust: boolean }` |
-| `POST /admin/orders/:id/adjustments/preview` | `{ type, items? }` | `AdjustmentEffect` de ese ajuste, sin aplicarlo |
-| `POST /admin/orders/:id/adjustments` | `{ type, reason, items? }` | 201 `Adjustment`. 409 `already_adjusted` u `order_not_approved`. |
+| `POST /admin/orders/:id/adjustments/preview` | `{ type: 'cancellation' }` | `AdjustmentEffect` de reversar el pedido, sin aplicarlo |
+| `POST /admin/orders/:id/adjustments` | `{ type: 'cancellation', reason }` | 201 `Adjustment`: el pedido queda «REVERSADA». 409 `already_adjusted` u `order_not_approved`. 422 con otro `type`. |
 
 ```ts
-type AdjustmentType = 'cancellation' | 'full_return' | 'partial_return';
+type AdjustmentType = 'cancellation';            // «Reversar»: no hay devoluciones (P-30)
 interface AdjustmentEffect { commission_amount: number; points: number; trainer_name: string | null }
 interface Adjustment {
-  id: number; type: AdjustmentType; reason: string; agent_name: string; created_at: string;
+  id: number; type: AdjustmentType | 'restitution'; reason: string; created_at: string;
+  agent_name: string;                           // «Automático (Bold)» si lo hizo la anulación de Bold (P-28)
   effect: AdjustmentEffect;                     // lo que se revirtió al entrenador (valores negativos)
 }
 ```
 
-- `items` solo en `partial_return`: `[{ item_id, quantity }]`, con cantidad entre 1 y la comprada.
-- `preview` del `GET` es lo que revertiría una cancelación total hoy. Los valores son negativos cuando se le quitan al entrenador y positivos cuando se le devuelven (canje cancelado).
-- Un pedido admite un solo ajuste. `can_adjust` es falso si ya lo tiene o si no está pagado.
+- `preview` del `GET` es lo que revertiría reversar el pedido hoy. Los valores son negativos cuando se le quitan al entrenador y positivos cuando se le devuelven (canje reversado).
+- Un pedido se reversa una sola vez y completo. `can_adjust` es falso si ya se reversó o si no está pagado.
 - De los puntos solo se retira lo que quede en el lote de ese pedido; lo ya usado no genera deuda.
-- Un canje solo admite `cancellation`: devuelve los puntos en un lote nuevo.
+- Reversar un canje le devuelve los puntos al entrenador en un lote nuevo (se guarda como `restitution`).
 
 ## Servidor a servidor y crons
 

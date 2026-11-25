@@ -76,7 +76,7 @@ CREATE TABLE `adjustments` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `order_id` bigint(20) NOT NULL,
   `agent_id` int(11) DEFAULT NULL COMMENT 'agente que lo registra (tb_empleados); NULL si lo registró la pasarela (anulación de Bold)',
-  `type` enum('cancellation','full_return','partial_return','restitution','correction') NOT NULL,
+  `type` enum('cancellation','restitution','correction') NOT NULL COMMENT 'cancellation = reversar un pedido pagado; restitution = reversar un canje',
   `reason` text NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),

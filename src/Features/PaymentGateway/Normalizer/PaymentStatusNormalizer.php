@@ -23,11 +23,11 @@ final class PaymentStatusNormalizer
     private const int MAX_STATUS_LENGTH = 50;
 
     /**
-     * Estados que pone la propia app: el aprobado del webhook y los de los ajustes (spec backend/03, P-26).
+     * Estados que pone la propia app: el aprobado del webhook y el de la reversión (spec backend/03, P-26).
      * Un nombre desconocido de la pasarela no puede caer en ellos (la tabla no distingue mayúsculas): un
      * pedido «APROBADA» sin pagar haría que el webhook ignorara el pago real.
      */
-    private const array RESERVED = [PaymentStatus::TEXT_APROBADA, AdjustmentService::STATUS_REVERTED, AdjustmentService::STATUS_RETURNED];
+    private const array RESERVED = [PaymentStatus::TEXT_APROBADA, AdjustmentService::STATUS_REVERTED];
 
     /**
      * @return array{0: int, 1: string} [codStatus, statusText]

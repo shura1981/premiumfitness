@@ -59,7 +59,7 @@ Definir qué hace el entrenador con su comisión, cómo se convierte a puntos y 
    - **Cuándo corre:** el día 1 a la 01:00. A esa hora el saldo de comisión vuelve a $0 y la comisión del mes anterior pasa al historial como liquidada, para que financiero la pague.
    - **Conversión bloqueada:** desde las 00:00 del día 1 hasta que termina el cierre, el entrenador no puede convertir. Así no consume comisión del mes que se está liquidando.
    - **Después del cierre:** esa comisión ya no se puede convertir.
-8. **Devolución después del corte.** Genera un ajuste negativo que se descuenta del mes siguiente. Si el saldo de un mes queda negativo, no se paga nada y la diferencia pasa al siguiente.
+8. **Reversión después del corte.** Reversar un pedido ya liquidado genera un ajuste negativo que se descuenta del mes siguiente. Si el saldo de un mes queda negativo, no se paga nada y la diferencia pasa al siguiente.
 10. **Pago y comprobante.** La comisión de un mes se paga **el día 4 del mes siguiente** (`COMMISSION_PAYMENT_DAY`), **en un solo pago** por liquidación. Si el 4 cae en sábado, domingo o festivo, se paga el **siguiente día hábil** (por ejemplo, el domingo 4 oct 2026 pasa al lunes 5 oct). El día, el sentido del corrimiento y la lista de festivos son variables de entorno (S-11). El cierre calcula esa fecha, la guarda en la liquidación (`due_date`) y es la que ve el entrenador. Financiero paga por fuera de la app lo que dice el Excel del cierre y registra el pago en el admin, liquidación por liquidación:
     - fecha del pago, referencia de la transacción y el comprobante (captura o PDF);
     - la liquidación pasa de `closed` a `paid`; queda registrado quién lo hizo y cuándo (`audit_logs`);
@@ -101,7 +101,7 @@ La línea del último cierre en Inicio se mantiene hasta el cierre siguiente.
 3. Una solicitud repetida no convierte dos veces.
 4. Un canje no acepta comisión ni pago mixto.
 5. Al corte, cada entrenador con saldo positivo tiene una liquidación del mes y su saldo queda en cero. Ninguna comisión se liquida dos veces.
-6. Una devolución posterior al corte se descuenta en la liquidación siguiente.
+6. La reversión de un pedido posterior al corte se descuenta en la liquidación siguiente.
 7. Una venta aprobada el día 1 a las 00:30 queda en la liquidación del mes nuevo, no en la del mes que se cierra.
 8. Una conversión intentada entre las 00:00 y el fin del cierre del día 1 se rechaza con el mensaje del corte.
 9. Al registrar el pago con su comprobante, la liquidación queda `paid`, el entrenador recibe el push y ve el comprobante. Otro entrenador recibe 403 al pedir ese comprobante.

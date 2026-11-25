@@ -283,23 +283,23 @@ function trainerBalances(int $trainerId): array
     ];
 }
 
-it('una devolución total revierte la comisión y los puntos del pedido, una sola vez', function (): void {
+it('reversar un pedido pagado quita la comisión y los puntos del pedido, una sola vez', function (): void {
     [$orderId, $trainer] = approvedPurchase();
     // 180.000 pagados: 9.000 puntos y 15 % de la base de 151.260,50.
     expect(trainerBalances($trainer))->toBe([9000, 22689.08]);
 
     $before = AppFactory::json(admin('GET', "orders/{$orderId}/adjustments"));
-    $create = admin('POST', "orders/{$orderId}/adjustments", ['type' => 'full_return', 'reason' => 'El cliente devolvió el pedido completo']);
-    $again  = admin('POST', "orders/{$orderId}/adjustments", ['type' => 'full_return', 'reason' => 'El cliente devolvió el pedido completo']);
+    $create = admin('POST', "orders/{$orderId}/adjustments", ['type' => 'cancellation', 'reason' => 'El cliente pidió cancelar el pedido pagado']);
+    $again  = admin('POST', "orders/{$orderId}/adjustments", ['type' => 'cancellation', 'reason' => 'El cliente pidió cancelar el pedido pagado']);
 
     expect($before)->toMatchArray(['data' => [], 'can_adjust' => true])
         ->and($before['preview'])->toMatchArray(['commission_amount' => -22689.08, 'points' => -9000])
         ->and($create->getStatusCode())->toBe(201)
-        ->and(AppFactory::json($create))->toMatchArray(['type' => 'full_return', 'effect' => ['commission_amount' => -22689.08, 'points' => -9000, 'trainer_name' => AppFactory::json($create)['effect']['trainer_name']]])
+        ->and(AppFactory::json($create))->toMatchArray(['type' => 'cancellation', 'effect' => ['commission_amount' => -22689.08, 'points' => -9000, 'trainer_name' => AppFactory::json($create)['effect']['trainer_name']]])
         ->and(trainerBalances($trainer))->toBe([0, 0.0])
         ->and($again->getStatusCode())->toBe(409)
         ->and(AppFactory::json($again)['code'])->toBe('already_adjusted')
-        ->and(Shop::orderRow($orderId)['status_value'])->toBe('DEVOLUCIÓN')
+        ->and(Shop::orderRow($orderId)['status_value'])->toBe('REVERSADA')
         // El cliente lo ve cancelado.
         ->and(AppFactory::json(AppFactory::dispatch(AppFactory::request('GET', '/api/orders/' . $orderId, headers: JwtFactory::authHeader((int) Shop::orderRow($orderId)['user_id']))))['status'])->toBe('cancelado')
         // Los movimientos originales siguen ahí: el ajuste no borra nada.
@@ -309,23 +309,16 @@ it('una devolución total revierte la comisión y los puntos del pedido, una sol
         ->and(Shop::rows("SELECT action, agent_id FROM audit_logs WHERE entity = 'order' AND entity_id = ?", [$orderId]))->toBe([['action' => 'order.adjustment', 'agent_id' => 9001]]);
 });
 
-it('una devolución parcial revierte en proporción a lo devuelto', function (): void {
+it('no hay devoluciones: el único ajuste es reversar el pedido completo', function (string $type): void {
     [$orderId, $trainer] = approvedPurchase();
     $itemId              = (int) Shop::rows('SELECT item_id FROM orders_items WHERE order_id = ?', [$orderId])[0]['item_id'];
-    $items               = [['item_id' => $itemId, 'quantity' => 1]];
 
-    $preview = AppFactory::json(admin('POST', "orders/{$orderId}/adjustments/preview", ['type' => 'partial_return', 'items' => $items]));
-    $tooMany = admin('POST', "orders/{$orderId}/adjustments", ['type' => 'partial_return', 'reason' => 'Devolvió una unidad', 'items' => [['item_id' => $itemId, 'quantity' => 3]]]);
-    $create  = admin('POST', "orders/{$orderId}/adjustments", ['type' => 'partial_return', 'reason' => 'Devolvió una unidad', 'items' => $items]);
+    $response = admin('POST', "orders/{$orderId}/adjustments", ['type' => $type, 'reason' => 'Devolvió una unidad', 'items' => [['item_id' => $itemId, 'quantity' => 1]]]);
 
-    // La mitad del pedido: la mitad de la comisión y de los puntos.
-    expect($preview)->toMatchArray(['commission_amount' => -11344.54, 'points' => -4500])
-        ->and($tooMany->getStatusCode())->toBe(422)
-        ->and($create->getStatusCode())->toBe(201)
-        ->and(trainerBalances($trainer))->toBe([4500, 11344.54])
-        // El pedido sigue aprobado: solo se devolvió una parte.
+    expect($response->getStatusCode())->toBe(422)
+        ->and(trainerBalances($trainer))->toBe([9000, 22689.08])
         ->and(Shop::orderRow($orderId)['status_value'])->toBe('APROBADA');
-});
+})->with(['full_return', 'partial_return']);
 
 it('de los puntos solo retira lo que queda en el lote del pedido; lo ya usado no genera deuda', function (): void {
     [$orderId, $trainer] = approvedPurchase();
@@ -375,25 +368,25 @@ it('una anulación repetida de Bold no revierte dos veces', function (): void {
         ->and(Shop::orderRow($orderId)['status_value'])->toBe('REVERSADA');
 });
 
-it('un aviso de la pasarela después de un ajuste no le cambia el estado al pedido', function (string $type): void {
+it('un aviso de la pasarela después de reversar no le cambia el estado al pedido', function (string $type): void {
     [$orderId] = approvedPurchase();
-    admin('POST', "orders/{$orderId}/adjustments", ['type' => 'full_return', 'reason' => 'El cliente devolvió el pedido completo']);
+    admin('POST', "orders/{$orderId}/adjustments", ['type' => 'cancellation', 'reason' => 'El cliente pidió cancelar el pedido pagado']);
 
     $late = Shop::boldWebhook($orderId, (float) Shop::orderRow($orderId)['amount'], type: $type);
 
     expect($late)->toMatchArray(['processed' => false])
-        ->and(Shop::orderRow($orderId)['status_value'])->toBe('DEVOLUCIÓN');
+        ->and(Shop::orderRow($orderId)['status_value'])->toBe('REVERSADA');
 })->with(['SALE_REJECTED', 'SALE_APPROVED']);
 
-it('si un gerente ya ajustó el pedido, la anulación de Bold no revierte otra vez', function (): void {
+it('si un gerente ya reversó el pedido, la anulación de Bold no revierte otra vez', function (): void {
     [$orderId, $trainer] = approvedPurchase();
-    $itemId              = (int) Shop::rows('SELECT item_id FROM orders_items WHERE order_id = ?', [$orderId])[0]['item_id'];
-    admin('POST', "orders/{$orderId}/adjustments", ['type' => 'partial_return', 'reason' => 'Devolvió una unidad', 'items' => [['item_id' => $itemId, 'quantity' => 1]]]);
+    admin('POST', "orders/{$orderId}/adjustments", ['type' => 'cancellation', 'reason' => 'El cliente pidió cancelar el pedido pagado']);
 
     $void = Shop::boldWebhook($orderId, (float) Shop::orderRow($orderId)['amount'], type: 'VOID_APPROVED');
 
     expect($void)->toMatchArray(['processed' => false])
-        ->and(trainerBalances($trainer))->toBe([4500, 11344.54]);
+        ->and(trainerBalances($trainer))->toBe([0, 0.0])
+        ->and(Shop::rows('SELECT COUNT(*) n FROM adjustments WHERE order_id = ?', [$orderId])[0]['n'])->toBe(1);
 });
 
 it('la anulación de un pago que nunca se aprobó lo deja rechazado, como siempre', function (): void {

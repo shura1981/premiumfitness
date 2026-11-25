@@ -142,6 +142,7 @@ Plan técnico: [01-apps-web-y-admin.plan.md](01-apps-web-y-admin.plan.md).
 - [x] Entrenadores: lista, saldos, referidos, y suspender o reactivar con motivo
 - [x] Estrategias por producto
 - [x] Ajustes por cancelación y devolución, con vista previa de lo que se revierte
+  - Desde el 25 nov 2026 es solo «Reversar»: sin tipo ni productos, con la vista previa y el motivo (spec `backend/03`, P-30)
 - [ ] Dar de alta el proyecto `premiumfitness-admin` en el gateway de sockets (`socket.elitenutapp.com`) y probar el tiempo real de pedidos
 - [x] Volver a ApexCharts 4.7.0 (MIT) y revisar las licencias de las dependencias de los tres proyectos (A-01)
 - [x] Añadir pruebas al admin: 127 pruebas (sesión, guards, validación del comprobante, estrategias, ajustes y API simulada)

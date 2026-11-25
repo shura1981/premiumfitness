@@ -9,7 +9,7 @@ Que la gerencia vea en el admin los canjes de productos con puntos (CU-12), apar
 ## Alcance
 
 - Endpoint `GET /api/admin/reports/redemptions?date_from=&date_to=`, solo para gerentes, con:
-  - totales del rango: canjes efectivos, puntos canjeados, unidades, entrenadores que canjearon, canjes cancelados y sus puntos devueltos;
+  - totales del rango: canjes efectivos, puntos canjeados, unidades, entrenadores que canjearon, canjes reversados y sus puntos devueltos;
   - canjes y puntos por día;
   - productos más canjeados (unidades y puntos);
   - entrenadores que más canjean (canjes y puntos);
@@ -36,7 +36,7 @@ Que la gerencia vea en el admin los canjes de productos con puntos (CU-12), apar
 | # | Punto | Estado |
 | --- | --- | --- |
 | C-01 | La fecha de un canje es la de su aprobación (`approved_at`), que en un canje es la misma de su creación: no espera pago. | Derivado |
-| C-02 | Un canje cancelado devuelve todos sus puntos al entrenador en un lote nuevo (ajustes, RF-17): «puntos devueltos» es el costo del canje cancelado. | Confirmado (código de `AdjustmentService`) |
+| C-02 | Un canje reversado devuelve todos sus puntos al entrenador en un lote nuevo (RF-17): «puntos devueltos» es el costo del canje reversado. | Confirmado (código de `AdjustmentService`) |
 | C-03 | Solo lo ven los gerentes (`ADMIN_MANAGER_ROLES`), como entrenadores, estrategias y comisión, porque muestra lo que gasta cada entrenador. | Derivado |
 | C-04 | El Excel incluye el precio completo y el IVA de cada línea, que el canje guarda como referencia («entre más información se tenga mejor», Steven, 24 nov 2026). Son valores de referencia: no entró dinero. | Confirmado (24 nov 2026, Steven) |
 

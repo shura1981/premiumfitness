@@ -30,7 +30,7 @@ El entrenador A rifiere al entrenador B (entrenador A obtiene 50 mil pero en est
     - Los 50.000 puntos se dan **una sola vez** por cada entrenador referido. Las compras siguientes de los clientes de B no le dan más puntos a A.
     - Los activa la primera compra **aprobada** de cualquier cliente de B, sin monto mínimo. La compra propia de B (con su 25%) no los activa.
     - Mientras están pendientes no caducan. Una vez activados, vencen a los 6 meses, como cualquier acumulación (regla 2).
-    - Si se cancela o devuelve la compra que los activó y A todavía no los ha usado, se le retiran y quedan otra vez pendientes hasta la siguiente compra aprobada de un cliente de B. Si A ya los usó, los conserva.
+    - Si se reversa la compra que los activó y A todavía no los ha usado, se le retiran y quedan otra vez pendientes hasta la siguiente compra aprobada de un cliente de B. Si A ya los usó, los conserva.
 
 7. Los puntos ganados por las compras de los clientes se calculan con IVA incluido. La comisión sí se calcula sobre el valor antes de IVA, discriminando el IVA de cada producto. *(Cambio del 9 nov 2026: antes los puntos también se calculaban antes de IVA.)*
 
@@ -69,4 +69,4 @@ El entrenador A rifiere al entrenador B (entrenador A obtiene 50 mil pero en est
 
     Ejemplo: con 100.000 puntos vigentes y 100.000 de comisión, recibe 100.000 + 50.000 = 150.000 y queda con **250.000 puntos**. El tope evita que el 50% se multiplique con conversiones pequeñas y repetidas: con 1.000.000 de puntos y 1.000 de comisión, recibe 2.000. Los puntos convertidos forman un lote que vence a los 6 meses.
 
-18. El último día de cada mes (hora de Colombia) se hace el corte: la comisión no convertida se liquida y el saldo queda en cero. Esa comisión se paga **el día 4 del mes siguiente** (o el siguiente día hábil si el 4 es sábado, domingo o festivo), en un solo pago, y el entrenador ve el comprobante en la app. Una devolución posterior al corte se descuenta del mes siguiente.
+18. El último día de cada mes (hora de Colombia) se hace el corte: la comisión no convertida se liquida y el saldo queda en cero. Esa comisión se paga **el día 4 del mes siguiente** (o el siguiente día hábil si el 4 es sábado, domingo o festivo), en un solo pago, y el entrenador ve el comprobante en la app. La reversión de un pedido posterior al corte se descuenta del mes siguiente.

@@ -42,7 +42,7 @@ Que el entrenador vea en todo momento, y con una respuesta inmediata:
 | S-02 | «Vigente» significa `status = 'available'` y `expires_at > NOW()`. Se calcula al consultar, así que no depende de que ya haya corrido el proceso de vencimiento. | Derivado |
 | S-03 | No se crea una tabla de saldos precalculados. Las cifras se obtienen sumando los lotes con índices que cubren la consulta. | Derivado: ver Plan |
 | S-04 | Los puntos por referido pendientes suman `trainer_referrals.referral_points` donde `activated_at IS NULL`. No son lotes y no suman al saldo canjeable. | Confirmado (spec `negocio/02`) |
-| S-05 | El total histórico de puntos de clientes suma `initial_points` de los lotes con `source = 'client_sale'`, incluidos los ya usados y los vencidos. No descuenta los lotes revertidos por devolución, que se ven en sus movimientos de ajuste. | Derivado |
+| S-05 | El total histórico de puntos de clientes suma `initial_points` de los lotes con `source = 'client_sale'`, incluidos los ya usados y los vencidos. No descuenta los lotes revertidos al reversar el pedido, que se ven en sus movimientos de ajuste. | Derivado |
 | S-06 | El saldo de comisión es la suma de `commission_movements.amount` sin liquidar: abonos por venta menos conversiones, más o menos ajustes. El débito de la liquidación mensual lo deja en cero. | Confirmado (S-17 del DER; spec `negocio/04`) |
 
 ## Plan

@@ -18,30 +18,30 @@ use Throwable;
 use App\Features\Order\OrderRealtime;
 
 /**
- * Ajustes por cancelación o devolución de un pedido aprobado (RF-17; PRD §7.4).
+ * Reversión de un pedido ya pagado (RF-17; spec backend/03, P-26 y P-29): el cliente pide cancelarlo, el
+ * comercio le devuelve el dinero por fuera de la app y el pedido queda «REVERSADA». No hay devoluciones
+ * totales ni parciales: un pedido se reversa completo.
  *
- *   - Compra de un cliente: se revierte al entrenador la comisión y los puntos de ese pedido, total
- *     o en proporción a lo devuelto, sin exceder lo que el pedido le dio.
+ *   - Compra de un cliente: se revierte al entrenador la comisión y los puntos de ese pedido, sin exceder
+ *     lo que el pedido le dio.
  *       · La comisión se descuenta con un movimiento de ajuste; si el mes ya se liquidó, queda
  *         negativa y se descuenta del siguiente (spec negocio/04, regla 8).
  *       · De los puntos solo se retira lo que quede en el lote de ese pedido. Lo ya usado no genera
  *         deuda: esa política está pendiente (PRD §7.4).
- *   - Canje cancelado: se devuelven los puntos en un lote nuevo.
+ *   - Canje reversado: se devuelven los puntos en un lote nuevo.
  *   - Un pedido admite un solo ajuste. El ajuste nunca borra ni cambia los movimientos originales.
  */
 class AdjustmentService
 {
-    public const array TYPES = ['cancellation', 'full_return', 'partial_return'];
+    /** El único ajuste: «Reversar» en el admin. */
+    public const array TYPES = ['cancellation'];
 
     /**
-     * Estado de un pedido aprobado o de un canje que un gerente cancela (`cancellation`). No es `CANCELADA`:
+     * Estado de un pedido pagado o de un canje que se reversa (`cancellation`). No es `CANCELADA`:
      * ese estado lo mandan las pasarelas para un pago que nunca se aprobó, sin dinero ni puntos de por medio.
      * `REVERSADA` ya está en `status_orders` (id 5) y ninguna de las tres pasarelas lo manda.
      */
     public const string STATUS_REVERTED = 'REVERSADA';
-
-    /** Estado de un pedido con devolución total. La parcial deja el pedido «APROBADA». */
-    public const string STATUS_RETURNED = 'DEVOLUCIÓN';
 
     private const array GATEWAY_NAMES = ['bold' => 'Bold', 'addi' => 'Addi', 'sistecredito' => 'Sistecrédito'];
 
@@ -81,17 +81,17 @@ class AdjustmentService
     }
 
     /**
-     * Lo que revertiría un ajuste, sin aplicarlo. Los valores van en negativo cuando se le quitan
-     * al entrenador y en positivo cuando se le devuelven (canje cancelado).
+     * Lo que revertiría la reversión, sin aplicarla. Los valores van en negativo cuando se le quitan
+     * al entrenador y en positivo cuando se le devuelven (canje reversado).
      *
      * @return array{commission_amount:float, points:int, trainer_name:?string}
      * @throws ApiException
      */
-    public function preview(int $orderId, string $type, mixed $items = null): array
+    public function preview(int $orderId, string $type): array
     {
         $order = $this->order($orderId);
 
-        return ['trainer_name' => $order['trainer_name']] + $this->effect($order, $type, $items);
+        return ['trainer_name' => $order['trainer_name']] + $this->effect($order, $type);
     }
 
     /**
@@ -99,7 +99,7 @@ class AdjustmentService
      * @return int Id del ajuste.
      * @throws ApiException
      */
-    public function create(int $orderId, ?int $agentId, string $type, string $reason, mixed $items = null, ?string $gateway = null): int
+    public function create(int $orderId, ?int $agentId, string $type, string $reason, ?string $gateway = null): int
     {
         $this->pdo->beginTransaction();
 
@@ -115,7 +115,7 @@ class AdjustmentService
                 throw ApiException::conflict('already_adjusted', 'Este pedido ya tiene un ajuste registrado.');
             }
 
-            $effect = $this->effect($order, $type, $items);
+            $effect = $this->effect($order, $type);
 
             $this->pdo->prepare('INSERT INTO adjustments (order_id, agent_id, type, reason) VALUES (?, ?, ?, ?)')
                 ->execute([$orderId, $agentId, $order['order_type'] === 'redemption' ? 'restitution' : $type, $reason]);
@@ -144,28 +144,25 @@ class AdjustmentService
                 PushOutbox::enqueue(
                     $trainerId,
                     'order_adjusted',
-                    $order['order_type'] === 'redemption' ? 'Te devolvimos tus puntos' : 'Ajuste por una devolución',
+                    $order['order_type'] === 'redemption' ? 'Te devolvimos tus puntos' : 'Pedido reversado',
                     $order['order_type'] === 'redemption'
-                        ? sprintf('Cancelamos tu canje #%d y te devolvimos %s puntos.', $orderId, number_format($effect['points'], 0, ',', '.'))
-                        : sprintf('El pedido #%d de un cliente tuvo una devolución: ajustamos tu comisión y tus puntos.', $orderId),
+                        ? sprintf('Reversamos tu canje #%d y te devolvimos %s puntos.', $orderId, number_format($effect['points'], 0, ',', '.'))
+                        : sprintf('El pedido #%d de un cliente fue reversado: ajustamos tu comisión y tus puntos.', $orderId),
                     ['route' => $order['order_type'] === 'redemption' ? '/coach/puntos' : '/coach/comision', 'order_id' => $orderId],
                     "adjustment:{$adjustmentId}",
                 );
             }
 
-            if ($type !== 'partial_return') {
-                $status = $type === 'cancellation' ? self::STATUS_REVERTED : self::STATUS_RETURNED;
-                $this->pdo->prepare('UPDATE orders SET status_id = ? WHERE order_id = ?')
-                    ->execute([new StatusOrderRepository()->findOrCreateIdByValue($status), $orderId]);
-            }
+            $this->pdo->prepare('UPDATE orders SET status_id = ? WHERE order_id = ?')
+                ->execute([new StatusOrderRepository()->findOrCreateIdByValue(self::STATUS_REVERTED), $orderId]);
 
-            $audit = ['adjustment_id' => $adjustmentId, 'type' => $type, 'reason' => $reason, 'items' => $items, 'effect' => $effect];
+            $audit = ['adjustment_id' => $adjustmentId, 'type' => $type, 'reason' => $reason, 'effect' => $effect];
             $agentId !== null
                 ? AuditLog::byAgent($agentId, 'order.adjustment', 'order', $orderId, $audit)
                 : AuditLog::byGateway((string) $gateway, 'order.adjustment', 'order', $orderId, $audit);
 
             $this->pdo->commit();
-            // Cancelación o devolución: el dueño y el admin ven el cambio sin recargar (spec integraciones/03).
+            // Reversión: el dueño y el admin ven el cambio sin recargar (spec integraciones/03).
             (new OrderRealtime())->statusChanged($orderId);
 
             return $adjustmentId;
@@ -183,10 +180,10 @@ class AdjustmentService
      * @return array{commission_amount:float, points:int}
      * @throws ApiException
      */
-    private function effect(array $order, string $type, mixed $items): array
+    private function effect(array $order, string $type): array
     {
         if (!in_array($type, self::TYPES, true)) {
-            throw ApiException::invalid('Revisa los datos e inténtalo de nuevo.', errors: ['type' => 'Elige el tipo de ajuste.']);
+            throw ApiException::invalid('Revisa los datos e inténtalo de nuevo.', errors: ['type' => 'El único ajuste es reversar el pedido.']);
         }
 
         if ($order['approved_at'] === null) {
@@ -194,10 +191,6 @@ class AdjustmentService
         }
 
         if ($order['order_type'] === 'redemption') {
-            if ($type === 'partial_return') {
-                throw ApiException::invalid('Un canje se cancela completo.', errors: ['type' => 'Un canje no admite devolución parcial.']);
-            }
-
             return ['commission_amount' => 0.0, 'points' => (int) $order['redemption_points']];
         }
 
@@ -206,53 +199,10 @@ class AdjustmentService
             return ['commission_amount' => 0.0, 'points' => 0];
         }
 
-        $share      = $type === 'partial_return' ? $this->returnedShare($order, $items) : ['commission' => (float) $order['commission_total'], 'ratio' => 1.0];
-        $points     = (int) round((int) $order['reward_points'] * $share['ratio']);
         // Solo lo que quede en el lote de este pedido: lo ya usado no genera deuda.
-        $retirable  = min($points, (int) ($order['lot_remaining'] ?? 0));
+        $retirable = min((int) $order['reward_points'], (int) ($order['lot_remaining'] ?? 0));
 
-        return ['commission_amount' => -round($share['commission'], 2) + 0.0, 'points' => -$retirable];
-    }
-
-    /**
-     * Parte del pedido que se devuelve: la comisión de las unidades devueltas y su peso sobre lo
-     * pagado por los productos (para los puntos).
-     *
-     * @param array<string, mixed> $order
-     * @return array{commission:float, ratio:float}
-     * @throws ApiException
-     */
-    private function returnedShare(array $order, mixed $items): array
-    {
-        if (!is_array($items) || $items === []) {
-            throw ApiException::invalid('Indica qué productos se devuelven.', errors: ['items' => 'Elige al menos un producto.']);
-        }
-
-        $lines = $this->pdo->prepare('SELECT item_id, quantity, line_total, commission_amount FROM orders_items WHERE order_id = ?');
-        $lines->execute([$order['order_id']]);
-        $byId  = array_column($lines->fetchAll(PDO::FETCH_ASSOC), null, 'item_id');
-        $paid  = array_sum(array_map(static fn (array $line): float => (float) $line['line_total'], $byId));
-
-        $commission = 0.0;
-        $returned   = 0.0;
-        $seen       = [];
-
-        foreach ($items as $item) {
-            $itemId   = is_array($item) ? filter_var($item['item_id'] ?? null, FILTER_VALIDATE_INT) : false;
-            $quantity = is_array($item) ? filter_var($item['quantity'] ?? null, FILTER_VALIDATE_INT) : false;
-            $line     = $itemId === false ? null : ($byId[$itemId] ?? null);
-
-            if ($line === null || isset($seen[$itemId]) || $quantity === false || $quantity < 1 || $quantity > (int) $line['quantity']) {
-                throw ApiException::invalid('Revisa los productos de la devolución.', errors: ['items' => 'La cantidad devuelta no puede superar la comprada.']);
-            }
-
-            $seen[$itemId] = true;
-            $fraction      = $quantity / (int) $line['quantity'];
-            $commission   += (float) ($line['commission_amount'] ?? 0) * $fraction;
-            $returned     += (float) $line['line_total'] * $fraction;
-        }
-
-        return ['commission' => $commission, 'ratio' => $paid > 0 ? $returned / $paid : 0.0];
+        return ['commission_amount' => -round((float) $order['commission_total'], 2) + 0.0, 'points' => -$retirable];
     }
 
     private function retirePoints(int $lotId, int $points, int $orderId, int $adjustmentId): void

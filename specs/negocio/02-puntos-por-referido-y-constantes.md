@@ -19,7 +19,7 @@ Dejar definido, sin ambigüedades, cómo gana el entrenador A los 50.000 puntos 
 
 ## Alcance
 
-- La regla de los 50.000 puntos por referido: cuándo quedan pendientes, qué compra los activa, que se den una sola vez, qué pasa ante una devolución y cuándo vencen.
+- La regla de los 50.000 puntos por referido: cuándo quedan pendientes, qué compra los activa, que se den una sola vez, qué pasa si se reversa la compra y cuándo vencen.
 - Las constantes del negocio como variables de entorno validadas al iniciar la aplicación.
 - La actualización de las reglas de negocio, los casos de uso, el PRD, el MVP, las fases, los estándares de código y el DER.
 
@@ -33,7 +33,7 @@ Dejar definido, sin ambigüedades, cómo gana el entrenador A los 50.000 puntos 
 
 1. Los documentos llaman a esta recompensa «50.000 puntos por referido», no «bono» ni «incentivo».
 2. Está documentado que los puntos se activan una sola vez, con la primera compra aprobada de cualquier cliente de B, sin monto mínimo. La compra propia de B no los activa.
-3. Está documentado qué pasa si se cancela o devuelve la compra que los activó.
+3. Está documentado qué pasa si se reversa la compra que los activó.
 4. Los 50.000 puntos pendientes no caducan. Una vez activados, vencen a los seis meses como cualquier otra acumulación.
 5. Las constantes están listadas como variables de entorno, y cada pedido, referido y conversión guarda el valor que aplicó.
 6. El DER no tiene una tabla de configuración de reglas (`rule_versions`).
@@ -47,7 +47,7 @@ Dejar definido, sin ambigüedades, cómo gana el entrenador A los 50.000 puntos 
 | S-03 | La compra propia de B (`trainer_purchase`) no activa los puntos de A. | Confirmado (9 nov 2026) |
 | S-04 | Al activarse, se guarda `activation_order_id` y `activated_at`. En la misma transacción se crea el lote de A en `point_lots` (`source='trainer_referral'`, disponible) y su movimiento de abono. | Confirmado (9 nov 2026) |
 | S-05 | Los puntos pendientes no caducan. Una vez activados son un lote como cualquier otro: vencen a los seis meses de la activación y se consumen por FIFO. | Pendientes: Confirmado. Vencimiento tras activarse: Derivado de la regla 2 («6 meses por cada acumulación»). |
-| S-06 | Si se cancela o devuelve la compra que activó los puntos y A no los ha usado, el lote se revierte y el referido vuelve a quedar pendiente, de modo que la siguiente compra aprobada de un cliente de B los activa. Si A ya los usó, se mantienen. | Confirmado (9 nov 2026) |
+| S-06 | Si se reversa la compra que activó los puntos y A no los ha usado, el lote se revierte y el referido vuelve a quedar pendiente, de modo que la siguiente compra aprobada de un cliente de B los activa. Si A ya los usó, se mantienen. | Confirmado (9 nov 2026) |
 | S-07 | Si A usó solo una parte, se revierte el remanente y se mantiene lo usado. | Derivado: aplica la misma regla por partes. |
 | S-08 | Las constantes del negocio son variables de entorno validadas al iniciar la aplicación. Cambiarlas exige reiniciar el servicio. | Confirmado (9 nov 2026) |
 | S-09 | Las estrategias por producto (como Nutra Balance) siguen en `product_discount_rules`, porque son datos del catálogo. | Confirmado (regla 15) |

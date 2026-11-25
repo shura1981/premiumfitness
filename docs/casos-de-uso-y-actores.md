@@ -257,7 +257,7 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 - **Compra sin aprobación:** no se otorgan todavía las recompensas de CU-05.
 - **Cliente sin entrenador:** compra a precio completo y no genera recompensas (RN-21). Puede asociarse antes de pagar con CU-20.
 - **Nueva compra del mismo cliente:** conserva el descuento mientras siga asociado al entrenador.
-- **Cancelación, rechazo o devolución:** los estados y sus efectos sobre beneficios no están definidos.
+- **Rechazo o reversión:** un pago rechazado o cancelado por la pasarela no da beneficios; un pedido pagado que se reversa queda «REVERSADA» y se le revierten al entrenador la comisión y los puntos. No hay devoluciones (spec `backend/03`, P-26 y P-30).
 
 **Resultado:** compra registrada con el descuento correspondiente; las recompensas dependen de su aprobación.
 
@@ -286,7 +286,7 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 - **Compra no aprobada:** el caso no se ejecuta.
 - **Entrenador no identificable o importes insuficientes:** se propone no acreditar una recompensa calculada con datos incompletos y dejar la incidencia identificable; tratamiento operativo pendiente.
 - **Aprobación recibida más de una vez:** se propone evitar duplicar puntos y comisión por la misma compra. Es un control derivado.
-- **Devolución posterior:** no se define reversión, retención ni descuento de saldos.
+- **Reversión posterior:** de los puntos solo se retira lo que quede del pedido; la comisión se descuenta, y si el mes ya se pagó, del siguiente.
 
 **Resultado:** puntos y comisión reconocidos al entrenador por la compra aprobada. Esto no equivale a un pago o retiro de la comisión.
 
@@ -359,7 +359,7 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 - **Se activan una sola vez:** las compras siguientes de los clientes de B no le dan más puntos a A.
 - **Compra propia de B:** no activa los puntos de A.
 - **Pago no aprobado:** no activa nada.
-- **Cancelación o devolución de la compra que los activó:**
+- **Reversión de la compra que los activó:**
   - Si A no ha usado los puntos, se le retiran y vuelven a quedar pendientes hasta la siguiente compra aprobada de un cliente de B.
   - Si los usó en parte, se retira solo el remanente.
   - Si los usó por completo, los conserva.
@@ -476,7 +476,7 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 - **Puntos insuficientes:** no se presupone pago mixto de dinero y puntos; debe definirse si se admite.
 - **Solicitud de efectivo:** no corresponde a un canje permitido.
 - **Canje fuera de la app:** no corresponde al canal autorizado por RN-09.
-- **Producto no disponible o canje cancelado:** reposición de puntos, reserva de inventario y devolución están pendientes.
+- **Producto no disponible o canje reversado:** los puntos se le devuelven al entrenador en un lote nuevo; la reserva de inventario sigue pendiente.
 - **Uso del descuento del 25%:** no se presume su acumulación con el canje.
 
 **Resultado:** canje registrado por productos. Como propuesta derivada, el canje sigue el mismo procesamiento y envío que una compra (CU-16 a CU-19). Falta confirmar si se registra en SAP y con qué documento (PD-18). Los tiempos de cumplimiento no están especificados.
@@ -619,7 +619,7 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 
 - **Guía sin transportadora o transportadora sin guía:** no se acepta.
 - **Guía incorrecta:** el agente puede corregirla. Como no se guarda un historial, el valor anterior se pierde (PD-19).
-- **Cancelación o devolución después del envío:** los estados existen en radical, pero sus efectos sobre puntos y comisiones siguen pendientes (PD-13).
+- **Reversión después del envío:** el pedido queda «REVERSADA» y se revierten la comisión y los puntos (PD-13). No hay devoluciones.
 
 **Resultado:** pedido enviado, con guía y transportadora.
 
@@ -697,8 +697,8 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 **Alternativas y errores:**
 
 - **Mes ya cerrado:** responde 409 y no toca nada. Con `force` solo regenera el Excel y reenvía el correo; nunca recalcula importes.
-- **Total negativo** (por devoluciones): no se paga nada y la diferencia pasa al mes siguiente.
-- **Devolución o corrección posterior al cierre:** entra como ajuste en el mes siguiente. Un mes cerrado no cambia.
+- **Total negativo** (por reversiones): no se paga nada y la diferencia pasa al mes siguiente.
+- **Reversión o corrección posterior al cierre:** entra como ajuste en el mes siguiente. Un mes cerrado no cambia.
 - **Fallo del correo:** el cierre queda hecho y el correo se reenvía con `force`.
 
 **Resultado:** período cerrado, Excel enviado a financiero y cada liquidación pagada con su comprobante visible para el entrenador.
@@ -758,14 +758,14 @@ Las recompensas de CU-05 dependen de la aprobación del pago (paso 1), no del en
 | PD-03 | Redondeo de puntos | Resuelto el 9 nov 2026: una sola vez por pedido, al entero más cercano (0,5 sube). | Ninguna. | CU-05, CU-09. |
 | PD-04 | Base de comisión | Se exige retirar el IVA, sin detallar descuentos, tasas, envío o pedidos con tratamientos tributarios diferentes. | Definir la base sin IVA por compra o por producto. | CU-05. |
 | PD-05 | Puntos por referido | **Resuelta (9 nov 2026):** son 50.000 puntos, definidos en la variable de entorno `TRAINER_REFERRAL_POINTS`. | — | CU-08. |
-| PD-06 | Compra que activa el referido | **Resuelta (9 nov 2026):** la primera compra aprobada de cualquier cliente de B, una sola vez y sin monto mínimo; la compra propia de B no cuenta. Si se cancela o devuelve y A no ha usado los puntos, vuelven a quedar pendientes. | — | CU-07, CU-08. |
+| PD-06 | Compra que activa el referido | **Resuelta (9 nov 2026):** la primera compra aprobada de cualquier cliente de B, una sola vez y sin monto mínimo; la compra propia de B no cuenta. Si se reversa y A no ha usado los puntos, vuelven a quedar pendientes. | — | CU-07, CU-08. |
 | PD-07 | Conversión de comisión | **Resuelta (9 nov 2026):** total de la comisión; puntos recibidos = comisión + mín(50% × puntos vigentes, comisión). | — | CU-10, CU-11. |
 | PD-08 | Permanencia en dietas | **Resuelta (9 nov 2026):** meta en puntos por clientes del mes anterior (249.000, provisional), mes gratis de 30 días desde el primer ingreso, canje de 50.000 puntos por mes y estado calculado en cada consulta. La lógica de la meta puede cambiar. | Valor definitivo de la meta. | CU-14, CU-15. |
 | PD-09 | Suscripción de dietas | **Resuelta (9 nov 2026):** no hay pago en dinero; el acceso se gana con la meta o se compra con 50.000 puntos al mes. La app de dietas es aparte y desacoplada (Nutrition & Fitness Plus, con su propio backend); pregunta a PremiumFitness por documento si el entrenador puede entrar (15 nov 2026). | Ninguna del lado de PremiumFitness. | CU-14, CU-15. |
 | PD-10 | Enlace y asociación | Resuelto en parte el 9 nov 2026: la asociación se guarda en la cuenta y no se cambia por el cliente. Falta definir cuánto tiempo guarda la app el id del enlace antes del registro. | Definir el almacenamiento temporal del id. | CU-02, CU-03. |
 | PD-11 | Continuidad del descuento | Resuelto el 9 nov 2026: el descuento aplica a todo el catálogo mientras el cliente esté asociado. | Ninguna. | CU-04. |
 | PD-12 | Acumulación y valoración | No se indica si descuentos, promociones y puntos se combinan ni cuál es el precio de canje. | Definir compatibilidad, base del descuento y valor de productos en puntos. | CU-04, CU-12, CU-13. |
-| PD-13 | Aprobación y reversión | No se define quién informa la aprobación ni qué ocurre con cancelaciones o devoluciones. | Definir origen del estado, transición válida y efectos sobre puntos y comisión. Los 50.000 puntos por referido ya tienen regla (CU-08). | CU-04, CU-05, CU-08, CU-12. |
+| PD-13 | Aprobación y reversión | **Resuelta (25 nov 2026):** la aprobación la informa solo la pasarela con su webhook. Un pedido pagado se reversa completo (estado «REVERSADA»), con un ajuste que revierte comisión y puntos; no hay devoluciones (spec `backend/03`, P-26, P-29 y P-30). | Ninguna. | CU-04, CU-05, CU-08, CU-12. |
 | PD-14 | Liquidación de comisión | **Resuelta (9 nov 2026):** la comisión no convertida se paga en dinero al final de cada mes (CU-21). Pendiente en términos y condiciones: medio, plazo, mínimo y retenciones. | Términos y condiciones. | CU-10, CU-11, CU-21. |
 | PD-15 | Mecánica del canje | Sin reglas de pago mixto, inventario, reserva, entrega o cancelación. | Definir qué hace efectivo el canje y cuándo se consumen o restituyen puntos. | CU-12. |
 | PD-16 | Registro y acceso | No hay campos, credenciales, verificación ni coexistencia de roles. | Definir datos mínimos, identificación y permisos. | CU-01, CU-03, CU-07 y consultas. |
