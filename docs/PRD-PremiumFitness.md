@@ -218,7 +218,8 @@ No hay devoluciones totales ni parciales (25 nov 2026, spec `backend/03` P-30). 
 - Compra rechazada o cancelada por la pasarela antes de aprobarse: sin recompensas.
 - Pedido reversado: se revierten la comisión y los puntos de ese pedido, completos. Solo se reversa un pedido pagado, y una sola vez.
 - Puntos de la venta ya usados: lo que falte se retira de los otros puntos vigentes del entrenador, del más antiguo; si no le alcanzan, se retira lo que tenga y no queda deuda (25 nov 2026, spec `backend/03` P-17). La comisión se descuenta completa; si el mes ya se liquidó, del siguiente.
-- Reversión de la venta que activó un referido: si A no ha usado nada de los 50.000 puntos, se retiran y el referido vuelve a quedar pendiente; si usó una parte, los conserva y el referido sigue activo.
+- Reversión de la venta que activó un referido: a A se le retiran los 50.000 puntos con la misma regla (lo que quede en ese lote y lo ya usado de sus otros puntos, sin deuda) y el referido vuelve a quedar pendiente: la próxima compra aprobada de un cliente de B los activa otra vez. Nadie cobra dos veces el mismo referido.
+- Los términos y condiciones explican estas reglas a los entrenadores antes del piloto (spec `negocio/04`).
 - Canje reversado: los puntos se le devuelven al entrenador en un lote nuevo, trazable; no se renuevan ni se pierden en silencio.
 - Los ajustes registran actor, motivo y operación original. No se borra el historial ni se descuenta dos veces un mismo saldo por reintentos.
 

@@ -30,8 +30,8 @@ use App\Features\Order\OrderRealtime;
  *       · Los puntos se retiran completos (P-17): primero lo que quede en el lote de ese pedido y, lo que
  *         el entrenador ya usó, de sus otros puntos vigentes por FIFO. Si no le alcanzan, se retira lo
  *         que tenga y no queda deuda.
- *       · Si esa venta activó los 50.000 puntos del referido de A y A no ha usado nada de ese lote, se le
- *         retiran y el referido vuelve a quedar pendiente (spec negocio/02, S-06). Si usó una parte, los conserva.
+ *       · Si esa venta activó los 50.000 puntos del referido de A, se le retiran a A con la misma regla y el
+ *         referido vuelve a quedar pendiente (spec negocio/02, S-06).
  *   - Canje reversado: se devuelven los puntos en un lote nuevo.
  *   - Un pedido admite un solo ajuste. El ajuste nunca borra ni cambia los movimientos originales.
  */
@@ -218,11 +218,12 @@ class AdjustmentService
     }
 
     /**
-     * La venta reversada activó los puntos del referido de A (spec negocio/02, S-06). Si A no ha usado nada
-     * de ese lote, se le retira entero y el referido vuelve a quedar pendiente: la próxima compra aprobada
-     * de un cliente de B lo activa con un lote nuevo. Si usó una parte, o el lote venció, los conserva.
+     * La venta reversada activó los puntos del referido de A (spec negocio/02, S-06; backend/03, P-17): se le
+     * retiran completos, como los de la venta (primero lo que quede en ese lote y lo ya usado de sus otros
+     * puntos vigentes por FIFO, sin deuda), y el referido vuelve a quedar pendiente: la próxima compra
+     * aprobada de un cliente de B lo activa con un lote nuevo. Así A nunca cobra dos veces el mismo referido.
      *
-     * @return int Puntos retirados a A; 0 si los conserva o la venta no activó ningún referido.
+     * @return int Puntos retirados a A; 0 si la venta no activó ningún referido o A no tenía puntos.
      */
     private function revertReferral(int $orderId, int $adjustmentId): int
     {
@@ -244,24 +245,17 @@ class AdjustmentService
             return 0;
         }
 
-        $lot = $this->pdo->prepare(
-            "SELECT id, initial_points, remaining_points FROM point_lots
-             WHERE trainer_referral_id = ? AND status = 'available' AND expires_at > NOW()
-             ORDER BY id DESC LIMIT 1 FOR UPDATE"
+        $data = $this->pdo->prepare(
+            'SELECT tr.referral_points, (SELECT MAX(l.id) FROM point_lots l WHERE l.trainer_referral_id = tr.id) AS lot_id
+             FROM trainer_referrals tr WHERE tr.id = ?'
         );
-        $lot->execute([(int) $referralId]);
-        /** @var array{id:int|string, initial_points:int|string, remaining_points:int|string}|false $row */
-        $row = $lot->fetch(PDO::FETCH_ASSOC);
+        $data->execute([(int) $referralId]);
+        /** @var array{referral_points:int|string, lot_id:int|string|null} $row */
+        $row = $data->fetch(PDO::FETCH_ASSOC);
 
-        if ($row === false || (int) $row['remaining_points'] !== (int) $row['initial_points']) {
-            return 0;
-        }
-
-        $points = (int) $row['initial_points'];
-        $this->pdo->prepare("UPDATE point_lots SET remaining_points = 0, status = 'used' WHERE id = ?")->execute([$row['id']]);
-        $this->pdo->prepare(
-            "INSERT INTO point_movements (point_lot_id, order_id, adjustment_id, type, points, source_key) VALUES (?, ?, ?, 'adjustment', ?, ?)"
-        )->execute([$row['id'], $orderId, $adjustmentId, -$points, "adjustment:{$adjustmentId}:referral"]);
+        // Los 50.000 completos, hasta donde alcancen sus puntos vigentes: no queda deuda (P-17, como los de la venta).
+        $points = min((int) $row['referral_points'], new PointLotRepository()->availablePoints((int) $referrerId));
+        $this->retirePoints((int) $referrerId, $row['lot_id'] === null ? null : (int) $row['lot_id'], $points, $orderId, $adjustmentId, 'referral');
         $this->pdo->prepare('UPDATE trainer_referrals SET activated_at = NULL, activation_order_id = NULL WHERE id = ?')->execute([(int) $referralId]);
 
         PushOutbox::enqueue(
@@ -278,19 +272,22 @@ class AdjustmentService
 
     /**
      * Retira los puntos de una venta reversada: primero del lote de ese pedido y el resto, lo que el
-     * entrenador ya usó, de sus otros lotes vigentes por FIFO. `$points` nunca supera su saldo (effect()).
+     * entrenador ya usó, de sus otros lotes vigentes por FIFO. `$points` nunca supera su saldo vigente.
+     *
+     * @param 'points'|'referral' $what Los puntos de la venta (entrenador del pedido) o los del referido (A).
      */
-    private function retirePoints(int $trainerId, ?int $lotId, int $points, int $orderId, int $adjustmentId): void
+    private function retirePoints(int $trainerId, ?int $lotId, int $points, int $orderId, int $adjustmentId, string $what = 'points'): void
     {
-        $fromOrderLot = $lotId === null ? 0 : $this->retireFromOrderLot($lotId, $points, $orderId, $adjustmentId);
+        $key          = "adjustment:{$adjustmentId}:{$what}";
+        $fromOrderLot = $lotId === null || $points <= 0 ? 0 : $this->retireFromOrderLot($lotId, $points, $orderId, $adjustmentId, $key);
 
-        PointSpender::spend($trainerId, $points - $fromOrderLot, 'adjustment', "adjustment:{$adjustmentId}:points", [
+        PointSpender::spend($trainerId, $points - $fromOrderLot, 'adjustment', $key, [
             'order_id' => $orderId, 'adjustment_id' => $adjustmentId,
         ]);
     }
 
-    /** @return int Puntos retirados del lote del pedido. */
-    private function retireFromOrderLot(int $lotId, int $points, int $orderId, int $adjustmentId): int
+    /** @return int Puntos retirados del lote que originó los puntos. */
+    private function retireFromOrderLot(int $lotId, int $points, int $orderId, int $adjustmentId, string $key): int
     {
         $stmt = $this->pdo->prepare("SELECT remaining_points FROM point_lots WHERE id = ? AND status = 'available' AND expires_at > NOW() FOR UPDATE");
         $stmt->execute([$lotId]);
@@ -305,7 +302,7 @@ class AdjustmentService
         $this->pdo->prepare("UPDATE point_lots SET remaining_points = ?, status = IF(? = 0, 'used', status) WHERE id = ?")->execute([$left, $left, $lotId]);
         $this->pdo->prepare(
             "INSERT INTO point_movements (point_lot_id, order_id, adjustment_id, type, points, source_key) VALUES (?, ?, ?, 'adjustment', ?, ?)"
-        )->execute([$lotId, $orderId, $adjustmentId, -$taken, "adjustment:{$adjustmentId}:points"]);
+        )->execute([$lotId, $orderId, $adjustmentId, -$taken, $key]);
 
         return $taken;
     }

@@ -385,7 +385,7 @@ function referralSeenBy(int $a, int $b): array
     return ['status' => $rows[0]['status'], 'points' => $rows[0]['points'], 'remaining_points' => $rows[0]['remaining_points']];
 }
 
-it('reversar la venta que activó el referido le retira a A los 50.000 sin usar y el referido vuelve a pendiente; la próxima venta lo activa otra vez', function (): void {
+it('reversar la venta que activó el referido le retira a A los 50.000 y el referido vuelve a pendiente; la próxima venta lo activa otra vez', function (): void {
     [$orderId, $a, $b, $client] = referralActivatedBySale();
     expect(trainerBalances($a)[0])->toBe(50000)
         ->and(referralSeenBy($a, $b)['status'])->toBe('activo');
@@ -415,16 +415,39 @@ it('reversar la venta que activó el referido le retira a A los 50.000 sin usar 
         ->and(referralSeenBy($a, $b))->toBe(['status' => 'activo', 'points' => 50000, 'remaining_points' => 50000]);
 });
 
-it('si A ya usó parte de los 50.000, los conserva y el referido sigue activo', function (): void {
-    [$orderId, $a, $b] = referralActivatedBySale();
+it('si A ya usó parte de los 50.000, se le retiran completos de sus otros puntos y el referido vuelve a pendiente (P-17)', function (): void {
+    [$orderId, $a, $b, $client] = referralActivatedBySale();
+    // A usó 20.000 de los 50.000 y tiene otros 40.000 puntos.
     Seed::pdo()->prepare("UPDATE point_lots SET remaining_points = 30000 WHERE trainer_id = ? AND source = 'trainer_referral'")->execute([$a]);
+    $other = Seed::pointLot($a, 40000, accruedAt: '+1 minute');
 
     admin('POST', "orders/{$orderId}/adjustments", ['type' => 'cancellation', 'reason' => 'El cliente pidió cancelar']);
 
-    expect(trainerBalances($a)[0])->toBe(30000)
-        ->and(Shop::rows('SELECT activation_order_id FROM trainer_referrals WHERE referred_id = ?', [$b])[0]['activation_order_id'])->toBe($orderId)
-        ->and(referralSeenBy($a, $b)['status'])->toBe('activo')
-        // B sí pierde lo de su venta.
+    // 30.000 del lote del referido y 20.000 de los otros: le quedan 20.000.
+    expect(trainerBalances($a)[0])->toBe(20000)
+        ->and(Shop::rows('SELECT remaining_points FROM point_lots WHERE id = ?', [$other])[0]['remaining_points'])->toBe(20000)
+        ->and(Shop::rows('SELECT activation_order_id FROM trainer_referrals WHERE referred_id = ?', [$b])[0]['activation_order_id'])->toBeNull()
+        ->and(referralSeenBy($a, $b)['status'])->toBe('pendiente')
+        ->and(json_decode(Shop::rows("SELECT data FROM audit_logs WHERE entity = 'order' AND entity_id = ?", [$orderId])[0]['data'], true)['effect']['referral_points'])->toBe(-50000);
+
+    // Otra venta de un cliente de B le da los 50.000 una vez más: nunca dos veces por el mismo referido.
+    Shop::pay(Shop::order($client, [['code' => Seed::catalogProduct(['valor' => 100000]), 'quantity' => 1]]));
+
+    expect(trainerBalances($a)[0])->toBe(70000)
+        ->and(referralSeenBy($a, $b))->toBe(['status' => 'activo', 'points' => 50000, 'remaining_points' => 50000]);
+});
+
+it('si A no tiene puntos suficientes, se le retira lo que tenga, no queda deuda y el referido vuelve a pendiente (P-17)', function (): void {
+    [$orderId, $a, $b] = referralActivatedBySale();
+    // A usó 45.000 de los 50.000 y no tiene más puntos.
+    Seed::pdo()->prepare("UPDATE point_lots SET remaining_points = 5000 WHERE trainer_id = ? AND source = 'trainer_referral'")->execute([$a]);
+
+    admin('POST', "orders/{$orderId}/adjustments", ['type' => 'cancellation', 'reason' => 'El cliente pidió cancelar']);
+
+    expect(trainerBalances($a)[0])->toBe(0)
+        ->and(Shop::rows('SELECT MIN(remaining_points) m FROM point_lots WHERE trainer_id = ?', [$a])[0]['m'])->toEqual(0)
+        ->and(referralSeenBy($a, $b)['status'])->toBe('pendiente')
+        ->and(json_decode(Shop::rows("SELECT data FROM audit_logs WHERE entity = 'order' AND entity_id = ?", [$orderId])[0]['data'], true)['effect']['referral_points'])->toBe(-5000)
         ->and(Shop::orderRow($orderId)['status_value'])->toBe('REVERSADA');
 });
 

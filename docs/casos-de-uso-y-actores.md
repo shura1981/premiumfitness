@@ -360,9 +360,8 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 - **Compra propia de B:** no activa los puntos de A.
 - **Pago no aprobado:** no activa nada.
 - **Reversión de la compra que los activó:**
-  - Si A no ha usado los puntos, se le retiran y vuelven a quedar pendientes hasta la siguiente compra aprobada de un cliente de B.
-  - Si los usó en parte, se retira solo el remanente.
-  - Si los usó por completo, los conserva.
+  - Se le retiran a A los 50.000 puntos y vuelven a quedar pendientes hasta la siguiente compra aprobada de un cliente de B.
+  - Si A ya usó una parte o todos, lo que falte se retira de sus otros puntos vigentes, del más antiguo; si no le alcanzan, se retira lo que tenga y no queda deuda (25 nov 2026, spec `backend/03` P-17).
 
 **Resultado:** 50.000 puntos disponibles para A, una sola vez por referido.
 
