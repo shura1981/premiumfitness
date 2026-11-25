@@ -91,7 +91,7 @@ Una misma persona puede participar en varias de estas situaciones. No se define 
 | --- | --- | --- |
 | Persona aún no registrada | Inicia el registro de cliente o entrenador. | Estado previo de ACT-01 o ACT-02; no se asume un tercer rol de negocio. |
 | App web que conserva el id del enlace | Mantiene el identificador del entrenador entre la apertura del enlace y el registro o login (cookie o almacenamiento del navegador). | Mecanismo técnico confirmado; no es un actor de negocio. Su soporte en una app nativa está pendiente. |
-| Origen del estado de compra «Aprobada» | Proporciona el evento que habilita las recompensas por venta. | La condición existe, pero los requisitos no indican quién la informa. Derivado de radical: la pasarela de pagos confirma el pago por webhook y el pedido pasa a «Aprobada». El proveedor sigue pendiente (D-10). |
+| Origen del estado de compra «Aprobada» | Proporciona el evento que habilita las recompensas por venta. | La condición existe, pero los requisitos no indican quién la informa. Derivado de radical: la pasarela de pagos confirma el pago por webhook y el pedido pasa a «Aprobada». Las pasarelas son Bold, Addi y Sistecrédito, con las cuentas de Nutramerican (D-10, resuelta el 25 nov 2026). |
 | Pasarela de pagos | Cobra el pedido e informa el resultado del pago. | Derivado de radical. No es un actor de negocio. |
 | SAP Business One | Recibe el pedido que registra el agente y devuelve el código del pedido SAP. Define los artículos y las bodegas. | Sistema externo, confirmado por producto. |
 | Transportadora | Transporta el pedido y expone el rastreo de la guía. En radical: Servientrega, Melonn y Envía. | Sistema externo, confirmado por producto. Las transportadoras de PremiumFitness están por confirmar. |

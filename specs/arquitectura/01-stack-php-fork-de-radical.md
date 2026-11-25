@@ -44,7 +44,7 @@ Dejar la documentación y las reglas de los agentes alineadas con la decisión d
 | S-04 | El rate limiting usa `RateLimitMiddleware` de radical (Symfony RateLimiter con almacenamiento en disco). El disco es compartido por todos los procesos de LiteSpeed, así que los límites no se duplican. Hay que añadir límites por celular, además de por IP. | Derivado |
 | S-05 | Al hacer el fork, hay que desactivar el endpoint `login-with-credential` y el autologin por QR de radical, porque entregan tokens sin contraseña (spec `seguridad/01`). | Derivado |
 | S-06 | `database-schema.md` de radical no se trae. La fuente del esquema es el DER (`specs/diseño/01-DER.md` y `scripts/der/generar_der.py`). | Derivado |
-| S-07 | Radical envía los SMS con Relax Global (`SMS_API_URL`, `SMS_API_TOKEN`). Es el candidato natural para D-10. | Pendiente de confirmar |
+| S-07 | Radical envía los SMS con Relax Global (`SMS_API_URL`, `SMS_API_TOKEN`). PremiumFitness usa el mismo (D-10). | Confirmado (25 nov 2026, Steven: «sí, déjalo con Relax Global como radical») |
 
 **Diferencia con la documentación anterior:** el PRD y las fases decían «Node.js con Express». Lo reemplaza esta decisión del usuario del 9 nov 2026. `docs/requerimientos.md` no fija el stack.
 

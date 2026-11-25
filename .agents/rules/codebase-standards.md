@@ -175,7 +175,7 @@ interface NotificationChannelInterface
 ```
 
 - `EmailNotificationChannel` — envío por SMTP vía PHPMailer.
-- `SmsNotificationChannel` — envío por SMS vía Relax Global API (`SMS_API_URL`, `SMS_API_TOKEN`). Proveedor por confirmar (D-10). Se obtiene con `SmsChannelFactory::fromEnv()`, que según `SMS_DRIVER` entrega el canal real (`relax`, el único admitido en producción), el de desarrollo (`log`) o el de pruebas (`memory`).
+- `SmsNotificationChannel` — envío por SMS vía Relax Global API (`SMS_API_URL`, `SMS_API_TOKEN`). Proveedor confirmado el 25 nov 2026 (D-10), como en radical. Se obtiene con `SmsChannelFactory::fromEnv()`, que según `SMS_DRIVER` entrega el canal real (`relax`, el único admitido en producción), el de desarrollo (`log`) o el de pruebas (`memory`).
 - `FcmPushChannel` — push con **FCM HTTP v1** (cuenta de servicio, OAuth2 con JWT RS256). Nunca el API legacy `fcm/send` con server key, que Google retiró. Se envía desde la outbox `push_notifications`, nunca dentro de la petición del usuario.
 - Los canales se instancian con `SmsNotificationChannel::fromEnv()` o `EmailNotificationChannel::fromEnv()`.
 

@@ -366,7 +366,7 @@ Estas decisiones completan las reglas; no dejan en duda los porcentajes, seis me
 | D-07 | Corte exacto de seis meses y política de reversión con beneficios consumidos, incluyendo puntos restituidos (los 50.000 puntos de A ya tienen regla). | Negocio y finanzas | Antes del piloto. |
 | D-08 | Resuelta el 9 nov 2026: la comisión no convertida se paga en dinero al final de cada mes. Pendiente en términos y condiciones: medio, plazo, mínimo y retenciones. | Negocio y legal | Antes del piloto. |
 | D-09 | Resuelta el 9 nov 2026 salvo el valor definitivo de la meta (249.000 puntos provisional, lógica sujeta a cambio): costo 50.000 puntos, mes gratis desde el primer ingreso, meta del mes anterior. | Negocio y producto | Antes de la fase de dietas. |
-| D-10 | Proveedor de pagos/SMS, verificación y conciliación disponibles en repositorios de referencia. | Tecnología y operación | Revisión e integración. |
+| D-10 | Resuelta el 25 nov 2026. **Pagos:** Bold, Addi y Sistecrédito, con las cuentas de Nutramerican; un pedido = un pago, como en radical, con el id `pf-<pedido>` (spec `backend/03`, P-24). **SMS:** Relax Global, como en radical. | Tecnología y operación | — |
 | D-11 | Duración y sustitución de cookie, varios QR, cliente existente, cambio de referente, ausencia de referencia y continuidad del 10%. | Negocio y producto | Antes de cerrar atribución/checkout. |
 | D-12 | Base de datos, distribución PWA, infraestructura y tamaño/concurrencia del piloto. | Tecnología y producto | Después de revisar repositorios; el backend (fork de radical, PHP 8.5 + MariaDB) y Angular ya están definidos. |
 | D-13 | Condiciones del programa, conservación de datos y permisos operativos/nutricionales. | Negocio y operación | Antes de uso real de cada módulo. |
