@@ -43,6 +43,8 @@ class AdjustmentService
     /** Estado de un pedido con devolución total. La parcial deja el pedido «APROBADA». */
     public const string STATUS_RETURNED = 'DEVOLUCIÓN';
 
+    private const array GATEWAY_NAMES = ['bold' => 'Bold', 'addi' => 'Addi', 'sistecredito' => 'Sistecrédito'];
+
     private readonly PDO $pdo;
 
     public function __construct()
@@ -54,10 +56,11 @@ class AdjustmentService
     public function listFor(int $orderId): array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT a.id, a.type, a.reason, a.created_at, e.usuario AS agent_name,
+            'SELECT a.id, a.type, a.reason, a.created_at, a.agent_id, o.payment_gateway, e.usuario AS agent_name,
                     (SELECT COALESCE(SUM(m.amount), 0) FROM commission_movements m WHERE m.adjustment_id = a.id) AS commission_amount,
                     (SELECT COALESCE(SUM(pm.points), 0) FROM point_movements pm WHERE pm.adjustment_id = a.id) AS points
              FROM adjustments a
+             JOIN orders o ON o.order_id = a.order_id
              LEFT JOIN ' . IntranetTables::fromEnv()->employees . ' e ON e.id_usuario = a.agent_id
              WHERE a.order_id = ? ORDER BY a.id'
         );
@@ -68,7 +71,10 @@ class AdjustmentService
             'id'         => (int) $row['id'],
             'type'       => (string) $row['type'],
             'reason'     => (string) $row['reason'],
-            'agent_name' => (string) ($row['agent_name'] ?? ''),
+            // Sin agente: lo registró la pasarela con su webhook (Bold anuló el pago).
+            'agent_name' => $row['agent_id'] === null
+                ? 'Automático (' . (self::GATEWAY_NAMES[(string) $row['payment_gateway']] ?? (string) $row['payment_gateway']) . ')'
+                : (string) ($row['agent_name'] ?? ''),
             'created_at' => date(DATE_ATOM, (int) strtotime((string) $row['created_at'])),
             'effect'     => ['commission_amount' => (float) $row['commission_amount'], 'points' => (int) $row['points'], 'trainer_name' => $trainerName],
         ], $stmt->fetchAll(PDO::FETCH_ASSOC));
@@ -89,10 +95,11 @@ class AdjustmentService
     }
 
     /**
+     * @param int|null $agentId Agente que lo registra; null si lo registra la pasarela (`byGateway`).
      * @return int Id del ajuste.
      * @throws ApiException
      */
-    public function create(int $orderId, int $agentId, string $type, string $reason, mixed $items = null): int
+    public function create(int $orderId, ?int $agentId, string $type, string $reason, mixed $items = null, ?string $gateway = null): int
     {
         $this->pdo->beginTransaction();
 
@@ -152,7 +159,10 @@ class AdjustmentService
                     ->execute([new StatusOrderRepository()->findOrCreateIdByValue($status), $orderId]);
             }
 
-            AuditLog::byAgent($agentId, 'order.adjustment', 'order', $orderId, ['adjustment_id' => $adjustmentId, 'type' => $type, 'reason' => $reason, 'items' => $items, 'effect' => $effect]);
+            $audit = ['adjustment_id' => $adjustmentId, 'type' => $type, 'reason' => $reason, 'items' => $items, 'effect' => $effect];
+            $agentId !== null
+                ? AuditLog::byAgent($agentId, 'order.adjustment', 'order', $orderId, $audit)
+                : AuditLog::byGateway((string) $gateway, 'order.adjustment', 'order', $orderId, $audit);
 
             $this->pdo->commit();
             // Cancelación o devolución: el dueño y el admin ven el cambio sin recargar (spec integraciones/03).

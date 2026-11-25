@@ -75,7 +75,7 @@ SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
 CREATE TABLE `adjustments` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `order_id` bigint(20) NOT NULL,
-  `agent_id` int(11) NOT NULL COMMENT 'agente que lo registra (tb_empleados)',
+  `agent_id` int(11) DEFAULT NULL COMMENT 'agente que lo registra (tb_empleados); NULL si lo registró la pasarela (anulación de Bold)',
   `type` enum('cancellation','full_return','partial_return','restitution','correction') NOT NULL,
   `reason` text NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),

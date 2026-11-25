@@ -24,6 +24,16 @@ final class AuditLog
         self::record(null, $userId, $action, $entity, $entityId, $data);
     }
 
+    /**
+     * Operación que hizo una pasarela con su webhook, sin agente ni usuario (por ejemplo, Bold anula un pago).
+     *
+     * @param array<string, mixed> $data
+     */
+    public static function byGateway(string $gateway, string $action, string $entity, ?int $entityId, array $data = []): void
+    {
+        self::record(null, null, $action, $entity, $entityId, ['gateway' => $gateway] + $data);
+    }
+
     /** @param array<string, mixed> $data */
     private static function record(?int $agentId, ?int $userId, string $action, string $entity, ?int $entityId, array $data): void
     {

@@ -344,6 +344,67 @@ it('de los puntos solo retira lo que queda en el lote del pedido; lo ya usado no
         ->and(AppFactory::json(AppFactory::dispatch(AppFactory::request('GET', '/api/orders/' . $orderId, headers: JwtFactory::authHeader((int) Shop::orderRow($orderId)['user_id']))))['status'])->toBe('cancelado');
 });
 
+// ── Bold anula un pago aprobado (P-28) ─────────────────────────────────────
+
+it('si Bold anula el pago de un pedido aprobado, queda REVERSADA y se revierten comisión y puntos, sin agente', function (): void {
+    [$orderId, $trainer] = approvedPurchase();
+    expect(trainerBalances($trainer))->toBe([9000, 22689.08]);
+
+    $void = Shop::boldWebhook($orderId, (float) Shop::orderRow($orderId)['amount'], type: 'VOID_APPROVED');
+
+    expect($void)->toMatchArray(['processed' => true, 'order_id' => $orderId, 'status' => 'REVERSADA'])
+        ->and(Shop::orderRow($orderId)['status_value'])->toBe('REVERSADA')
+        ->and(trainerBalances($trainer))->toBe([0, 0.0])
+        // Lo registró Bold: sin agente, y así se ve en el admin.
+        ->and(Shop::rows('SELECT agent_id, type FROM adjustments WHERE order_id = ?', [$orderId]))->toBe([['agent_id' => null, 'type' => 'cancellation']])
+        ->and(AppFactory::json(admin('GET', "orders/{$orderId}/adjustments"))['data'][0]['agent_name'])->toBe('Automático (Bold)')
+        ->and(Shop::rows("SELECT agent_id, user_id, JSON_VALUE(data, '$.gateway') gateway FROM audit_logs WHERE entity = 'order' AND entity_id = ?", [$orderId]))
+        ->toBe([['agent_id' => null, 'user_id' => null, 'gateway' => 'bold']]);
+});
+
+it('una anulación repetida de Bold no revierte dos veces', function (): void {
+    [$orderId, $trainer] = approvedPurchase();
+    $amount              = (float) Shop::orderRow($orderId)['amount'];
+
+    Shop::boldWebhook($orderId, $amount, type: 'VOID_APPROVED');
+    $again = Shop::boldWebhook($orderId, $amount, type: 'VOID_APPROVED');
+
+    expect($again)->toMatchArray(['processed' => false])
+        ->and(trainerBalances($trainer))->toBe([0, 0.0])
+        ->and(Shop::rows('SELECT COUNT(*) n FROM adjustments WHERE order_id = ?', [$orderId])[0]['n'])->toBe(1)
+        ->and(Shop::orderRow($orderId)['status_value'])->toBe('REVERSADA');
+});
+
+it('un aviso de la pasarela después de un ajuste no le cambia el estado al pedido', function (string $type): void {
+    [$orderId] = approvedPurchase();
+    admin('POST', "orders/{$orderId}/adjustments", ['type' => 'full_return', 'reason' => 'El cliente devolvió el pedido completo']);
+
+    $late = Shop::boldWebhook($orderId, (float) Shop::orderRow($orderId)['amount'], type: $type);
+
+    expect($late)->toMatchArray(['processed' => false])
+        ->and(Shop::orderRow($orderId)['status_value'])->toBe('DEVOLUCIÓN');
+})->with(['SALE_REJECTED', 'SALE_APPROVED']);
+
+it('si un gerente ya ajustó el pedido, la anulación de Bold no revierte otra vez', function (): void {
+    [$orderId, $trainer] = approvedPurchase();
+    $itemId              = (int) Shop::rows('SELECT item_id FROM orders_items WHERE order_id = ?', [$orderId])[0]['item_id'];
+    admin('POST', "orders/{$orderId}/adjustments", ['type' => 'partial_return', 'reason' => 'Devolvió una unidad', 'items' => [['item_id' => $itemId, 'quantity' => 1]]]);
+
+    $void = Shop::boldWebhook($orderId, (float) Shop::orderRow($orderId)['amount'], type: 'VOID_APPROVED');
+
+    expect($void)->toMatchArray(['processed' => false])
+        ->and(trainerBalances($trainer))->toBe([4500, 11344.54]);
+});
+
+it('la anulación de un pago que nunca se aprobó lo deja rechazado, como siempre', function (): void {
+    $orderId = Shop::order(Seed::user(), [['code' => Seed::catalogProduct(['valor' => 100000]), 'quantity' => 1]]);
+
+    Shop::boldWebhook($orderId, (float) Shop::orderRow($orderId)['amount'], type: 'VOID_APPROVED');
+
+    expect(Shop::orderRow($orderId))->toMatchArray(['status_value' => 'PAGO RECHAZADO', 'approved_at' => null])
+        ->and(Shop::rows('SELECT COUNT(*) n FROM adjustments WHERE order_id = ?', [$orderId])[0]['n'])->toBe(0);
+});
+
 it('cancelar un canje devuelve los puntos en un lote nuevo', function (): void {
     $trainer = Seed::trainer();
     Seed::pointLot($trainer, 300000);

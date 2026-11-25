@@ -1,6 +1,6 @@
 # 01 — Diagrama entidad relación (DER)
 
-**Estado:** propuesta v0.19 lista para revisión · **Creado:** 7 de noviembre de 2026
+**Estado:** propuesta v0.20 lista para revisión · **Creado:** 7 de noviembre de 2026
 
 ## Petición original
 
@@ -62,6 +62,8 @@
 - **Sin FK al catálogo:** `orders_items.product_sku` y `product_discount_rules.product_sku` guardan el `codigo` de la intranet, sin FK. `orders_items` añade `product_name` y copia al comprar el nombre, el precio y el `sap_code`.
 - **IVA:** ya no hay tasa por producto. Cada línea toma `VAT_PERCENTAGE` (19), salvo los códigos de `VAT_EXEMPT_PRODUCT_CODES` (Nutra C, código 103040), y guarda tasa, base e IVA.
 - **Tipos:** la tabla externa se dibuja con los tipos reales (`SHOW COLUMNS`, 15 nov 2026).
+
+**Revisión v0.20, 25 de noviembre de 2026:** `adjustments.agent_id` admite NULL: el ajuste lo registró la pasarela (Bold anuló un pago aprobado; spec `backend/03`, P-28). La auditoría de ese ajuste queda sin agente ni usuario, con la pasarela en sus datos.
 
 **Revisión v0.19, 24 de noviembre de 2026:** los pagos vuelven al diseño de radical: un pedido = un pago. Se **elimina `payment_attempts`** (v0.17 y v0.18) y se añade `orders.payment_code` (`varchar(30)`, única, comparada exacta): el id de pago que recibe la pasarela, `pf-<order_id>`. El prefijo evita que choque con los pedidos de otros proyectos que comparten las cuentas de las pasarelas. Lo que manda la pasarela queda en el pedido (`payment_state_json`), como en radical (spec `backend/03`, P-24).
 
