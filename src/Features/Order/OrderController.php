@@ -130,29 +130,6 @@ class OrderController
         return $this->json($response, ['ok' => true, 'order_id' => $orderId, 'status_id' => $statusId]);
     }
 
-    /** PATCH /api/orders/{id}/status */
-    public function updateStatus(Request $request, Response $response, int $id): Response
-    {
-        /** @var array<string, mixed> $body */
-        $body = (array) ($request->getParsedBody() ?? []);
-
-        $order = $this->repository->findById($id);
-        if ($order === false) {
-            return $this->jsonError($response, 'Order not found', 404);
-        }
-
-        // El pago lo aprueba el aviso de la pasarela, que además acredita la comisión y los puntos
-        // del entrenador. Marcarlo «APROBADA» a mano dejaría el pedido pagado sin esas recompensas.
-        $approvedId = $this->statusRepository->findOrCreateIdByValue(PaymentStatus::TEXT_APROBADA);
-        if ((int) $body['status_id'] === $approvedId && $order->status_value !== PaymentStatus::TEXT_APROBADA) {
-            return $this->jsonError($response, 'El pago lo aprueba la pasarela: no se puede marcar como aprobado a mano.', 409);
-        }
-
-        $this->repository->updateStatus($id, (int) $body['status_id']);
-
-        return $this->json($response, $this->repository->findById($id));
-    }
-
     /** PATCH /api/orders/{id}/sap-order-code */
     public function updateSapOrderCode(Request $request, Response $response, int $id): Response
     {

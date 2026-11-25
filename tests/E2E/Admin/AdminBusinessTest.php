@@ -505,19 +505,19 @@ it('un agente del call center no entra a entrenadores, estrategias, cierre ni re
         ->and(AppFactory::dispatch(AppFactory::request('GET', "/api/admin/orders/{$orderId}/adjustments", headers: $callCenter))->getStatusCode())->toBe(200);
 });
 
-it('no deja marcar un pedido como aprobado a mano: lo aprueba la pasarela', function (): void {
+it('un agente no puede cambiar a mano el estado de un pago: solo la pasarela', function (string $status): void {
     [$client, $trainer] = Seed::clientWithTrainer();
     $orderId            = Shop::order($client, [['code' => Seed::catalogProduct(), 'quantity' => 1]]);
-    $approvedId         = (int) Shop::rows("SELECT status_id FROM status_orders WHERE value = 'APROBADA'")[0]['status_id'];
-    $otherId            = (int) Shop::rows("SELECT status_id FROM status_orders WHERE value = 'CANCELADA'")[0]['status_id'];
+    $before             = Shop::orderRow($orderId)['status_value'];
+    $statusId           = (int) Shop::rows('SELECT status_id FROM status_orders WHERE value = ?', [$status])[0]['status_id'];
 
-    $manual = admin('PATCH', "orders/{$orderId}/status", ['status_id' => $approvedId]);
+    $manual = admin('PATCH', "orders/{$orderId}/status", ['status_id' => $statusId]);
 
-    expect($manual->getStatusCode())->toBe(409)
+    expect($manual->getStatusCode())->toBeIn([404, 405])
+        ->and(Shop::orderRow($orderId)['status_value'])->toBe($before)
         ->and(Shop::orderRow($orderId)['approved_at'])->toBeNull()
-        ->and(trainerBalances($trainer))->toBe([0, 0.0])
-        ->and(admin('PATCH', "orders/{$orderId}/status", ['status_id' => $otherId])->getStatusCode())->toBe(200);
-});
+        ->and(trainerBalances($trainer))->toBe([0, 0.0]);
+})->with(['APROBADA', 'REVERSADA', 'CANCELADA']);
 
 it('entrega el celular del agente como texto y expone Retry-After al navegador', function (): void {
     $login = \Tests\Support\Auth::post('/api/admin/auth/login', ['email' => 'agente.prueba@premiumfitness.local', 'password' => 'admin-local-123']);

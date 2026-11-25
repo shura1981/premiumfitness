@@ -768,14 +768,6 @@ class OrderRepository extends AbstractRepository
         );
     }
 
-    public function updateStatus(int $orderId, int $statusId): bool
-    {
-        return $this->execute(
-            'UPDATE orders SET status_id = ? WHERE order_id = ?',
-            [$statusId, $orderId]
-        );
-    }
-
     public function updateAgentId(int $orderId, int $agentId): bool
     {
         return $this->execute(
