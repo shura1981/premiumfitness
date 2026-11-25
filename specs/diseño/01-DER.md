@@ -252,7 +252,7 @@ Diagrama editable: [diagrama-entidad-relacion.drawio](../../docs/img/diagrama-en
   - `commission_movements (trainer_id, amount)`
   - `orders_coupons (trainer_id, order_id)`
 - **Idempotencia:** son únicos `orders.payment_reference`, `commission_movements.source_key`, `point_lots.source_key`, `point_movements.source_key` y `commission_conversions.idempotency_key`. El dispatcher de radical ya trata como no-op un pedido aprobado.
-- **Puntos por referido una sola vez:** `trainer_referrals.referred_id`, `trainer_referrals.activation_order_id` y `point_lots.trainer_referral_id` son únicos.
+- **Puntos por referido una sola vez:** `trainer_referrals.referred_id` y `trainer_referrals.activation_order_id` son únicos, y la clave del lote (`referral:<id>:order:<pedido>`) también. `point_lots.trainer_referral_id` tiene índice, no único: si se reversa la venta que activó el referido y A no usó los puntos, se le retiran y otra venta lo activa con un lote nuevo (spec `backend/03`, P-17).
 - **Liquidación única:** `commission_periods.period` y `commission_settlements (period_id, trainer_id)` son únicos.
 - **Conversión única:** `commission_movements.conversion_id` y `point_lots.conversion_id` son únicos. Cada conversión tiene un débito y un crédito.
 - **FIFO:** el consumo sigue `point_lots.accrued_at` con desempate por `id` (PRD §7.3). El saldo canjeable es la suma de `remaining_points` de los lotes `available` no caducados.

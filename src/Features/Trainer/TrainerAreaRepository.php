@@ -177,7 +177,9 @@ class TrainerAreaRepository extends AbstractRepository
                     l.remaining_points, l.status AS lot_status, l.expires_at
              FROM trainer_referrals tr
              JOIN users u ON u.id = tr.referred_id
-             LEFT JOIN point_lots l ON l.trainer_referral_id = tr.id
+             -- El lote de la activación vigente: si una venta reversada lo devolvió a pendiente, el lote viejo no cuenta.
+             LEFT JOIN point_lots l ON tr.activated_at IS NOT NULL
+                 AND l.id = (SELECT MAX(x.id) FROM point_lots x WHERE x.trainer_referral_id = tr.id)
              WHERE tr.referrer_id = ? ORDER BY tr.registered_at DESC LIMIT 500'
         );
         $stmt->execute([$trainerId]);

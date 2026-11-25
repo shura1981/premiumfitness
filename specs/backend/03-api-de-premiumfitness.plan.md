@@ -342,7 +342,7 @@ interface Adjustment {
 
 - `preview` del `GET` es lo que revertiría reversar el pedido hoy. Los valores son negativos cuando se le quitan al entrenador y positivos cuando se le devuelven (canje reversado).
 - Un pedido se reversa una sola vez y completo. `can_adjust` es falso si ya se reversó o si no está pagado.
-- De los puntos solo se retira lo que quede en el lote de ese pedido; lo ya usado no genera deuda.
+- Los puntos de la venta se retiran completos: primero del lote del pedido y lo ya usado de los otros lotes vigentes por FIFO, sin deuda (P-17). `effect.points` es lo que se le retira al entrenador del pedido; si la venta activó un referido, lo que se le retira a A queda en la auditoría (`effect.referral_points`), no en `effect`.
 - Reversar un canje le devuelve los puntos al entrenador en un lote nuevo (se guarda como `restitution`).
 
 ## Servidor a servidor y crons

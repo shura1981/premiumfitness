@@ -9,6 +9,7 @@ use App\Features\Commission\CommissionMovementRepository;
 use App\Features\Notification\PushOutbox;
 use App\Features\Order\StatusOrderRepository;
 use App\Features\Point\PointLotRepository;
+use App\Features\Point\PointSpender;
 use App\Infrastructure\Config\BusinessConfig;
 use App\Infrastructure\Database\DB;
 use App\Infrastructure\Database\IntranetTables;
@@ -26,8 +27,11 @@ use App\Features\Order\OrderRealtime;
  *     lo que el pedido le dio.
  *       · La comisión se descuenta con un movimiento de ajuste; si el mes ya se liquidó, queda
  *         negativa y se descuenta del siguiente (spec negocio/04, regla 8).
- *       · De los puntos solo se retira lo que quede en el lote de ese pedido. Lo ya usado no genera
- *         deuda: esa política está pendiente (PRD §7.4).
+ *       · Los puntos se retiran completos (P-17): primero lo que quede en el lote de ese pedido y, lo que
+ *         el entrenador ya usó, de sus otros puntos vigentes por FIFO. Si no le alcanzan, se retira lo
+ *         que tenga y no queda deuda.
+ *       · Si esa venta activó los 50.000 puntos del referido de A y A no ha usado nada de ese lote, se le
+ *         retiran y el referido vuelve a quedar pendiente (spec negocio/02, S-06). Si usó una parte, los conserva.
  *   - Canje reversado: se devuelven los puntos en un lote nuevo.
  *   - Un pedido admite un solo ajuste. El ajuste nunca borra ni cambia los movimientos originales.
  */
@@ -58,14 +62,16 @@ class AdjustmentService
         $stmt = $this->pdo->prepare(
             'SELECT a.id, a.type, a.reason, a.created_at, a.agent_id, o.payment_gateway, e.usuario AS agent_name,
                     (SELECT COALESCE(SUM(m.amount), 0) FROM commission_movements m WHERE m.adjustment_id = a.id) AS commission_amount,
-                    (SELECT COALESCE(SUM(pm.points), 0) FROM point_movements pm WHERE pm.adjustment_id = a.id) AS points
+                    (SELECT COALESCE(SUM(pm.points), 0) FROM point_movements pm JOIN point_lots pl ON pl.id = pm.point_lot_id
+                     WHERE pm.adjustment_id = a.id AND pl.trainer_id <=> :trainer_id) AS points
              FROM adjustments a
              JOIN orders o ON o.order_id = a.order_id
              LEFT JOIN ' . IntranetTables::fromEnv()->employees . ' e ON e.id_usuario = a.agent_id
-             WHERE a.order_id = ? ORDER BY a.id'
+             WHERE a.order_id = :order_id ORDER BY a.id'
         );
-        $stmt->execute([$orderId]);
-        $trainerName = $this->order($orderId)['trainer_name'];
+        $order = $this->order($orderId);
+        $stmt->execute(['trainer_id' => $order['trainer_id'], 'order_id' => $orderId]);
+        $trainerName = $order['trainer_name'];
 
         return array_map(static fn (array $row): array => [
             'id'         => (int) $row['id'],
@@ -115,25 +121,31 @@ class AdjustmentService
                 throw ApiException::conflict('already_adjusted', 'Este pedido ya tiene un ajuste registrado.');
             }
 
+            if ($order['trainer_id'] !== null) {
+                // Antes de calcular el efecto: los puntos que se retiran dependen de su saldo.
+                $this->pdo->prepare('SELECT user_id FROM trainers WHERE user_id = ? FOR UPDATE')->execute([$order['trainer_id']]);
+            }
+
             $effect = $this->effect($order, $type);
 
             $this->pdo->prepare('INSERT INTO adjustments (order_id, agent_id, type, reason) VALUES (?, ?, ?, ?)')
                 ->execute([$orderId, $agentId, $order['order_type'] === 'redemption' ? 'restitution' : $type, $reason]);
             $adjustmentId = (int) $this->pdo->lastInsertId();
             $trainerId    = $order['trainer_id'];
+            $referralPoints = 0;
 
             if ($trainerId !== null) {
-                $this->pdo->prepare('SELECT user_id FROM trainers WHERE user_id = ? FOR UPDATE')->execute([$trainerId]);
-
                 if ($effect['commission_amount'] < 0) {
                     new CommissionMovementRepository()->record($trainerId, 'adjustment', $effect['commission_amount'], "adjustment:{$adjustmentId}:commission", [
                         'order_id' => $orderId, 'adjustment_id' => $adjustmentId,
                     ]);
                 }
 
-                if ($effect['points'] < 0 && $order['lot_id'] !== null) {
-                    $this->retirePoints($order['lot_id'], -$effect['points'], $orderId, $adjustmentId);
+                if ($effect['points'] < 0) {
+                    $this->retirePoints($trainerId, $order['lot_id'], -$effect['points'], $orderId, $adjustmentId);
                 }
+
+                $referralPoints = $order['order_type'] === 'redemption' ? 0 : $this->revertReferral($orderId, $adjustmentId);
 
                 if ($effect['points'] > 0) {
                     new PointLotRepository()->credit($trainerId, 'restitution', $effect['points'], BusinessConfig::fromEnv()->pointsExpirationMonths, "adjustment:{$adjustmentId}:restitution", [
@@ -156,7 +168,7 @@ class AdjustmentService
             $this->pdo->prepare('UPDATE orders SET status_id = ? WHERE order_id = ?')
                 ->execute([new StatusOrderRepository()->findOrCreateIdByValue(self::STATUS_REVERTED), $orderId]);
 
-            $audit = ['adjustment_id' => $adjustmentId, 'type' => $type, 'reason' => $reason, 'effect' => $effect];
+            $audit = ['adjustment_id' => $adjustmentId, 'type' => $type, 'reason' => $reason, 'effect' => $effect + ['referral_points' => -$referralPoints]];
             $agentId !== null
                 ? AuditLog::byAgent($agentId, 'order.adjustment', 'order', $orderId, $audit)
                 : AuditLog::byGateway((string) $gateway, 'order.adjustment', 'order', $orderId, $audit);
@@ -199,21 +211,94 @@ class AdjustmentService
             return ['commission_amount' => 0.0, 'points' => 0];
         }
 
-        // Solo lo que quede en el lote de este pedido: lo ya usado no genera deuda.
-        $retirable = min((int) $order['reward_points'], (int) ($order['lot_remaining'] ?? 0));
+        // Los puntos del pedido, completos, hasta donde alcancen sus puntos vigentes: no queda deuda (P-17).
+        $retirable = min((int) $order['reward_points'], new PointLotRepository()->availablePoints((int) $order['trainer_id']));
 
         return ['commission_amount' => -round((float) $order['commission_total'], 2) + 0.0, 'points' => -$retirable];
     }
 
-    private function retirePoints(int $lotId, int $points, int $orderId, int $adjustmentId): void
+    /**
+     * La venta reversada activó los puntos del referido de A (spec negocio/02, S-06). Si A no ha usado nada
+     * de ese lote, se le retira entero y el referido vuelve a quedar pendiente: la próxima compra aprobada
+     * de un cliente de B lo activa con un lote nuevo. Si usó una parte, o el lote venció, los conserva.
+     *
+     * @return int Puntos retirados a A; 0 si los conserva o la venta no activó ningún referido.
+     */
+    private function revertReferral(int $orderId, int $adjustmentId): int
     {
-        $stmt = $this->pdo->prepare("SELECT remaining_points FROM point_lots WHERE id = ? AND status = 'available' FOR UPDATE");
+        $find = $this->pdo->prepare('SELECT referrer_id FROM trainer_referrals WHERE activation_order_id = ?');
+        $find->execute([$orderId]);
+        $referrerId = $find->fetchColumn();
+
+        if ($referrerId === false) {
+            return 0;
+        }
+
+        // Mismo orden de bloqueo que la aprobación del pago: primero los entrenadores (B ya está), luego el referido.
+        $this->pdo->prepare('SELECT user_id FROM trainers WHERE user_id = ? FOR UPDATE')->execute([(int) $referrerId]);
+        $referral = $this->pdo->prepare('SELECT id FROM trainer_referrals WHERE activation_order_id = ? FOR UPDATE');
+        $referral->execute([$orderId]);
+        $referralId = $referral->fetchColumn();
+
+        if ($referralId === false) {
+            return 0;
+        }
+
+        $lot = $this->pdo->prepare(
+            "SELECT id, initial_points, remaining_points FROM point_lots
+             WHERE trainer_referral_id = ? AND status = 'available' AND expires_at > NOW()
+             ORDER BY id DESC LIMIT 1 FOR UPDATE"
+        );
+        $lot->execute([(int) $referralId]);
+        /** @var array{id:int|string, initial_points:int|string, remaining_points:int|string}|false $row */
+        $row = $lot->fetch(PDO::FETCH_ASSOC);
+
+        if ($row === false || (int) $row['remaining_points'] !== (int) $row['initial_points']) {
+            return 0;
+        }
+
+        $points = (int) $row['initial_points'];
+        $this->pdo->prepare("UPDATE point_lots SET remaining_points = 0, status = 'used' WHERE id = ?")->execute([$row['id']]);
+        $this->pdo->prepare(
+            "INSERT INTO point_movements (point_lot_id, order_id, adjustment_id, type, points, source_key) VALUES (?, ?, ?, 'adjustment', ?, ?)"
+        )->execute([$row['id'], $orderId, $adjustmentId, -$points, "adjustment:{$adjustmentId}:referral"]);
+        $this->pdo->prepare('UPDATE trainer_referrals SET activated_at = NULL, activation_order_id = NULL WHERE id = ?')->execute([(int) $referralId]);
+
+        PushOutbox::enqueue(
+            (int) $referrerId,
+            'referral_reverted',
+            'Tu referido vuelve a estar pendiente',
+            sprintf('Se reversó la venta que activó tu referido: retiramos %s puntos. Se activan otra vez con la próxima compra de uno de sus clientes.', number_format($points, 0, ',', '.')),
+            ['route' => '/coach/referidos'],
+            "adjustment:{$adjustmentId}:referral",
+        );
+
+        return $points;
+    }
+
+    /**
+     * Retira los puntos de una venta reversada: primero del lote de ese pedido y el resto, lo que el
+     * entrenador ya usó, de sus otros lotes vigentes por FIFO. `$points` nunca supera su saldo (effect()).
+     */
+    private function retirePoints(int $trainerId, ?int $lotId, int $points, int $orderId, int $adjustmentId): void
+    {
+        $fromOrderLot = $lotId === null ? 0 : $this->retireFromOrderLot($lotId, $points, $orderId, $adjustmentId);
+
+        PointSpender::spend($trainerId, $points - $fromOrderLot, 'adjustment', "adjustment:{$adjustmentId}:points", [
+            'order_id' => $orderId, 'adjustment_id' => $adjustmentId,
+        ]);
+    }
+
+    /** @return int Puntos retirados del lote del pedido. */
+    private function retireFromOrderLot(int $lotId, int $points, int $orderId, int $adjustmentId): int
+    {
+        $stmt = $this->pdo->prepare("SELECT remaining_points FROM point_lots WHERE id = ? AND status = 'available' AND expires_at > NOW() FOR UPDATE");
         $stmt->execute([$lotId]);
         $remaining = $stmt->fetchColumn();
         $taken     = $remaining === false ? 0 : min($points, (int) $remaining);
 
         if ($taken <= 0) {
-            return;
+            return 0;
         }
 
         $left = (int) $remaining - $taken;
@@ -221,6 +306,8 @@ class AdjustmentService
         $this->pdo->prepare(
             "INSERT INTO point_movements (point_lot_id, order_id, adjustment_id, type, points, source_key) VALUES (?, ?, ?, 'adjustment', ?, ?)"
         )->execute([$lotId, $orderId, $adjustmentId, -$taken, "adjustment:{$adjustmentId}:points"]);
+
+        return $taken;
     }
 
     /**
@@ -232,7 +319,7 @@ class AdjustmentService
         $stmt = $this->pdo->prepare(
             "SELECT o.order_id, o.user_id, o.order_type, o.approved_at, o.reward_points, o.redemption_points,
                     oc.trainer_id AS coupon_trainer_id, t.full_name AS coupon_trainer_name, b.full_name AS buyer_name,
-                    l.id AS lot_id, IF(l.status = 'available' AND l.expires_at > NOW(), l.remaining_points, 0) AS lot_remaining,
+                    l.id AS lot_id,
                     (SELECT COALESCE(SUM(i.commission_amount), 0) FROM orders_items i WHERE i.order_id = o.order_id) AS commission_total
              FROM orders o
              JOIN users b ON b.id = o.user_id

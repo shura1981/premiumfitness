@@ -47,7 +47,7 @@ Dejar definido, sin ambigüedades, cómo gana el entrenador A los 50.000 puntos 
 | S-03 | La compra propia de B (`trainer_purchase`) no activa los puntos de A. | Confirmado (9 nov 2026) |
 | S-04 | Al activarse, se guarda `activation_order_id` y `activated_at`. En la misma transacción se crea el lote de A en `point_lots` (`source='trainer_referral'`, disponible) y su movimiento de abono. | Confirmado (9 nov 2026) |
 | S-05 | Los puntos pendientes no caducan. Una vez activados son un lote como cualquier otro: vencen a los seis meses de la activación y se consumen por FIFO. | Pendientes: Confirmado. Vencimiento tras activarse: Derivado de la regla 2 («6 meses por cada acumulación»). |
-| S-06 | Si se reversa la compra que activó los puntos y A no los ha usado, el lote se revierte y el referido vuelve a quedar pendiente, de modo que la siguiente compra aprobada de un cliente de B los activa. Si A ya los usó, se mantienen. | Confirmado (9 nov 2026) |
+| S-06 | Si se reversa la compra que activó los puntos y A no los ha usado, el lote se revierte y el referido vuelve a quedar pendiente, de modo que la siguiente compra aprobada de un cliente de B los activa. Si A ya los usó, se mantienen. | Confirmado (9 nov 2026). Implementado el 25 nov 2026 (spec `backend/03`, P-17): «no los ha usado» es que el lote está entero y vigente; si A usó una parte, conserva todo y el referido sigue activo, para no darle los puntos dos veces. |
 | S-07 | Si A usó solo una parte, se revierte el remanente y se mantiene lo usado. | Derivado: aplica la misma regla por partes. |
 | S-08 | Las constantes del negocio son variables de entorno validadas al iniciar la aplicación. Cambiarlas exige reiniciar el servicio. | Confirmado (9 nov 2026) |
 | S-09 | Las estrategias por producto (como Nutra Balance) siguen en `product_discount_rules`, porque son datos del catálogo. | Confirmado (regla 15) |
@@ -79,7 +79,7 @@ Se quitan las FK `rule_version_id`. Los valores aplicados se guardan en las colu
 2. Si el pedido es `client_purchase`, bloquea con `SELECT … FOR UPDATE` el referido pendiente de ese entrenador.
 3. Si existe, lo activa y crea el lote de A.
 
-Lo protegen de duplicados los índices únicos de `trainer_referrals.activation_order_id`, `point_lots.trainer_referral_id` y `point_lots.source_key`.
+Lo protegen de duplicados el bloqueo de la fila del referido (`FOR UPDATE`) y los índices únicos de `trainer_referrals.activation_order_id` y `point_lots.source_key`, cuya clave lleva el pedido que activa (`referral:<id>:order:<pedido>`). `point_lots.trainer_referral_id` no es único desde el 25 nov 2026: si se reversa la venta que activó el referido (S-06), una venta posterior lo activa con un lote nuevo.
 
 **Reversión.** Se registra en `adjustments` (CU-13). Si hay remanente, se descuenta del lote con un movimiento `adjustment`. Luego se limpian `activation_order_id` y `activated_at`.
 

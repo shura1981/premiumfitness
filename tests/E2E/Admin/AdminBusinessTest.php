@@ -320,21 +320,112 @@ it('no hay devoluciones: el único ajuste es reversar el pedido completo', funct
         ->and(Shop::orderRow($orderId)['status_value'])->toBe('APROBADA');
 })->with(['full_return', 'partial_return']);
 
-it('de los puntos solo retira lo que queda en el lote del pedido; lo ya usado no genera deuda', function (): void {
+it('retira los puntos completos: lo que queda en el lote del pedido y lo ya usado de sus otros lotes, por FIFO (P-17)', function (): void {
     [$orderId, $trainer] = approvedPurchase();
+    // De los 9.000 puntos del pedido ya usó 7.000: quedan 2.000 en su lote.
     Seed::pdo()->prepare('UPDATE point_lots SET remaining_points = 2000 WHERE order_id = ?')->execute([$orderId]);
-    Seed::pointLot($trainer, 50000);
+    $older = Seed::pointLot($trainer, 5000, accruedAt: '-2 months');
+    $newer = Seed::pointLot($trainer, 50000, accruedAt: '+1 minute');
 
     $preview = AppFactory::json(admin('GET', "orders/{$orderId}/adjustments"))['preview'];
-    admin('POST', "orders/{$orderId}/adjustments", ['type' => 'cancellation', 'reason' => 'Pedido cancelado por el cliente']);
+    $create  = AppFactory::json(admin('POST', "orders/{$orderId}/adjustments", ['type' => 'cancellation', 'reason' => 'Pedido cancelado por el cliente']));
+    $lots    = Shop::rows('SELECT id, remaining_points FROM point_lots WHERE trainer_id = ? ORDER BY id', [$trainer]);
 
-    expect($preview['points'])->toBe(-2000)
-        // Los otros lotes del entrenador no se tocan.
-        ->and(trainerBalances($trainer)[0])->toBe(50000)
-        // REVERSADA, no CANCELADA: ese estado es de las pasarelas, para un pago que nunca se aprobó.
+    expect($preview['points'])->toBe(-9000)
+        ->and($create['effect']['points'])->toBe(-9000)
+        // 2.000 del lote del pedido; los 7.000 que faltan, primero del lote más antiguo (5.000) y luego del siguiente.
+        ->and(array_column($lots, 'remaining_points', 'id'))->toBe([
+            (int) Shop::rows('SELECT id FROM point_lots WHERE order_id = ?', [$orderId])[0]['id'] => 0, $older => 0, $newer => 48000,
+        ])
+        ->and(trainerBalances($trainer)[0])->toBe(48000)
         ->and(Shop::orderRow($orderId)['status_value'])->toBe('REVERSADA')
         // El cliente lo ve cancelado.
         ->and(AppFactory::json(AppFactory::dispatch(AppFactory::request('GET', '/api/orders/' . $orderId, headers: JwtFactory::authHeader((int) Shop::orderRow($orderId)['user_id']))))['status'])->toBe('cancelado');
+});
+
+it('si no le alcanzan los puntos, retira los que tenga y no queda deuda (P-17)', function (): void {
+    [$orderId, $trainer] = approvedPurchase();
+    // Ya usó 7.000 de los 9.000 y no tiene más puntos: solo quedan 2.000.
+    Seed::pdo()->prepare('UPDATE point_lots SET remaining_points = 2000 WHERE order_id = ?')->execute([$orderId]);
+    // Un lote vencido que el cron aún no marcó no cuenta.
+    Seed::pointLot($trainer, 30000, expiresAt: '-1 day', accruedAt: '-7 months');
+
+    $create = admin('POST', "orders/{$orderId}/adjustments", ['type' => 'cancellation', 'reason' => 'Pedido cancelado por el cliente']);
+
+    expect($create->getStatusCode())->toBe(201)
+        ->and(AppFactory::json($create)['effect']['points'])->toBe(-2000)
+        ->and(Shop::rows('SELECT COALESCE(SUM(remaining_points), 0) p FROM point_lots WHERE trainer_id = ? AND expires_at > NOW()', [$trainer])[0]['p'])->toEqual(0)
+        ->and(Shop::rows('SELECT remaining_points FROM point_lots WHERE trainer_id = ? AND expires_at < NOW()', [$trainer])[0]['remaining_points'])->toBe(30000)
+        ->and(Shop::rows('SELECT MIN(remaining_points) m FROM point_lots WHERE trainer_id = ?', [$trainer])[0]['m'])->toEqual(0);
+});
+
+// ── Referido activado por la venta reversada (spec negocio/02, S-06) ───────
+
+/** A refirió a B; un cliente de B compra y su pago aprobado activa los puntos de A. Devuelve [pedido, A, B, cliente de B]. */
+function referralActivatedBySale(): array
+{
+    $a = Seed::trainer();
+    $b = Seed::trainer();
+    Seed::pdo()->prepare('INSERT INTO trainer_referrals (referrer_id, referred_id, referral_points) VALUES (?, ?, 50000)')->execute([$a, $b]);
+    [$client] = Seed::clientWithTrainer($b);
+    $orderId  = Shop::order($client, [['code' => Seed::catalogProduct(['valor' => 100000]), 'quantity' => 2]]);
+    Shop::pay($orderId);
+
+    return [$orderId, $a, $b, $client];
+}
+
+/** @return array{status:string, points:int, remaining_points:int} El referido B en la pantalla de A. */
+function referralSeenBy(int $a, int $b): array
+{
+    $trainers = AppFactory::json(AppFactory::dispatch(AppFactory::request('GET', '/api/trainer/referrals', headers: JwtFactory::authHeader($a, 'trainer'))))['trainers'];
+    $rows     = array_values(array_filter($trainers, static fn (array $t): bool => $t['id'] === $b));
+
+    expect($rows)->toHaveCount(1);
+
+    return ['status' => $rows[0]['status'], 'points' => $rows[0]['points'], 'remaining_points' => $rows[0]['remaining_points']];
+}
+
+it('reversar la venta que activó el referido le retira a A los 50.000 sin usar y el referido vuelve a pendiente; la próxima venta lo activa otra vez', function (): void {
+    [$orderId, $a, $b, $client] = referralActivatedBySale();
+    expect(trainerBalances($a)[0])->toBe(50000)
+        ->and(referralSeenBy($a, $b)['status'])->toBe('activo');
+
+    $create = AppFactory::json(admin('POST', "orders/{$orderId}/adjustments", ['type' => 'cancellation', 'reason' => 'El cliente pidió cancelar']));
+    $referral = Shop::rows('SELECT activated_at, activation_order_id FROM trainer_referrals WHERE referred_id = ?', [$b])[0];
+
+    expect(trainerBalances($a)[0])->toBe(0)
+        ->and($referral)->toBe(['activated_at' => null, 'activation_order_id' => null])
+        ->and(referralSeenBy($a, $b))->toBe(['status' => 'pendiente', 'points' => 50000, 'remaining_points' => 0])
+        // El efecto del ajuste es el de B (9.000 puntos de su venta); los de A van aparte.
+        ->and($create['effect']['points'])->toBe(-9000)
+        ->and(AppFactory::json(admin('GET', "orders/{$orderId}/adjustments"))['data'][0]['effect']['points'])->toBe(-9000)
+        ->and(Shop::rows("SELECT type FROM push_notifications WHERE user_id = ? AND type = 'referral_reverted'", [$a]))->toHaveCount(1)
+        ->and(json_decode(Shop::rows("SELECT data FROM audit_logs WHERE entity = 'order' AND entity_id = ?", [$orderId])[0]['data'], true)['effect']['referral_points'])->toBe(-50000);
+
+    // Otra venta aprobada de un cliente de B activa el referido otra vez, con un lote nuevo.
+    $next = Shop::order($client, [['code' => Seed::catalogProduct(['valor' => 100000]), 'quantity' => 1]]);
+    Shop::pay($next);
+
+    expect(trainerBalances($a)[0])->toBe(50000)
+        ->and(Shop::rows('SELECT activation_order_id FROM trainer_referrals WHERE referred_id = ?', [$b])[0]['activation_order_id'])->toBe($next)
+        ->and(Shop::rows("SELECT initial_points, remaining_points, status FROM point_lots WHERE trainer_id = ? AND source = 'trainer_referral' ORDER BY id", [$a]))->toBe([
+            ['initial_points' => 50000, 'remaining_points' => 0, 'status' => 'used'],
+            ['initial_points' => 50000, 'remaining_points' => 50000, 'status' => 'available'],
+        ])
+        ->and(referralSeenBy($a, $b))->toBe(['status' => 'activo', 'points' => 50000, 'remaining_points' => 50000]);
+});
+
+it('si A ya usó parte de los 50.000, los conserva y el referido sigue activo', function (): void {
+    [$orderId, $a, $b] = referralActivatedBySale();
+    Seed::pdo()->prepare("UPDATE point_lots SET remaining_points = 30000 WHERE trainer_id = ? AND source = 'trainer_referral'")->execute([$a]);
+
+    admin('POST', "orders/{$orderId}/adjustments", ['type' => 'cancellation', 'reason' => 'El cliente pidió cancelar']);
+
+    expect(trainerBalances($a)[0])->toBe(30000)
+        ->and(Shop::rows('SELECT activation_order_id FROM trainer_referrals WHERE referred_id = ?', [$b])[0]['activation_order_id'])->toBe($orderId)
+        ->and(referralSeenBy($a, $b)['status'])->toBe('activo')
+        // B sí pierde lo de su venta.
+        ->and(Shop::orderRow($orderId)['status_value'])->toBe('REVERSADA');
 });
 
 // ── Bold anula un pago aprobado (P-28) ─────────────────────────────────────

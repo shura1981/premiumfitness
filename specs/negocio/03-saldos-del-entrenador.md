@@ -106,7 +106,7 @@ Las columnas de cada índice siguen el orden de los filtros: primero las igualda
 | `commission_movements` | `ix_commission_movements_balance (trainer_id, amount)` | Saldo de comisión. |
 | `orders_coupons` | `ix_orders_coupons_trainer (trainer_id, order_id)` | Ventas atribuidas al entrenador. |
 
-Los índices únicos que ya existen (`trainer_referral_id`, `source_key` y otros) siguen igual.
+Los índices únicos que ya existen (`source_key` y otros) siguen igual. `point_lots.trainer_referral_id` dejó de ser único el 25 nov 2026 (spec `backend/03`, P-17): un referido reactivado tiene dos lotes, y el detalle por entrenador B lee solo el de la activación vigente (el de mayor `id`, cuando `activated_at` no es nulo).
 
 ## Checklist
 

@@ -190,7 +190,8 @@ class PurchaseApproval
 
     /**
      * Primera compra aprobada de un cliente de B: A recibe los puntos que valía el referido cuando
-     * B se registró (regla 15). `activation_order_id` y `trainer_referral_id` son únicos.
+     * B se registró (regla 15). `activation_order_id` es único. La clave del lote lleva el pedido que lo activa:
+     * si esa venta se reversa, el referido vuelve a quedar pendiente y otra venta lo activa con un lote nuevo (S-06).
      */
     private function activateReferral(PDO $pdo, int $orderId, int $referredId, int $referralId): void
     {
@@ -207,7 +208,7 @@ class PurchaseApproval
 
         $referrerId = (int) $referral['referrer_id'];
         $points     = (int) $referral['referral_points'];
-        $lotId      = $this->lots->credit($referrerId, 'trainer_referral', $points, $this->business->pointsExpirationMonths, "referral:{$referralId}", [
+        $lotId      = $this->lots->credit($referrerId, 'trainer_referral', $points, $this->business->pointsExpirationMonths, "referral:{$referralId}:order:{$orderId}", [
             'trainer_referral_id' => $referralId,
         ]);
 
@@ -218,7 +219,7 @@ class PurchaseApproval
                 'Tu referido ya vendió',
                 sprintf('Un entrenador que referiste hizo su primera venta: ganaste %s puntos.', number_format($points, 0, ',', '.')),
                 ['route' => '/coach/referidos', 'trainer_id' => $referredId],
-                "referral:{$referralId}",
+                "referral:{$referralId}:order:{$orderId}",
             );
         }
     }
