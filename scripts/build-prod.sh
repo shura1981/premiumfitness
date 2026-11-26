@@ -1,67 +1,95 @@
 #!/usr/bin/env bash
 
-# Detener si hay un error
-set -e
+set -euo pipefail
 
-# Mostrar comandos
-set -x
-
-echo "🛑 Iniciando el proceso de empaquetado para Producción..."
-
-PROJECT_DIR=$(pwd)
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname -- "${SCRIPT_DIR}")"
 BUILD_DIR="${PROJECT_DIR}/build"
+ENV_FILE="${PROJECT_DIR}/.env.prod"
 
-echo "🧹 Borrando build anterior si existe..."
-rm -rf "${BUILD_DIR}"
-mkdir -p "${BUILD_DIR}"
+cd -- "${PROJECT_DIR}"
 
-echo "🔄 Ejecutando Composer (solo producción) previo a copiar..."
-# 1️⃣ Instala solo el vendor de producción
-composer run build
-
-echo "📦 Copiando directorios y archivos necesarios..."
-# 2️⃣ Copiamos directorios
-cp -r app "${BUILD_DIR}/"
-cp -r assets "${BUILD_DIR}/"
-cp -r cron-jobs "${BUILD_DIR}/"
-
-# Las apps Angular no van aquí: se despliegan en sus subdominios (spec arquitectura/02).
-cp -r load "${BUILD_DIR}/"
-cp -r logs "${BUILD_DIR}/"
-cp -r src "${BUILD_DIR}/"
-
-# Ahora ya podemos copiar vendor porque arriba le quitamos dev
-cp -r vendor "${BUILD_DIR}/"
-cp -r views "${BUILD_DIR}/"
-
-# Copiamos archivos sueltos
-if [ -f ".prod.env" ]; then cp .prod.env "${BUILD_DIR}/"; fi
-if [ -f ".htaccess" ]; then cp .htaccess "${BUILD_DIR}/"; fi
-cp index.php "${BUILD_DIR}/"
-
-echo "📝 Limpiando campos innecesarios de composer.json..."
-# Copiar composer.json pero eliminando bloques de desarrollo ("scripts", "autoload-dev", "require-dev") usando PHP
-php -r "\$data = json_decode(file_get_contents('composer.json'), true); unset(\$data['scripts'], \$data['autoload-dev'], \$data['require-dev']); file_put_contents('${BUILD_DIR}/composer.json', json_encode(\$data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));"
-
-echo "🧹 Limpiando contenido de logs..."
-# Eliminar TODO el contenido de logs (archivos, carpetas ocultas, subcarpetas, etc) 
-# para que /build/logs quede completamente vacío
-rm -rf "${BUILD_DIR}/logs/"*
-rm -rf "${BUILD_DIR}/logs/".* 2>/dev/null || true
-
-echo "🔄 Renombrando .prod.env a .env..."
-# 4️⃣ Renombrar .prod.env a .env (para el entorno en el servidor de destido)
-if [ -f "${BUILD_DIR}/.prod.env" ]; then
-    mv "${BUILD_DIR}/.prod.env" "${BUILD_DIR}/.env"
-else
-    echo "⚠️ No se encontró .prod.env para renombrar."
+if [[ ! -f "${ENV_FILE}" ]]; then
+    echo "❌ Falta .env.prod en la raíz del proyecto. Consulta docs/despliegue.md." >&2
+    exit 1
 fi
 
-# 5️⃣ Restaurar dependencias locales
-# Como borramos (arriba) la carpeta vendor de testing (Pest/PHPStan) al usar 'composer run build', 
-# la volvemos a instalar aquí para que tú puedas seguir trabajando localmente con tus tests después de generar el build de Prod.
-echo "🔄 Restaurando dependencias de dev locales..."
-composer run install:dev
+echo "📦 Preparando el build de producción de PremiumFitness..."
+STAGING_DIR="$(mktemp -d "${PROJECT_DIR}/.build-prod.XXXXXX")"
+trap 'rm -rf -- "${STAGING_DIR}"' EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
-echo "✅ Proceso completado exitosamente."
-echo "➡️  Los archivos listos para subir a producción están en la carpeta: ${BUILD_DIR}"
+# Solo se copia código de ejecución. Los datos locales de escritura quedan fuera.
+for directory in app assets cron-jobs load src views; do
+    cp -R -- "${directory}" "${STAGING_DIR}/"
+done
+cp -- index.php .htaccess composer.json composer.lock "${STAGING_DIR}/"
+cp -- "${ENV_FILE}" "${STAGING_DIR}/.env"
+chmod 600 "${STAGING_DIR}/.env"
+mkdir -p -- "${STAGING_DIR}/cache/twig" "${STAGING_DIR}/cache/data" \
+    "${STAGING_DIR}/logs" "${STAGING_DIR}/temp" \
+    "${STAGING_DIR}/storage/private/reports" "${STAGING_DIR}/storage/private/receipts"
+
+echo "🔄 Instalando dependencias de producción desde composer.lock..."
+(
+    cd -- "${STAGING_DIR}"
+    # Se reutiliza el comando de dependencias, aislado del vendor/ de desarrollo.
+    composer --no-interaction run build
+
+    echo "🔎 Validando la configuración de producción..."
+    php /dev/stdin "${PROJECT_DIR}" <<'PHP'
+<?php
+
+declare(strict_types=1);
+
+// El bootstrap solo valida el entorno; no levanta la app ni conecta con la base.
+require 'load/bootstrap.php';
+
+$environment = Dotenv\Dotenv::parse(file_get_contents('.env'));
+if ($environment['APP_ENV'] !== 'production' || ($environment['SMS_DRIVER'] ?? '') !== 'relax') {
+    fwrite(STDERR, "❌ .env.prod debe usar APP_ENV=production y SMS_DRIVER=relax.\n");
+    exit(1);
+}
+
+// Estas rutas deben permanecer dentro del paquete y protegidas por .htaccess.
+foreach (['REPORTS_STORAGE_PATH', 'RECEIPTS_STORAGE_PATH', 'FIREBASE_CREDENTIALS_PATH'] as $key) {
+    $path = $environment[$key];
+    if (!str_starts_with($path, 'storage/private/') || str_contains($path, '..')) {
+        fwrite(STDERR, "❌ {$key} debe ser una ruta relativa dentro de storage/private/.\n");
+        exit(1);
+    }
+
+    $directory = $key === 'FIREBASE_CREDENTIALS_PATH' ? dirname($path) : $path;
+    if (!is_dir($directory) && !mkdir($directory, 0775, true)) {
+        throw new RuntimeException("No se pudo crear el directorio de {$key}.");
+    }
+}
+
+$credentialPath = $environment['FIREBASE_CREDENTIALS_PATH'];
+$credentialSource = $argv[1] . '/' . $credentialPath;
+if (is_file($credentialSource)) {
+    if (!copy($credentialSource, $credentialPath) || !chmod($credentialPath, 0600)) {
+        throw new RuntimeException('No se pudo copiar la credencial de Firebase.');
+    }
+} else {
+    fwrite(STDERR, "⚠️ Falta la cuenta de servicio de Firebase; el envío push requiere configurarla en el servidor.\n");
+}
+
+// Igual que en el repositorio de referencia: manifiesto sin comandos ni bloques de desarrollo.
+$manifest = json_decode(file_get_contents('composer.json'), true, flags: JSON_THROW_ON_ERROR);
+unset($manifest['scripts'], $manifest['autoload-dev'], $manifest['require-dev']);
+file_put_contents('composer.json', json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) . "\n");
+// El lock original ya se usó para instalar; no corresponde al manifiesto reducido.
+unlink('composer.lock');
+PHP
+)
+
+# El build anterior solo se sustituye después de instalar y validar el nuevo.
+rm -rf -- "${BUILD_DIR}"
+mv -- "${STAGING_DIR}" "${BUILD_DIR}"
+
+echo "✅ Build generado en: ${BUILD_DIR}"
+du -sh -- "${BUILD_DIR}"
+echo "📌 En el hosting: permite escritura de PHP en cache/, logs/, temp/ y storage/private/."
+echo "📌 Revisa las credenciales heredadas y los valores pendientes de .env.prod (docs/despliegue.md)."

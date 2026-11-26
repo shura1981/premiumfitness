@@ -54,6 +54,7 @@
         "test:integration": "vendor/bin/pest --testsuite=Integration",
         "test:e2e": "vendor/bin/pest --testsuite=E2E",
         "build": "composer install --no-dev --optimize-autoloader",
+        "build:prod": "bash scripts/build-prod.sh",
         "install:dev": "composer install",
         "dump": "composer dump-autoload -o"
     }

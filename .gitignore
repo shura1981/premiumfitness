@@ -17,6 +17,7 @@ storage/private/
 *.log
 .DS_Store
 build
+/.build-prod.*/
 /storage/private/
 tests/E2E/http/products/images
 assets/productos
