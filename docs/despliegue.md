@@ -25,7 +25,9 @@ El servidor de desarrollo escucha en `http://localhost:8000`. Las pruebas usan l
 
 ## Configuración de producción
 
-El archivo privado es **`.env.prod`** en la raíz, excluido de Git. Se creó a partir de `.env`, conservando sus claves, constantes y credenciales. El empaquetador lo copia como **`build/.env`** y no modifica `.env`.
+El archivo privado es **`.env.prod`** en la raíz, excluido de Git. Se creó a partir de `.env`, conservando sus claves, constantes y credenciales. El empaquetador lo copia como **`build/.env`** y no modifica `.env`. El nombre que consume este build es `.env.prod`; no se mantiene otro archivo `.prod.env`.
+
+**Última sincronización: 26 de noviembre de 2026**, desde el `.env` privado de la copia de trabajo de la rama `dev` del mismo repositorio (commit `3a2eef5`). Se incorporó `TRAINER_REFERRAL_MIN_PURCHASE=149000`, se actualizaron siete credenciales de Addi, Bold y Sistecrédito, y se adaptaron los retornos de las tres pasarelas al dominio de producción. Ambos `.env` locales quedaron intactos.
 
 Se ajustaron estos valores al entorno de producción:
 
@@ -33,10 +35,14 @@ Se ajustaron estos valores al entorno de producción:
 - `APP_URL=https://premiumfitness-api.nutramerican.com`.
 - `WEB_APP_URL=https://premiumfitness.nutramerican.com` y `ADMIN_APP_URL=https://premiumfitness-admin.nutramerican.com`.
 - `CORS_ALLOWED_ORIGINS` con los dos dominios de las apps, sin localhost.
-- Webhooks de Addi y Sistecrédito, respuesta de Bold y URL del cron con el dominio de la API.
-- `ADDI_URL_REDIRECT` y `SISTECREDITO_URL_RESPONSE` vuelven a `https://premiumfitness.nutramerican.com/pago/resultado`; esta API solo sirve la página `/response/bold`. Al crear un pago, el checkout aporta además el retorno concreto del pedido.
-- `PAYMENT_GATEWAY_SPA_RETURN_URL=https://premiumfitness.nutramerican.com/pago/resultado`.
+- Webhooks de Addi y Sistecrédito y URL del cron con el dominio de la API.
+- `ADDI_URL_REDIRECT=https://premiumfitness.nutramerican.com/pago/resultado/addi`.
+- `SISTECREDITO_URL_RESPONSE=https://premiumfitness.nutramerican.com/pago/resultado/sistecredito`.
+- `BOLD_URL_RESPONSE=https://premiumfitness.nutramerican.com/pago/resultado/bold`.
+- `TRAINER_REFERRAL_MIN_PURCHASE=149000`, el mínimo de productos con descuento e IVA, sin flete, que activa los puntos del referido.
 - `DIET_ACCESS_RENEW_URL=https://premiumfitness.nutramerican.com/coach/dietas`.
+
+Esta sincronización modifica la configuración de producción; los commits funcionales de `dev` todavía no están integrados en esta rama. Se conservan sus **104 variables**, más `PAYMENT_GATEWAY_SPA_RETURN_URL=https://premiumfitness.nutramerican.com/pago/resultado` por compatibilidad con el bootstrap actual. Al integrar el código de `dev`, que ya retiró esa variable, se puede eliminar. El build empaqueta el código de la rama donde se ejecuta.
 
 ### Valores que requieren revisión antes de desplegar
 
@@ -46,9 +52,9 @@ El archivo de origen contiene valores locales y placeholders. Crear el paquete v
 | --- | --- |
 | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS` | Se heredaron de `.env`. Confirmar los datos del hosting y permisos de lectura sobre `crisenri_intranet`; no se tomaron credenciales de otros proyectos. |
 | `MAIL_*` | Sustituir los datos de ejemplo del remitente, usuario y contraseña por los de SMTP real. |
-| `SISTECREDITO_SUBSCRIPTION_KEY`, `SISTECREDITO_APPLICATION_KEY`, `SISTECREDITO_APPLICATION_TOKEN` | Completar las credenciales reales; confirmar `SISTECREDITO_SANDBOX_ACTIVE=false`. |
-| `ADDI_CLIENT_ID`, `ADDI_CLIENT_SECRET` | Completar las credenciales reales. |
-| `BOLD_IDENTITY_KEY`, `BOLD_SECRET_KEY` | Completar las claves reales. |
+| `SISTECREDITO_SUBSCRIPTION_KEY`, `SISTECREDITO_APPLICATION_KEY`, `SISTECREDITO_APPLICATION_TOKEN` | Sincronizadas con el `.env` de `dev` el 26 de noviembre; confirmar que corresponden a producción y `SISTECREDITO_SANDBOX_ACTIVE=false`. |
+| `ADDI_CLIENT_ID`, `ADDI_CLIENT_SECRET` | Sincronizadas con el `.env` de `dev` el 26 de noviembre; confirmar que corresponden a producción. |
+| `BOLD_IDENTITY_KEY`, `BOLD_SECRET_KEY` | Sincronizadas con el `.env` de `dev` el 26 de noviembre; confirmar que corresponden a producción. |
 | `SOCKET_NOTIFICATION_TOKEN`, `SOCKET_GATEWAY_KEY_ADMIN` | Completar las claves de los proyectos PremiumFitness. |
 | `COMMISSION_REPORT_RECIPIENTS` | Reemplazar el destinatario de ejemplo de financiero. |
 | `JWT_SECRET`, `JWT_REFRESH_SECRET`, `CRON_JOB_TOKEN`, `DIET_ACCESS_API_KEY` | Se conservaron los valores del archivo de origen; confirmar los que se usarán en producción y coordinar las claves compartidas con sus consumidores. |
@@ -64,7 +70,9 @@ composer run lint
 composer run build:prod
 ```
 
-También puede ejecutarse el script desde otro directorio, usando su ruta absoluta. No necesita que exista un `vendor/` local.
+Puedes mover o renombrar la carpeta completa del proyecto. `scripts/build-prod.sh` calcula la raíz a partir de su propia ubicación y las tareas de VS Code usan `${workspaceFolder}`. `.env.prod` se busca en esa raíz y `build/` se genera allí; ninguna de esas ubicaciones depende del nombre de tu usuario o de una carpeta fija. Conserva la estructura interna del proyecto y el archivo `.env.prod` al moverlo. Si creas una copia mediante Git, debes copiar o configurar `.env.prod` aparte porque no se versiona.
+
+El script también se puede ejecutar desde otro directorio indicando su ubicación actual. No necesita que exista un `vendor/` local.
 
 El comando falla si falta `.env.prod`, si no se valida con `load/bootstrap.php`, si no usa `APP_ENV=production` y `SMS_DRIVER=relax`, o si Composer no puede instalar. El build anterior se conserva cuando falla la preparación. Si falta la cuenta de Firebase, se genera con un aviso; el envío push requiere esa cuenta.
 
