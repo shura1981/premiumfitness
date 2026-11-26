@@ -46,7 +46,7 @@ El alcance confirmado comprende:
 3. Asociación del cliente con el entrenador, por el enlace o por su cupón.
 4. Compras de clientes con un descuento del 10%.
 5. Reconocimiento al entrenador del 5% en puntos (con IVA incluido) y del 15% de comisión sin IVA cuando una compra es aprobada. Los porcentajes son configurables por producto.
-6. 50.000 puntos por referir a otro entrenador, que se activan con la primera compra aprobada de un cliente del referido.
+6. 50.000 puntos por referir a otro entrenador, que se activan con la primera compra aprobada de un cliente del referido de al menos 149.000 en productos.
 7. Conversión del total de la comisión a puntos (comisión + 50% de los puntos vigentes, con tope en la comisión) o pago en dinero de la comisión no convertida al final de cada mes.
 8. Canje de puntos por productos exclusivamente a través de la app.
 9. Descuento del 25% para entrenadores en todo el portafolio.
@@ -110,7 +110,7 @@ No se incluyen como actores un operador de bodega ni un soporte, porque ni los r
 | RN-04 | Las recompensas al entrenador por una venta se reconocen cuando la compra está aprobada. | Confirmado. Los demás estados no se definen. | «Cuando la compra sea Aprobada…». |
 | RN-05 | El entrenador recibe en puntos el 5% de lo que pagó el cliente por los productos (con descuento y con IVA, sin envío), calculado sobre el total del pedido y redondeado al entero más cercano. | Confirmado; base, redondeo y envío definidos por producto el 9 nov 2026. | Párrafo de aprobación y beneficio 1. |
 | RN-06 | El entrenador recibe una comisión sobre el valor sin IVA de cada producto comprado. El porcentaje por defecto es del 15% y puede variar por producto (RN-22). | Confirmado por el párrafo de aprobación; existe una contradicción posterior sobre el beneficiario. | Párrafo de aprobación y beneficio 2. |
-| RN-07 | El entrenador A recibe 50.000 puntos por referir a otro entrenador (B). Quedan pendientes al registrarse B y se activan una sola vez con la primera compra aprobada de un cliente de B, sin monto mínimo. La compra propia de B no los activa. Los puntos pendientes no caducan; una vez activados, vencen a los 6 meses. | Confirmado por producto (9 nov 2026). El monto es la variable de entorno `TRAINER_REFERRAL_POINTS`. | Párrafo posterior a «Entrenador comparte qr con otro entrenador». |
+| RN-07 | El entrenador A recibe 50.000 puntos por referir a otro entrenador (B). Quedan pendientes al registrarse B y se activan una sola vez con la primera compra aprobada de un cliente de B de al menos 149.000 en productos (con descuento e IVA, sin flete; variable `TRAINER_REFERRAL_MIN_PURCHASE`). La compra propia de B no los activa. Los puntos pendientes no caducan; una vez activados, vencen a los 6 meses. | Confirmado por producto (9 nov 2026). El monto es la variable de entorno `TRAINER_REFERRAL_POINTS`. | Párrafo posterior a «Entrenador comparte qr con otro entrenador». |
 | RN-08 | La app de dietas opera en modalidad de suscripción y se desactiva si el entrenador incumple una regla de negocio. | Confirmado. Regla, evaluación y alcance de la desactivación pendientes. | Beneficios para entrenadores, punto 1. |
 | RN-09 | Los puntos se canjean por productos exclusivamente en la app; no se entregan en efectivo. | Confirmado. | Beneficios, punto 2, y último párrafo. |
 | RN-10 | El entrenador tiene un descuento para todo el portafolio, del 25% por defecto y configurable. | Confirmado. Acumulación con otros beneficios pendiente. | Beneficios para entrenadores, punto 3. |
@@ -149,7 +149,7 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 | CU-05 | Reconocer puntos y comisión por compra aprobada | Entrenador beneficiario; evento de aprobación como disparador | Confirmado; cálculos incompletos. |
 | CU-06 | Compartir el enlace para entrenadores | Entrenador A | Confirmado; enlace confirmado por producto. |
 | CU-07 | Registrar entrenador referido | Entrenador B | Derivado del flujo confirmado de referidos. |
-| CU-08 | Activar los 50.000 puntos por entrenador referido | Entrenador A beneficiario; primera compra aprobada de un cliente de B como disparador | Confirmado por producto (9 nov 2026). |
+| CU-08 | Activar los 50.000 puntos por entrenador referido | Entrenador A beneficiario; primera compra aprobada de un cliente de B, de al menos 149.000 en productos, como disparador | Confirmado por producto (9 nov 2026). |
 | CU-09 | Consultar puntos y movimientos | Entrenador | Derivado para permitir el uso informado de puntos. |
 | CU-10 | Consultar comisiones | Entrenador | Confirmado por producto (9 nov 2026). |
 | CU-11 | Convertir el total de la comisión a puntos | Entrenador | Confirmado por producto (9 nov 2026). |
@@ -331,7 +331,7 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 4. Se guarda la relación A → B con 50.000 puntos pendientes para A. El valor se toma de la variable de entorno `TRAINER_REFERRAL_POINTS` y queda fijado en el referido.
 5. Los puntos pendientes no se pueden canjear y no caducan. B no gana puntos por registrarse.
 
-**Alternativas y errores:** si B se registra sin el enlace de A, no queda referido por A: no hay cupón para entrenadores. B tiene un solo referente. El autorreferido y un B ya registrado siguen pendientes (D-05).
+**Alternativas y errores:** si B se registra sin el enlace de A, no queda referido por A: no hay cupón para entrenadores. B tiene un solo referente. Un B ya registrado no queda referido (solo cuentas nuevas) y A no puede referirse a sí mismo. Las cuentas falsas con datos de otra persona se frenan con la compra mínima de 149.000 que activa los puntos, los términos y condiciones y la suspensión del entrenador (D-05, resuelta el 26 nov 2026).
 
 **Resultado:** B registrado y 50.000 puntos pendientes para A.
 
@@ -757,7 +757,7 @@ Las recompensas de CU-05 dependen de la aprobación del pago (paso 1), no del en
 | PD-03 | Redondeo de puntos | Resuelto el 9 nov 2026: una sola vez por pedido, al entero más cercano (0,5 sube). | Ninguna. | CU-05, CU-09. |
 | PD-04 | Base de comisión | Se exige retirar el IVA, sin detallar descuentos, tasas, envío o pedidos con tratamientos tributarios diferentes. | Definir la base sin IVA por compra o por producto. | CU-05. |
 | PD-05 | Puntos por referido | **Resuelta (9 nov 2026):** son 50.000 puntos, definidos en la variable de entorno `TRAINER_REFERRAL_POINTS`. | — | CU-08. |
-| PD-06 | Compra que activa el referido | **Resuelta (9 nov 2026):** la primera compra aprobada de cualquier cliente de B, una sola vez y sin monto mínimo; la compra propia de B no cuenta. Si se reversa y A no ha usado los puntos, vuelven a quedar pendientes. | — | CU-07, CU-08. |
+| PD-06 | Compra que activa el referido | **Resuelta (9 nov 2026):** la primera compra aprobada de cualquier cliente de B, una sola vez; la compra propia de B no cuenta. Desde el 26 nov 2026 debe ser de al menos 149.000 en productos (D-05). Si se reversa, se le retiran a A y vuelven a quedar pendientes (25 nov 2026, P-17). | — | CU-07, CU-08. |
 | PD-07 | Conversión de comisión | **Resuelta (9 nov 2026):** total de la comisión; puntos recibidos = comisión + mín(50% × puntos vigentes, comisión). | — | CU-10, CU-11. |
 | PD-08 | Permanencia en dietas | **Resuelta (9 nov 2026):** meta en puntos por clientes del mes anterior (249.000, provisional), mes gratis de 30 días desde el primer ingreso, canje de 50.000 puntos por mes y estado calculado en cada consulta. La lógica de la meta puede cambiar. | Valor definitivo de la meta. | CU-14, CU-15. |
 | PD-09 | Suscripción de dietas | **Resuelta (9 nov 2026):** no hay pago en dinero; el acceso se gana con la meta o se compra con 50.000 puntos al mes. La app de dietas es aparte y desacoplada (Nutrition & Fitness Plus, con su propio backend); pregunta a PremiumFitness por documento si el entrenador puede entrar (15 nov 2026). | Ninguna del lado de PremiumFitness. | CU-14, CU-15. |

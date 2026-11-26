@@ -121,10 +121,9 @@ class AdjustmentService
                 throw ApiException::conflict('already_adjusted', 'Este pedido ya tiene un ajuste registrado.');
             }
 
-            if ($order['trainer_id'] !== null) {
-                // Antes de calcular el efecto: los puntos que se retiran dependen de su saldo.
-                $this->pdo->prepare('SELECT user_id FROM trainers WHERE user_id = ? FOR UPDATE')->execute([$order['trainer_id']]);
-            }
+            // Antes de calcular el efecto, porque los puntos que se retiran dependen de su saldo. Se bloquean el
+            // entrenador del pedido y A, si la venta activó su referido, en orden de id, como al aprobar el pago.
+            $this->lockTrainers($orderId, $order['trainer_id']);
 
             $effect = $this->effect($order, $type);
 
@@ -217,6 +216,24 @@ class AdjustmentService
         return ['commission_amount' => -round((float) $order['commission_total'], 2) + 0.0, 'points' => -$retirable];
     }
 
+    /** Bloquea en orden de id al entrenador del pedido y a A, si la venta activó su referido. */
+    private function lockTrainers(int $orderId, ?int $trainerId): void
+    {
+        if ($trainerId === null) {
+            return;
+        }
+
+        $referrer = $this->pdo->prepare('SELECT referrer_id FROM trainer_referrals WHERE activation_order_id = ?');
+        $referrer->execute([$orderId]);
+        $ids = array_values(array_unique(array_filter([$trainerId, (int) $referrer->fetchColumn()])));
+        sort($ids);
+
+        $lock = $this->pdo->prepare('SELECT user_id FROM trainers WHERE user_id = ? FOR UPDATE');
+        foreach ($ids as $id) {
+            $lock->execute([$id]);
+        }
+    }
+
     /**
      * La venta reversada activó los puntos del referido de A (spec negocio/02, S-06; backend/03, P-17): se le
      * retiran completos, como los de la venta (primero lo que quede en ese lote y lo ya usado de sus otros
@@ -235,8 +252,7 @@ class AdjustmentService
             return 0;
         }
 
-        // Mismo orden de bloqueo que la aprobación del pago: primero los entrenadores (B ya está), luego el referido.
-        $this->pdo->prepare('SELECT user_id FROM trainers WHERE user_id = ? FOR UPDATE')->execute([(int) $referrerId]);
+        // A ya está bloqueado (lockTrainers); el referido se bloquea después, como al aprobar el pago.
         $referral = $this->pdo->prepare('SELECT id FROM trainer_referrals WHERE activation_order_id = ? FOR UPDATE');
         $referral->execute([$orderId]);
         $referralId = $referral->fetchColumn();

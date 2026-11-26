@@ -30,7 +30,7 @@
 **Revisión v0.9, 9 de noviembre de 2026:** cambios del spec `specs/negocio/02-puntos-por-referido-y-constantes.md`.
 
 - **Constantes:** las constantes del negocio pasan a variables de entorno. Se elimina `rule_versions` junto con todas las FK `rule_version_id`. Cada registro guarda el valor que aplicó: `orders.reward_percentage`, `trainer_referrals.referral_points` y `commission_conversions.conversion_percentage`.
-- **Puntos por referido:** los 50.000 puntos pendientes viven en `trainer_referrals`. El lote de A se crea solo al activarse, con la primera compra aprobada de un cliente de B.
+- **Puntos por referido:** los 50.000 puntos pendientes viven en `trainer_referrals`. El lote de A se crea solo al activarse, con la primera compra aprobada de un cliente de B de al menos `TRAINER_REFERRAL_MIN_PURCHASE` (149.000) en productos.
 - **Estados:** se eliminan el estado `inactive` de `point_lots` y el tipo `activation` de `point_movements`.
 - **Puntos por pedido:** los puntos se calculan por pedido (`orders.reward_points`), no por línea.
 

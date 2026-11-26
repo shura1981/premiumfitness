@@ -403,7 +403,7 @@ it('reversar la venta que activó el referido le retira a A los 50.000 y el refe
         ->and(json_decode(Shop::rows("SELECT data FROM audit_logs WHERE entity = 'order' AND entity_id = ?", [$orderId])[0]['data'], true)['effect']['referral_points'])->toBe(-50000);
 
     // Otra venta aprobada de un cliente de B activa el referido otra vez, con un lote nuevo.
-    $next = Shop::order($client, [['code' => Seed::catalogProduct(['valor' => 100000]), 'quantity' => 1]]);
+    $next = Shop::order($client, [['code' => Seed::catalogProduct(['valor' => 100000]), 'quantity' => 2]]);
     Shop::pay($next);
 
     expect(trainerBalances($a)[0])->toBe(50000)
@@ -431,7 +431,7 @@ it('si A ya usó parte de los 50.000, se le retiran completos de sus otros punto
         ->and(json_decode(Shop::rows("SELECT data FROM audit_logs WHERE entity = 'order' AND entity_id = ?", [$orderId])[0]['data'], true)['effect']['referral_points'])->toBe(-50000);
 
     // Otra venta de un cliente de B le da los 50.000 una vez más: nunca dos veces por el mismo referido.
-    Shop::pay(Shop::order($client, [['code' => Seed::catalogProduct(['valor' => 100000]), 'quantity' => 1]]));
+    Shop::pay(Shop::order($client, [['code' => Seed::catalogProduct(['valor' => 100000]), 'quantity' => 2]]));
 
     expect(trainerBalances($a)[0])->toBe(70000)
         ->and(referralSeenBy($a, $b))->toBe(['status' => 'activo', 'points' => 50000, 'remaining_points' => 50000]);

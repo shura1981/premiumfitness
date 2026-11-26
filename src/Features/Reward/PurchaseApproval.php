@@ -90,7 +90,7 @@ class PurchaseApproval
     private function lockOrder(PDO $pdo, int $orderId): ?array
     {
         $stmt = $pdo->prepare(
-            'SELECT order_id, user_id, order_type, amount, approved_at, reward_points FROM orders WHERE order_id = ? FOR UPDATE'
+            'SELECT order_id, user_id, order_type, amount, shipping_amount, approved_at, reward_points FROM orders WHERE order_id = ? FOR UPDATE'
         );
         $stmt->execute([$orderId]);
         $order = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -111,7 +111,8 @@ class PurchaseApproval
         }
 
         $trainerId = (int) $trainerId;
-        $referral  = $this->pendingReferralOf($pdo, $trainerId);
+        // Los puntos del referido de A los activa una compra de al menos TRAINER_REFERRAL_MIN_PURCHASE en productos (regla 6, D-05).
+        $referral  = $this->activatesReferral($order) ? $this->pendingReferralOf($pdo, $trainerId) : null;
 
         // Se bloquean los entrenadores en orden de id para que dos aprobaciones no se crucen.
         $toLock = array_values(array_unique(array_filter([$trainerId, $referral['referrer_id'] ?? null])));
@@ -176,6 +177,19 @@ class PurchaseApproval
                 "order:{$orderId}:points",
             );
         }
+    }
+
+    /**
+     * Lo pagado por los productos (con descuento e IVA, sin flete) llega al mínimo que activa los puntos del
+     * referido. Una compra menor no los activa: el referido sigue pendiente hasta una que sí llegue.
+     *
+     * @param array<string, mixed> $order
+     */
+    private function activatesReferral(array $order): bool
+    {
+        $products = (float) $order['amount'] - (float) ($order['shipping_amount'] ?? 0);
+
+        return $products >= $this->business->trainerReferralMinPurchase;
     }
 
     /** @return array{id:int, referrer_id:int}|null El referido pendiente del entrenador B, si lo tiene. */

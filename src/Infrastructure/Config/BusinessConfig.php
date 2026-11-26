@@ -16,6 +16,8 @@ final readonly class BusinessConfig
         public float $clientPurchasePointsPercentage,
         public float $trainerCommissionPercentage,
         public int $trainerReferralPoints,
+        /** Lo mínimo que debe pagar por productos la compra de un cliente de B para activar los puntos de A (regla 6, D-05). */
+        public int $trainerReferralMinPurchase,
         public int $pointsExpirationMonths,
         public float $commissionConversionPercentage,
         public float $vatPercentage,
@@ -32,6 +34,7 @@ final readonly class BusinessConfig
             clientPurchasePointsPercentage: (float) $_ENV['CLIENT_PURCHASE_POINTS_PERCENTAGE'],
             trainerCommissionPercentage: (float) $_ENV['TRAINER_COMMISSION_PERCENTAGE'],
             trainerReferralPoints: (int) $_ENV['TRAINER_REFERRAL_POINTS'],
+            trainerReferralMinPurchase: (int) $_ENV['TRAINER_REFERRAL_MIN_PURCHASE'],
             pointsExpirationMonths: (int) $_ENV['POINTS_EXPIRATION_MONTHS'],
             commissionConversionPercentage: (float) $_ENV['COMMISSION_CONVERSION_PERCENTAGE'],
             vatPercentage: (float) $_ENV['VAT_PERCENTAGE'],

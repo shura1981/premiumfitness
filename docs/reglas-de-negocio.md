@@ -28,9 +28,9 @@ El entrenador A rifiere al entrenador B (entrenador A obtiene 50 mil pero en est
 
     Precisiones (9 nov 2026):
     - Los 50.000 puntos se dan **una sola vez** por cada entrenador referido. Las compras siguientes de los clientes de B no le dan más puntos a A.
-    - Los activa la primera compra **aprobada** de cualquier cliente de B, sin monto mínimo. La compra propia de B (con su 25%) no los activa.
+    - Los activa la primera compra **aprobada** de cualquier cliente de B de al menos 149.000 en productos (con descuento e IVA, sin flete; variable `TRAINER_REFERRAL_MIN_PURCHASE`). Una compra menor no los activa: siguen pendientes hasta una que llegue. La compra propia de B (con su 25%) no los activa. *(Cambio del 26 nov 2026, D-05: antes no había monto mínimo.)*
     - Mientras están pendientes no caducan. Una vez activados, vencen a los 6 meses, como cualquier acumulación (regla 2).
-    - Si se reversa la compra que los activó y A todavía no los ha usado, se le retiran y quedan otra vez pendientes hasta la siguiente compra aprobada de un cliente de B. Si A ya los usó, los conserva.
+    - Si se reversa la compra que los activó, se le retiran a A y quedan otra vez pendientes hasta la siguiente compra aprobada de un cliente de B. Si A ya los usó, lo que falte se retira de sus otros puntos vigentes (del más antiguo); si no le alcanzan, se retira lo que tenga y no queda deuda. *(Cambio del 25 nov 2026: antes, si A ya los había usado, los conservaba. Spec `backend/03`, P-17.)*
 
 7. Los puntos ganados por las compras de los clientes se calculan con IVA incluido. La comisión sí se calcula sobre el valor antes de IVA, discriminando el IVA de cada producto. *(Cambio del 9 nov 2026: antes los puntos también se calculaban antes de IVA.)*
 
@@ -59,7 +59,7 @@ El entrenador A rifiere al entrenador B (entrenador A obtiene 50 mil pero en est
 
 14. Cuando el cliente está asociado a un entrenador, todo el catálogo se muestra con el descuento aplicado: un badge con el porcentaje, el precio con descuento y el precio real tachado.
 
-15. Los porcentajes no son fijos. El 10% del cliente, el 25% del entrenador, el 5% en puntos y el 15% de comisión son valores por defecto configurables, igual que los 50.000 puntos por referido, los 6 meses de vencimiento y el 50% de la conversión. Todas estas constantes se definen en variables de entorno, y cada pedido guarda el valor que se le aplicó. Cada producto puede tener una estrategia propia que cambie el descuento con cupón y la comisión. Ejemplo: Nutra Balance tiene un 5% adicional (el cliente recibe 15% de descuento) y la comisión del entrenador baja al 10%.
+15. Los porcentajes no son fijos. El 10% del cliente, el 25% del entrenador, el 5% en puntos y el 15% de comisión son valores por defecto configurables, igual que los 50.000 puntos por referido, la compra mínima de 149.000 que los activa, los 6 meses de vencimiento y el 50% de la conversión. Todas estas constantes se definen en variables de entorno, y cada pedido guarda el valor que se le aplicó. Cada producto puede tener una estrategia propia que cambie el descuento con cupón y la comisión. Ejemplo: Nutra Balance tiene un 5% adicional (el cliente recibe 15% de descuento) y la comisión del entrenador baja al 10%.
 
 16. La comisión es dinero que la empresa le paga al entrenador **al final de cada mes**; los términos y condiciones definen cómo. Mientras no se haya pagado, el entrenador puede convertirla a puntos. Para canjear productos con la comisión, primero tiene que convertirla. No hay canje mixto: un canje se paga solo con puntos, nunca con dinero ni con comisión.
 
