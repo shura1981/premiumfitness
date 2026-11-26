@@ -30,7 +30,8 @@ Si el catálogo cambia de lugar (otra tabla, SAP o una API), se escribe otro ada
 | `grupo` | `group` | Presentaciones del mismo producto |
 | `agotado`, `nuevo` | `isOutOfStock`, `isNew` | `bit(1)`: se leen como número |
 | `sap_code`, `sap_name` | `sapCode`, `sapName` | Internos: no salen en la API pública. `sap_code = 0` llega como nulo. |
-| `description`, `uso`, `ingredientes`, `invima`, `video`, `tablasjpg` | `content` | Solo en la ficha; HTML limpio con `HtmlSanitizer::richText()` |
+| `description`, `uso`, `invima`, `tablasjpg` | `content` | Solo en la ficha; HTML limpio con `HtmlSanitizer::richText()` |
+| `ingredientes` | — | No se lee: la ficha no muestra los ingredientes (pedido de Steven, 26 nov 2026) |
 | `descuento`, `old_price`, `promo` | — | No se leen. `promo` solo filtra. |
 
 ## Archivos
@@ -162,7 +163,7 @@ final readonly class CatalogProduct implements \JsonSerializable
 ```
 
 - `ProductImages::fromJson()` separa `small`, `medium`, `big` y `bigger`. Si el JSON está mal formado devuelve imágenes vacías en lugar de fallar.
-- `ProductContent::fromIntranetRow()` limpia el HTML de `description`, `uso`, `ingredientes` e `invima`, porque los edita la web.
+- `ProductContent::fromIntranetRow()` limpia el HTML de `description`, `uso` e `invima`, porque los edita la web.
 
 ## Adaptador
 
@@ -182,7 +183,7 @@ final class IntranetProductCatalog extends AbstractRepository implements Product
     // Las columnas bit(1) llegan como bytes ("\x00" es verdadero en PHP): se leen como número.
     private const string COLUMNS = 'codigo, orden, producto, valor, category, presentation, ruta, intro,
         imageswebp, grupo, agotado + 0 AS agotado, nuevo + 0 AS nuevo, sap_code, sap_name';
-    private const string CONTENT_COLUMNS = 'description, uso, ingredientes, invima, video, tablasjpg';
+    private const string CONTENT_COLUMNS = 'description, uso, invima, tablasjpg';
 
     // Lo que entra a la app: activo, sin promoción, con nombre y con precio.
     // En SQL, `activo = 1` compara el bit como número; un `activo` NULL no entra.

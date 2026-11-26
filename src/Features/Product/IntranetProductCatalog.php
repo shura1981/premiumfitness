@@ -19,7 +19,7 @@ final class IntranetProductCatalog extends AbstractRepository implements Product
     // Las columnas bit(1) llegan como bytes ("\x00" es verdadero en PHP): se leen como número.
     private const string COLUMNS = 'codigo, orden, producto, valor, category, presentation, ruta, intro,
         imageswebp, grupo, agotado + 0 AS agotado, nuevo + 0 AS nuevo, sap_code, sap_name';
-    private const string CONTENT_COLUMNS = 'description, uso, ingredientes, invima, tablasjpg';
+    private const string CONTENT_COLUMNS = 'description, uso, invima, tablasjpg';
 
     // Lo que entra a la app: activo, sin promoción, con nombre y con precio.
     // En SQL, `activo = 1` compara el bit como número; un `activo` NULL no entra.
