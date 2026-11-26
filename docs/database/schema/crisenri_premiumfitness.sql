@@ -2889,7 +2889,7 @@ CREATE TABLE `point_lots` (
   `remaining_points` int(11) NOT NULL,
   `status` enum('available','used','expired') NOT NULL DEFAULT 'available',
   `accrued_at` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'orden FIFO',
-  `expires_at` timestamp NOT NULL COMMENT 'accrued_at + POINTS_EXPIRATION_MONTHS',
+  `expires_at` timestamp NOT NULL COMMENT 'accrued_at + POINTS_EXPIRATION_MONTHS, a las 23:59:59 de ese día',
   `source_key` varchar(64) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_point_lots_source` (`source_key`),

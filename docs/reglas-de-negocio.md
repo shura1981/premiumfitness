@@ -15,6 +15,7 @@ El diagrama resume las reglas 1 a 11 de este documento: cálculo y vencimiento d
 1. 1 peso equivale a 1 punto. Los puntos de la compra de un cliente son el 5% de **lo que el cliente pagó por los productos, con el descuento aplicado y con IVA incluido**. Se calculan una sola vez sobre el total del pedido, sin incluir el envío, y se redondean al entero más cercano (0,5 sube). Ejemplo: una Bipro de 249.900 con 10% de descuento se paga 224.910 → 224.910 × 5% = 11.245,5 → **11.246 puntos**. El IVA solo se discrimina para calcular la comisión, no los puntos. *(Definido el 9 nov 2026: antes se descontaba el IVA de cada producto.)*
 
 2. Los puntos tiene fecha de expiración, 6 meses por cada acumulacion.
+    - Corte (confirmado el 26 nov 2026): vencen a los 6 meses, al terminar ese día en hora de Colombia (11:59 p. m.); si el mes de llegada no tiene ese día, el último día del mes.
 
 3. El entrenador tiene descuento del 25% si hace compras por la app pero no puede usar pagos mixtos entre puntos y dinero.
 

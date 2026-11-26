@@ -41,7 +41,12 @@ it('al aprobarse el pago, el entrenador recibe la comisión y los puntos guardad
         ->and(balancesOf($trainer))->toBe(['points' => 11246, 'commission' => 28350.0])
         ->and($lot)->toBe(['source' => 'client_sale', 'initial_points' => 11246, 'remaining_points' => 11246, 'status' => 'available', 'order_id' => $orderId, 'months' => (int) $_ENV['POINTS_EXPIRATION_MONTHS']])
         ->and($movement)->toBe(['type' => 'sale_credit', 'amount' => '28350.00', 'tax_base' => '189000.00', 'order_id' => $orderId])
-        ->and(Shop::rows("SELECT type, points FROM point_movements WHERE order_id = ?", [$orderId]))->toBe([['type' => 'credit', 'points' => 11246]]);
+        ->and(Shop::rows("SELECT type, points FROM point_movements WHERE order_id = ?", [$orderId]))->toBe([['type' => 'credit', 'points' => 11246]])
+        // Vence al terminar el día que ve el entrenador, no a la hora de la compra (P-38).
+        ->and(Shop::rows(
+            'SELECT TIME(expires_at) AS time, DATE(expires_at) = DATE(DATE_ADD(accrued_at, INTERVAL ? MONTH)) AS same_day FROM point_lots WHERE order_id = ?',
+            [(int) $_ENV['POINTS_EXPIRATION_MONTHS'], $orderId]
+        )[0])->toBe(['time' => '23:59:59', 'same_day' => 1]);
 });
 
 it('repetir el aviso de pago no acredita dos veces', function (): void {

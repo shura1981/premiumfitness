@@ -129,9 +129,9 @@ Un pedido pendiente o rechazado no genera recompensas. La aprobación repetida n
 2. Se registra A → B con 50.000 puntos pendientes para A (`TRAINER_REFERRAL_POINTS`), separados del saldo utilizable. Los puntos pendientes no caducan.
 3. B comparte su QR de clientes; uno de sus clientes compra.
 4. Al aprobarse esa compra, se activan los 50.000 puntos de A y se acreditan a B los beneficios habituales de su venta.
-5. Se guarda el pedido que activó los puntos para no volver a activarlos. Si ese pedido se reversa y A no ha usado los puntos, se retiran y vuelven a quedar pendientes; si los usó, los conserva.
+5. Se guarda el pedido que activó los puntos para no volver a activarlos. Si ese pedido se reversa, a A se le retiran los 50.000 aunque ya los haya usado (lo que falte sale de sus otros puntos, sin deuda) y vuelven a quedar pendientes (spec `backend/03`, P-17).
 
-Se usa aprobación por continuidad con el primer flujo de compra. La activación única por relación A → B es el control derivado para no duplicar los 50.000 puntos; nuevas ventas de los clientes de B no crean otro lote. La compra propia de B no los activa y no hay monto mínimo (confirmado el 9 nov 2026). No se añade comisión de la venta a A ni cadena multinivel.
+Se usa aprobación por continuidad con el primer flujo de compra. La activación única por relación A → B es el control derivado para no duplicar los 50.000 puntos; nuevas ventas de los clientes de B no crean otro lote. La compra propia de B no los activa (confirmado el 9 nov 2026) y la compra del cliente debe ser de al menos 149.000 en productos, sin flete (`TRAINER_REFERRAL_MIN_PURCHASE`; confirmado el 26 nov 2026, P-35). No se añade comisión de la venta a A ni cadena multinivel.
 
 ### 6.5. Consulta y conversión — CU-09, CU-10 y CU-11
 
@@ -207,7 +207,7 @@ El ejemplo de requerimientos que asigna 12.500 puntos a un precio de 249.900 usa
 - FIFO usa la fecha de acumulación de los lotes disponibles, con desempate estable por identificador; no se reemplaza por ordenar únicamente por vencimiento.
 - Un lote parcialmente consumido mantiene su fecha de caducidad original. Un consumo no renueva su vigencia.
 - Las conversiones crean un nuevo lote con seis meses de vigencia. Los 50.000 puntos por referido vencen a los seis meses de activarse; mientras están pendientes no caducan.
-- Se propone computar meses calendario y resolver fin de mes según la zona horaria acordada. Es una precisión técnica pendiente, no un cambio al plazo de seis meses.
+- Corte (confirmado el 26 nov 2026, spec `backend/03` P-38): meses calendario; el lote vence al terminar ese día en hora de Colombia (11:59 p. m.), que es la fecha que ve el entrenador. Si el mes de llegada no tiene ese día, vence el último día del mes.
 - Débitos y créditos se ejecutan con transacciones; el servidor verifica saldo, precio, permisos y estado al confirmar.
 - Los cambios de reglas aplican a operaciones futuras; el historial conserva la versión del cálculo original.
 
@@ -241,7 +241,7 @@ No hay devoluciones totales ni parciales (25 nov 2026, spec `backend/03` P-30). 
 | RF-10 | MVP | Recompensas | Compra aprobada de cliente genera 5% en puntos (con IVA incluido) y 15% de comisión (sin IVA) una sola vez, con origen trazable. |
 | RF-11 | MVP | Saldos e historial | El entrenador ve siempre sus puntos por compras de clientes (acumulado histórico y vigentes), sus puntos por entrenadores referidos (vigentes, pendientes y detalle por B) y su comisión convertible; muestra remanentes y vencimientos. Las consultas se resuelven con índices que las cubren (spec `negocio/03`). |
 | RF-12 | MVP | Conversión total | Consume todo el saldo de comisión y acredita comisión + mín(50% × puntos vigentes, comisión) una sola vez; si falla, no deja saldos a medias. |
-| RF-13 | MVP | Caducidad | Cada lote vence a seis meses según el corte definido; no queda canjeable ni vuelve a descontarse. |
+| RF-13 | MVP | Caducidad | Cada lote vence a los seis meses, al terminar ese día en hora de Colombia (P-38); no queda canjeable ni vuelve a descontarse. |
 | RF-14 | MVP | Canje | Precio completo, sin pago mixto, FIFO y remanentes; concurrencia no provoca sobregiro; IVA persistido. |
 | RF-15 | Posterior | Dietas | La app de dietas (Nutrition & Fitness Plus, aparte y desacoplada, con su propio backend) consulta a PremiumFitness por el documento del entrenador (`POST /api/integrations/diet-access`, servidor a servidor). Acceso por mes gratis (30 días desde el primer ingreso), meta del mes anterior (249.000 puntos por clientes, provisional) o canje de 50.000 puntos por el mes, que se hace en la app web; desactivación limitada a dietas (spec `integraciones/02`). |
 | RF-16 | MVP | Operación mínima | Acceso autorizado para gestionar/consultar datos necesarios de catálogo, pedidos, canjes y movimientos; ajustes auditados. |
@@ -364,7 +364,7 @@ Estas decisiones completan las reglas; no dejan en duda los porcentajes, seis me
 | D-04 | Resuelta el 9 nov 2026: puntos recibidos = comisión + mín(50% × puntos vigentes, comisión). | Negocio y finanzas | — |
 | D-05 | Resuelta el 26 nov 2026 (spec `backend/03`, P-35). Un rol por cuenta; celular (verificado por SMS), documento y correo únicos; el referido solo con una cuenta nueva y nunca a sí mismo. Contra cuentas falsas con datos de otra persona: los 50.000 puntos los activa una compra de al menos 149.000 en productos, los términos y condiciones lo prohíben y el gerente puede suspender al entrenador. No se bloquean compras por dirección o datos parecidos. | Producto y tecnología | Acceso y referidos. |
 | D-06 | Resuelta el 9 nov 2026: los 50.000 puntos pendientes no caducan; una vez activados, vencen a los seis meses. | Negocio | — |
-| D-07 | Reversión con beneficios consumidos resuelta el 25 nov 2026 (§7.4, spec `backend/03` P-17). Pendiente: corte exacto de seis meses. | Negocio y finanzas | Antes del piloto. |
+| D-07 | Resuelta el 26 nov 2026. Reversión con beneficios consumidos: §7.4 y spec `backend/03`, P-17. Corte de los seis meses (P-38): cada lote vence al terminar ese día en hora de Colombia, la fecha que muestra la app; si el mes no tiene ese día, el último día del mes. | Negocio y finanzas | — |
 | D-08 | Resuelta el 9 nov 2026: la comisión no convertida se paga en dinero al final de cada mes. Pendiente en términos y condiciones: medio, plazo, mínimo y retenciones. | Negocio y legal | Antes del piloto. |
 | D-09 | Resuelta el 9 nov 2026 salvo el valor definitivo de la meta (249.000 puntos provisional, lógica sujeta a cambio): costo 50.000 puntos, mes gratis desde el primer ingreso, meta del mes anterior. | Negocio y producto | Antes de la fase de dietas. |
 | D-10 | Resuelta el 25 nov 2026. **Pagos:** Bold, Addi y Sistecrédito, con las cuentas de Nutramerican; un pedido = un pago, como en radical, con el id `pf-<pedido>` (spec `backend/03`, P-24). **SMS:** Relax Global, como en radical. | Tecnología y operación | — |

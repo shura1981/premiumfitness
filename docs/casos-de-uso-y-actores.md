@@ -394,7 +394,7 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 
 - Las cifras responden de inmediato porque se calculan con índices que cubren la consulta (spec `specs/negocio/03-saldos-del-entrenador.md`).
 - Un lote vencido deja de contar como vigente en cuanto pasa su fecha, aunque el proceso de vencimiento no haya corrido.
-- Cada lote vence a los 6 meses de su acumulación.
+- Cada lote vence a los 6 meses de su acumulación, al terminar ese día en hora de Colombia (spec `backend/03`, P-38).
 
 ### CU-10. Consultar comisiones
 

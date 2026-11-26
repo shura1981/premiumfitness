@@ -6,6 +6,7 @@ namespace App\Features\Point;
 
 use App\Infrastructure\Database\AbstractRepository;
 use App\Infrastructure\Database\DB;
+use DateTimeImmutable;
 
 /**
  * Lotes de puntos del entrenador (spec negocio/03). Cada abono es un lote con su fecha de
@@ -21,6 +22,7 @@ class PointLotRepository extends AbstractRepository
     /**
      * Abona puntos: crea el lote y su movimiento de crédito. `source_key` es única: si el origen
      * ya se había abonado no hace nada y devuelve null. Va dentro de la transacción de quien llama.
+     * El lote vence al terminar el día que marca `PointExpiry`.
      *
      * @param array{order_id?:?int, conversion_id?:?int, adjustment_id?:?int, trainer_referral_id?:?int} $links
      */
@@ -34,7 +36,7 @@ class PointLotRepository extends AbstractRepository
             'INSERT IGNORE INTO point_lots
                 (order_id, trainer_id, conversion_id, adjustment_id, trainer_referral_id, source,
                  initial_points, remaining_points, accrued_at, expires_at, source_key)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), DATE_ADD(NOW(), INTERVAL ? MONTH), ?)'
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)'
         );
         $stmt->execute([
             $links['order_id'] ?? null,
@@ -45,7 +47,7 @@ class PointLotRepository extends AbstractRepository
             $source,
             $points,
             $points,
-            $expirationMonths,
+            PointExpiry::from(new DateTimeImmutable(), $expirationMonths)->format('Y-m-d H:i:s'),
             $sourceKey,
         ]);
 
