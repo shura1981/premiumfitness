@@ -72,6 +72,7 @@ interface User {
 | `POST /account/push-devices` | `{ token, platform: "web" }` | 204 |
 | `DELETE /account/push-devices` | `{ token }` | 204 |
 | `POST /client/coupon` | `{ coupon_code }` | `User`. Solo un cliente sin entrenador. 404 `coupon_not_found`; 409 `already_linked`. |
+| `POST /client/trainer` | `{ link_id }` | `User`. El cliente confirma el cambio al entrenador del enlace (D-11, P-36). Solo cambian las compras nuevas. Sin entrenador, lo asocia; con el mismo, no hace nada. 403 si no es cliente; 404 si el enlace no es válido o el entrenador no está activo. `User` trae `trainer_link_id` (el id del enlace de su entrenador) y `GET /referrals/trainers/{id}` trae `link_id`, para que la app compare. |
 
 ```ts
 interface Profile extends User {

@@ -29,6 +29,7 @@ use App\Features\PaymentGateway\PaymentStatusController;
 use App\Features\Product\ProductController;
 use App\Features\Reference\ReferenceController;
 use App\Features\Referral\ReferralController;
+use App\Features\Referral\Validators\TrainerLinkValidator;
 use App\Features\Trainer\TrainerController;
 use App\Infrastructure\Auth\JwtService;
 use App\Infrastructure\Middlewares\CronJobTokenMiddleware;
@@ -159,6 +160,12 @@ return static function (\Slim\App $app): void {
         $group->post('/client/coupon', [$referralController, 'linkByCoupon'])
             ->add($validate(new CouponValidator()))
             ->add($limitByIp('client-coupon', 10))
+            ->add($jwt);
+
+        // El cliente abre el enlace de otro entrenador y confirma el cambio (D-11): solo cambian las compras nuevas.
+        $group->post('/client/trainer', [$referralController, 'changeTrainer'])
+            ->add($validate(new TrainerLinkValidator()))
+            ->add($limitByIp('client-trainer', 10))
             ->add($jwt);
 
         // ---------------------------------------------------------------------

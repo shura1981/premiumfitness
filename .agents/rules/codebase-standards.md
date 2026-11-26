@@ -147,6 +147,7 @@ En PremiumFitness el «QR» es un enlace con el id del entrenador en base64 (reg
 1. Los dos enlaces abren la app web: `/r/c/<id>` registra o asocia a un cliente y `/r/t/<id>` registra a un entrenador B referido por A.
 2. La app guarda el id hasta el registro o el login, y el backend crea el vínculo (`client_referrals` o `trainer_referrals`).
 3. Un id inválido o de un entrenador inactivo no asocia a nadie.
+4. Un cliente ya asociado que abre el enlace de otro entrenador decide si cambia (`POST /api/client/trainer`, D-11). Solo cambian las compras nuevas: cada pedido guarda su entrenador en `orders_coupons`.
 
 ## Scheduled Jobs
 

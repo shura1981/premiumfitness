@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Features\Referral;
 
+use App\Features\Audit\AuditLog;
 use App\Features\Notification\PushOutbox;
 use App\Features\Trainer\TrainerRepository;
 use App\Infrastructure\Config\BusinessConfig;
@@ -81,7 +82,45 @@ class ReferralService
     }
 
     /** El aviso no lleva datos del cliente: solo que hay uno nuevo. */
-    private function notifyNewClient(int $trainerId, int $clientId): void
+    /**
+     * El cliente abre el enlace de otro entrenador y confirma el cambio (D-11, spec backend/03 P-36). Solo cambian
+     * las compras nuevas: cada pedido guarda su entrenador (`orders_coupons`), así que lo ya comprado, con su
+     * comisión y sus puntos, sigue siendo del anterior. El cambio queda en `audit_logs`. Sin entrenador, lo asocia.
+     *
+     * @throws ApiException
+     */
+    public function changeTrainer(int $userId, string $role, string $encodedId): void
+    {
+        if ($role !== 'client') {
+            throw ApiException::forbidden('Solo una cuenta de cliente puede cambiar de entrenador.');
+        }
+
+        $trainer = $this->trainerOfLink($encodedId);
+
+        if ($trainer === null) {
+            throw ApiException::notFound('Este enlace no es válido o el entrenador ya no está activo.');
+        }
+
+        $current = $this->referrals->trainerOf($userId);
+
+        if ($current === $trainer['id']) {
+            return;
+        }
+
+        if ($current === null) {
+            if ($this->referrals->linkClient($userId, $trainer['id'], 'link')) {
+                $this->notifyNewClient($trainer['id'], $userId);
+            }
+
+            return;
+        }
+
+        $this->referrals->changeClientTrainer($userId, $trainer['id']);
+        AuditLog::byUser($userId, 'client.trainer_changed', 'user', $userId, ['from_trainer_id' => $current, 'to_trainer_id' => $trainer['id']]);
+        $this->notifyNewClient($trainer['id'], $userId, 'client-change:' . $userId . ':' . $trainer['id'] . ':' . time());
+    }
+
+    private function notifyNewClient(int $trainerId, int $clientId, ?string $sourceKey = null): void
     {
         PushOutbox::enqueue(
             $trainerId,
@@ -89,7 +128,7 @@ class ReferralService
             'Tienes un cliente nuevo',
             'Un cliente se asoció a ti. Sus compras te darán puntos y comisión.',
             ['route' => '/coach/referidos'],
-            "client-link:{$clientId}",
+            $sourceKey ?? "client-link:{$clientId}",
         );
     }
 

@@ -54,6 +54,7 @@ El entrenador A rifiere al entrenador B (entrenador A obtiene 50 mil pero en est
     - Entra por el enlace del entrenador. El enlace lo lleva al login; si ya está registrado pasa al dashboard, y si no, se registra. El id del entrenador queda guardado.
     - Se registra sin enlace y luego escribe el cupón del entrenador.
     - Si ya estaba registrado sin entrenador y abre el enlace, queda asociado a ese entrenador al iniciar sesión.
+    - Si un cliente ya asociado abre el enlace de otro entrenador, la app le pregunta si quiere cambiarlo; si acepta, solo cambian las compras nuevas: las anteriores, con su comisión y sus puntos, siguen siendo del entrenador de antes (26 nov 2026, D-11).
 
     Un cliente asociado no ve el campo del cupón. Un cliente sin cupón puede comprar a precio completo y su compra no genera recompensas.
 
