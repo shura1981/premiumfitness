@@ -8,6 +8,7 @@ use App\Infrastructure\View\HtmlSanitizer;
 
 /**
  * Textos de la ficha del producto. Los edita la web de la empresa: el HTML se limpia al leerlo.
+ * Los ingredientes no se muestran en la app (pedido de Steven, 26 nov 2026): la columna no se lee.
  */
 final readonly class ProductContent
 {
@@ -24,7 +25,7 @@ final readonly class ProductContent
     {
         $sections = [];
 
-        foreach (['description' => 'Descripción', 'uso' => 'Modo de uso', 'ingredientes' => 'Ingredientes', 'invima' => 'Registro sanitario'] as $column => $title) {
+        foreach (['description' => 'Descripción', 'uso' => 'Modo de uso', 'invima' => 'Registro sanitario'] as $column => $title) {
             $html = HtmlSanitizer::richText(isset($row[$column]) ? (string) $row[$column] : null);
 
             if ($html !== '') {

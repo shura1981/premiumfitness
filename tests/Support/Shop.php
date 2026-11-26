@@ -117,18 +117,18 @@ final class Shop
         return self::boldWebhook($orderId, (float) $stmt->fetchColumn());
     }
 
-    /** Referencia del último intento de pago del pedido (`pf-<id>`), la que recibe la pasarela. */
+    /** Id de pago del pedido (`orders.payment_code`, `pf-<pedido>`), el que recibe la pasarela. */
     public static function reference(int $orderId): string
     {
-        $stmt = Seed::pdo()->prepare('SELECT MAX(id) FROM payment_attempts WHERE order_id = ?');
+        $stmt = Seed::pdo()->prepare('SELECT payment_code FROM orders WHERE order_id = ?');
         $stmt->execute([$orderId]);
-        $id = $stmt->fetchColumn();
+        $code = $stmt->fetchColumn();
 
-        if ($id === null || $id === false) {
-            throw new \RuntimeException("El pedido {$orderId} no tiene intentos de pago.");
+        if (!is_string($code) || $code === '') {
+            throw new \RuntimeException("El pedido {$orderId} no tiene id de pago.");
         }
 
-        return 'pf-' . $id;
+        return $code;
     }
 
     /** @return array<string, mixed> */

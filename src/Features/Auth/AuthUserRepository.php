@@ -12,7 +12,7 @@ class AuthUserRepository extends AbstractRepository
     private const SELECT = '
         SELECT u.id, u.full_name, u.num_cell, u.email, u.password, u.role, u.status,
                u.document_id, u.document_type_id, dt.name AS document_type_name,
-               t.full_name AS trainer_name
+               cr.trainer_id, t.full_name AS trainer_name
         FROM users u
         JOIN document_types dt ON dt.id = u.document_type_id
         LEFT JOIN client_referrals cr ON cr.client_id = u.id

@@ -20,7 +20,7 @@ use App\Infrastructure\Http\CurlHttpClient;
  *   SOCKET_GATEWAY_PROJECT_ID_ADMIN  — ej. premiumfitness-admin
  *   SOCKET_GATEWAY_KEY_ADMIN         — x-project-key del proyecto admin
  */
-final readonly class SocketGatewayClient
+final readonly class SocketGatewayClient implements RealtimeGateway
 {
     private function __construct(
         private CurlHttpClient $http,

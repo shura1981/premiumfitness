@@ -58,11 +58,11 @@ it('un JSON de imágenes vacío o mal formado no rompe el producto', function (m
     expect(ProductImages::fromJson($json)->card())->toBeNull();
 })->with([null, '', '{mal', '"texto"', '[]', 42]);
 
-it('limpia el HTML de la ficha y omite las secciones vacías', function (): void {
+it('limpia el HTML de la ficha, omite las secciones vacías y nunca muestra los ingredientes', function (): void {
     $content = ProductContent::fromIntranetRow([
         'description' => '<p onclick="robar()">Proteína</p><script>alert(1)</script>',
         'uso'         => "Mezcla una porción.\n\nToma después de entrenar.",
-        'ingredientes' => '   ',
+        'ingredientes' => '<p>Proteína de suero</p>',
         'invima'      => null,
         'tablasjpg'   => null,
     ]);

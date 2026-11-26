@@ -19,7 +19,7 @@ Dejar definido, sin ambigüedades, cómo gana el entrenador A los 50.000 puntos 
 
 ## Alcance
 
-- La regla de los 50.000 puntos por referido: cuándo quedan pendientes, qué compra los activa, que se den una sola vez, qué pasa ante una devolución y cuándo vencen.
+- La regla de los 50.000 puntos por referido: cuándo quedan pendientes, qué compra los activa, que se den una sola vez, qué pasa si se reversa la compra y cuándo vencen.
 - Las constantes del negocio como variables de entorno validadas al iniciar la aplicación.
 - La actualización de las reglas de negocio, los casos de uso, el PRD, el MVP, las fases, los estándares de código y el DER.
 
@@ -32,8 +32,8 @@ Dejar definido, sin ambigüedades, cómo gana el entrenador A los 50.000 puntos 
 ## Criterios de aceptación
 
 1. Los documentos llaman a esta recompensa «50.000 puntos por referido», no «bono» ni «incentivo».
-2. Está documentado que los puntos se activan una sola vez, con la primera compra aprobada de cualquier cliente de B, sin monto mínimo. La compra propia de B no los activa.
-3. Está documentado qué pasa si se cancela o devuelve la compra que los activó.
+2. Está documentado que los puntos se activan una sola vez, con la primera compra aprobada de cualquier cliente de B de al menos 149.000 en productos (con descuento e IVA, sin flete; variable `TRAINER_REFERRAL_MIN_PURCHASE`). La compra propia de B no los activa.
+3. Está documentado qué pasa si se reversa la compra que los activó.
 4. Los 50.000 puntos pendientes no caducan. Una vez activados, vencen a los seis meses como cualquier otra acumulación.
 5. Las constantes están listadas como variables de entorno, y cada pedido, referido y conversión guarda el valor que aplicó.
 6. El DER no tiene una tabla de configuración de reglas (`rule_versions`).
@@ -43,12 +43,12 @@ Dejar definido, sin ambigüedades, cómo gana el entrenador A los 50.000 puntos 
 | ID | Supuesto | Clase |
 | --- | --- | --- |
 | S-01 | Al registrarse B desde el enlace de A, se crea `trainer_referrals` con `referral_points` igual al valor vigente de `TRAINER_REFERRAL_POINTS` (50.000). Todavía no se crea ningún lote de puntos. | Confirmado (9 nov 2026) |
-| S-02 | Los 50.000 puntos se activan con la primera compra **aprobada** de cualquier cliente asociado a B, sin monto mínimo. Se activan una sola vez por referido. | Confirmado (9 nov 2026) |
+| S-02 | Los 50.000 puntos se activan con la primera compra **aprobada** de cualquier cliente asociado a B de al menos 149.000 en productos (con descuento e IVA, sin flete; variable `TRAINER_REFERRAL_MIN_PURCHASE`). Se activan una sola vez por referido. | Confirmado (9 nov 2026). **Cambiado el 26 nov 2026** (D-05, Steven: «El monto mínimo 149 mil que igual puedo cambiar en la variable de entorno»): antes era sin monto mínimo. Cierra el abuso de un B y un cliente falsos que activan los 50.000 con la compra más barata. |
 | S-03 | La compra propia de B (`trainer_purchase`) no activa los puntos de A. | Confirmado (9 nov 2026) |
 | S-04 | Al activarse, se guarda `activation_order_id` y `activated_at`. En la misma transacción se crea el lote de A en `point_lots` (`source='trainer_referral'`, disponible) y su movimiento de abono. | Confirmado (9 nov 2026) |
 | S-05 | Los puntos pendientes no caducan. Una vez activados son un lote como cualquier otro: vencen a los seis meses de la activación y se consumen por FIFO. | Pendientes: Confirmado. Vencimiento tras activarse: Derivado de la regla 2 («6 meses por cada acumulación»). |
-| S-06 | Si se cancela o devuelve la compra que activó los puntos y A no los ha usado, el lote se revierte y el referido vuelve a quedar pendiente, de modo que la siguiente compra aprobada de un cliente de B los activa. Si A ya los usó, se mantienen. | Confirmado (9 nov 2026) |
-| S-07 | Si A usó solo una parte, se revierte el remanente y se mantiene lo usado. | Derivado: aplica la misma regla por partes. |
+| S-06 | Si se reversa la compra que activó los puntos y A no los ha usado, el lote se revierte y el referido vuelve a quedar pendiente, de modo que la siguiente compra aprobada de un cliente de B los activa. Si A ya los usó, se mantienen. | Confirmado (9 nov 2026). **Cambiado el 25 nov 2026** (spec `backend/03`, P-17, Steven: «la B»): se retiran siempre, también si A ya los usó, con la regla de los puntos de la venta (lo que quede en el lote y lo ya usado de sus otros puntos, sin deuda), y el referido vuelve a quedar pendiente. Antes, si A los había usado, los conservaba. |
+| S-07 | ~~Si A usó solo una parte, se revierte el remanente y se mantiene lo usado.~~ Reemplazada el 25 nov 2026 (spec `backend/03`, P-17): junto con volver a pendiente, A habría cobrado dos veces lo usado. Se retiran los 50.000 completos, sin deuda. | Confirmado (25 nov 2026, Steven) |
 | S-08 | Las constantes del negocio son variables de entorno validadas al iniciar la aplicación. Cambiarlas exige reiniciar el servicio. | Confirmado (9 nov 2026) |
 | S-09 | Las estrategias por producto (como Nutra Balance) siguen en `product_discount_rules`, porque son datos del catálogo. | Confirmado (regla 15) |
 | S-10 | Cada registro guarda el valor que aplicó, para que un cambio de las variables no altere el histórico ni los reportes. Lo guardan `orders_items.discount_percentage`, `orders_items.commission_percentage`, `orders.reward_percentage`, `trainer_referrals.referral_points` y `commission_conversions.conversion_percentage`. | Derivado |
@@ -79,9 +79,9 @@ Se quitan las FK `rule_version_id`. Los valores aplicados se guardan en las colu
 2. Si el pedido es `client_purchase`, bloquea con `SELECT … FOR UPDATE` el referido pendiente de ese entrenador.
 3. Si existe, lo activa y crea el lote de A.
 
-Lo protegen de duplicados los índices únicos de `trainer_referrals.activation_order_id`, `point_lots.trainer_referral_id` y `point_lots.source_key`.
+Lo protegen de duplicados el bloqueo de la fila del referido (`FOR UPDATE`) y los índices únicos de `trainer_referrals.activation_order_id` y `point_lots.source_key`, cuya clave lleva el pedido que activa (`referral:<id>:order:<pedido>`). `point_lots.trainer_referral_id` no es único desde el 25 nov 2026: si se reversa la venta que activó el referido (S-06), una venta posterior lo activa con un lote nuevo.
 
-**Reversión.** Se registra en `adjustments` (CU-13). Si hay remanente, se descuenta del lote con un movimiento `adjustment`. Luego se limpian `activation_order_id` y `activated_at`.
+**Reversión.** Se registra en `adjustments` (CU-13). Se le retiran a A los puntos del referido: lo que quede en el lote y lo ya usado de sus otros lotes vigentes por FIFO, hasta donde alcance su saldo, con movimientos `adjustment`. Luego se limpian `activation_order_id` y `activated_at`.
 
 ## Checklist
 
@@ -93,3 +93,4 @@ Lo protegen de duplicados los índices únicos de `trainer_referrals.activation_
 - [x] Cambiar «bono» e «incentivo» del referido por «50.000 puntos» en el PRD, el MVP y las fases, y resolver D-06
 - [x] Añadir las variables de entorno a `.agents/rules/codebase-standards.md`
 - [x] Marcar en `specs/negocio/01-enlace-cupon-y-descuentos.md` el cambio de S-05 (de configuración versionada a variables de entorno)
+- [x] Compra mínima para activar los puntos (S-02, D-05, 26 nov 2026): `TRAINER_REFERRAL_MIN_PURCHASE=149000`, validada al arrancar; cuenta lo pagado por los productos, sin flete. Con pruebas: 90.000 no activa, 144.000 más flete no activa, 180.000 sí; verificadas deshaciendo el cambio

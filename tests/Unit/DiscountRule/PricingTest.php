@@ -21,6 +21,7 @@ function policy(): DiscountPolicy
         clientPurchasePointsPercentage: 5,
         trainerCommissionPercentage: 15,
         trainerReferralPoints: 50000,
+        trainerReferralMinPurchase: 149000,
         pointsExpirationMonths: 6,
         commissionConversionPercentage: 50,
         vatPercentage: 19,

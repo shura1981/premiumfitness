@@ -37,7 +37,7 @@ class OrderRepository extends AbstractRepository
                {$paymentMethod} AS payment_method, o.payment_gateway, o.payment_state_json,
                o.sap_order_code, o.tracking_number, o.carrier_name,
                o.status_id, o.address_id, o.order_notes,
-               o.created_at, o.updated_at,
+               o.created_at, o.updated_at, o.approved_at,
                s.value AS status_value,
                u.full_name AS user_full_name,
                u.email AS user_email,
@@ -75,7 +75,7 @@ class OrderRepository extends AbstractRepository
                {$paymentMethod} AS payment_method, o.payment_gateway, o.payment_state_json,
                o.sap_order_code, o.tracking_number, o.carrier_name,
                o.status_id, o.address_id, o.order_notes,
-               o.created_at, o.updated_at,
+               o.created_at, o.updated_at, o.approved_at,
                s.value AS status_value,
                u.full_name AS user_full_name,
                u.email AS user_email,
@@ -194,6 +194,16 @@ class OrderRepository extends AbstractRepository
 
             throw $e;
         }
+    }
+
+    /** Pedido con ese id de pago (`orders.payment_code`, P-24); null si no es de PremiumFitness o no existe. */
+    public function findOrderIdByPaymentCode(string $paymentCode): ?int
+    {
+        $stmt = $this->pdo->prepare('SELECT order_id FROM orders WHERE payment_code = ?');
+        $stmt->execute([trim($paymentCode)]);
+        $orderId = $stmt->fetchColumn();
+
+        return $orderId === false ? null : (int) $orderId;
     }
 
     public function findById(int $orderId): OrderModel|false
@@ -755,14 +765,6 @@ class OrderRepository extends AbstractRepository
         return $this->execute(
             'UPDATE orders SET tracking_number = ?, carrier_name = ? WHERE order_id = ?',
             [$trackingNumber, $carrierName, $orderId]
-        );
-    }
-
-    public function updateStatus(int $orderId, int $statusId): bool
-    {
-        return $this->execute(
-            'UPDATE orders SET status_id = ? WHERE order_id = ?',
-            [$statusId, $orderId]
         );
     }
 

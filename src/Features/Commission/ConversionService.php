@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Features\Commission;
 
 use App\Features\Notification\PushOutbox;
+use App\Features\Point\PointExpiry;
 use App\Features\Point\PointLotRepository;
 use App\Infrastructure\Config\BusinessConfig;
 use App\Infrastructure\Database\DB;
@@ -162,7 +163,7 @@ class ConversionService
             'bonus_points'      => (int) round($bonus),
             'points_granted'    => $granted,
             'resulting_points'  => $basePoints + $granted,
-            'expires_at'        => new DateTimeImmutable("+{$this->business->pointsExpirationMonths} months")->format(DATE_ATOM),
+            'expires_at'        => PointExpiry::from(new DateTimeImmutable(), $this->business->pointsExpirationMonths)->format(DATE_ATOM),
         ];
     }
 

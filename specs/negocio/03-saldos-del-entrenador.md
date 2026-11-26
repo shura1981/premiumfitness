@@ -42,7 +42,7 @@ Que el entrenador vea en todo momento, y con una respuesta inmediata:
 | S-02 | «Vigente» significa `status = 'available'` y `expires_at > NOW()`. Se calcula al consultar, así que no depende de que ya haya corrido el proceso de vencimiento. | Derivado |
 | S-03 | No se crea una tabla de saldos precalculados. Las cifras se obtienen sumando los lotes con índices que cubren la consulta. | Derivado: ver Plan |
 | S-04 | Los puntos por referido pendientes suman `trainer_referrals.referral_points` donde `activated_at IS NULL`. No son lotes y no suman al saldo canjeable. | Confirmado (spec `negocio/02`) |
-| S-05 | El total histórico de puntos de clientes suma `initial_points` de los lotes con `source = 'client_sale'`, incluidos los ya usados y los vencidos. No descuenta los lotes revertidos por devolución, que se ven en sus movimientos de ajuste. | Derivado |
+| S-05 | El total histórico de puntos de clientes suma `initial_points` de los lotes con `source = 'client_sale'`, incluidos los ya usados y los vencidos. No descuenta los lotes revertidos al reversar el pedido, que se ven en sus movimientos de ajuste. | Derivado |
 | S-06 | El saldo de comisión es la suma de `commission_movements.amount` sin liquidar: abonos por venta menos conversiones, más o menos ajustes. El débito de la liquidación mensual lo deja en cero. | Confirmado (S-17 del DER; spec `negocio/04`) |
 
 ## Plan
@@ -106,7 +106,7 @@ Las columnas de cada índice siguen el orden de los filtros: primero las igualda
 | `commission_movements` | `ix_commission_movements_balance (trainer_id, amount)` | Saldo de comisión. |
 | `orders_coupons` | `ix_orders_coupons_trainer (trainer_id, order_id)` | Ventas atribuidas al entrenador. |
 
-Los índices únicos que ya existen (`trainer_referral_id`, `source_key` y otros) siguen igual.
+Los índices únicos que ya existen (`source_key` y otros) siguen igual. `point_lots.trainer_referral_id` dejó de ser único el 25 nov 2026 (spec `backend/03`, P-17): un referido reactivado tiene dos lotes, y el detalle por entrenador B lee solo el de la activación vigente (el de mayor `id`, cuando `activated_at` no es nulo).
 
 ## Checklist
 

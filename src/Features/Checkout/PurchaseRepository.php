@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Features\Checkout;
 
+use App\Features\PaymentGateway\PaymentCode;
 use App\Infrastructure\Database\AbstractRepository;
 use App\Infrastructure\Database\DB;
 use Throwable;
@@ -43,6 +44,9 @@ class PurchaseRepository extends AbstractRepository
                 ]
             );
             $orderId = (int) $this->pdo->lastInsertId();
+
+            // Id de pago que va a la pasarela (P-24): el número del pedido con el prefijo.
+            $this->execute('UPDATE orders SET payment_code = ? WHERE order_id = ?', [PaymentCode::forOrder($orderId), $orderId]);
 
             $item = $this->pdo->prepare(
                 'INSERT INTO orders_items

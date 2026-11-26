@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Features\PaymentGateway\Gateways\Bold;
 
 use App\Features\PaymentGateway\Events\PaymentEventDispatcher;
-use App\Features\PaymentGateway\PaymentAttemptRepository;
+use App\Features\PaymentGateway\PaymentCode;
 use App\Infrastructure\Http\CurlHttpClient;
 use App\Shared\Exceptions\HttpRequestException;
 use InvalidArgumentException;
@@ -16,8 +16,8 @@ use RuntimeException;
  * real de un pago cuando el webhook no llegó a tiempo.
  *
  * Permite consultar por:
- *   - Referencia externa: la del intento de pago (`pf-<id>`) → `?is_external_reference=true`.
- *     Un pedido se concilia consultando las referencias de sus intentos (spec backend/03, P-24).
+ *   - Referencia externa: el id de pago del pedido (`pf-<pedido>`, spec backend/03, P-24)
+ *     → `?is_external_reference=true`.
  *   - ID de pago Bold (`payment_id`)
  *
  * Selección de evento cuando existen múltiples notificaciones/intentos:
@@ -34,7 +34,6 @@ final readonly class BoldReconciliationService
         private string $identityKey,
         private string $notificationsUrl,
         private int $timeoutSeconds,
-        private PaymentAttemptRepository $attempts,
     ) {}
 
     public static function fromEnv(?CurlHttpClient $http = null): self
@@ -44,7 +43,6 @@ final readonly class BoldReconciliationService
             identityKey:      trim((string) $_ENV['BOLD_IDENTITY_KEY']),
             notificationsUrl: rtrim(trim((string) $_ENV['BOLD_URL_NOTIFICATIONS']), '/'),
             timeoutSeconds:   max(5, (int) $_ENV['PAYMENT_GATEWAY_TIMEOUT_SECONDS']),
-            attempts:         new PaymentAttemptRepository(),
         );
     }
 
@@ -98,30 +96,14 @@ final readonly class BoldReconciliationService
     }
 
     /**
-     * Notificación relevante de un pedido entre las de todos sus intentos de pago: la aprobada si
-     * alguno se aprobó; si no, la del intento más reciente que tenga respuesta.
+     * Notificación de Bold de un pedido: se consulta por su id de pago (`pf-<pedido>`), que es la
+     * referencia externa que recibió Bold. En radical se consulta con el número del pedido.
      *
      * @return array<string, mixed>|null
      */
     public function fetchForOrder(int $orderId): ?array
     {
-        $latest = null;
-
-        foreach ($this->attempts->referencesFor($orderId) as $reference) {
-            $notification = $this->fetchNotification($reference, true);
-
-            if ($notification === null) {
-                continue;
-            }
-
-            if (($notification['type'] ?? null) === 'SALE_APPROVED') {
-                return $notification;
-            }
-
-            $latest ??= $notification;
-        }
-
-        return $latest;
+        return $this->fetchNotification(PaymentCode::forOrder($orderId), true);
     }
 
     /**

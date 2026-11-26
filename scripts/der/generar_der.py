@@ -470,7 +470,7 @@ PLX = db.R("cc") + 150
 db.table("pl", "point_lots", "N", PLX, Y3, [
     r("PK", "id", "bigint(20) (AI)"), r("FK", "order_id", "bigint(20) NULL"), r("FK", "trainer_id", "bigint(20)"),
     r("FK UQ", "conversion_id", "bigint(20) NULL"), r("FK", "adjustment_id", "bigint(20) NULL"),
-    r("FK UQ", "trainer_referral_id", "bigint(20) NULL"),
+    r("FK", "trainer_referral_id", "bigint(20) NULL"),
     r("", "source", "enum('client_sale','trainer_referral','conversion','restitution')"),
     r("", "initial_points", "int(11)"), r("", "remaining_points", "int(11)"),
     r("", "status", "enum('available','used','expired')"),

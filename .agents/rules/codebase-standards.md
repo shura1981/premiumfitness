@@ -110,6 +110,7 @@ Cada feature vive en `src/Features/<FeatureName>/`: Controller, Model, Repositor
 - Cada pedido, línea, referido y conversión guarda el valor que aplicó (porcentaje, IVA, puntos), para que un cambio en las variables no altere el histórico. Los reportes y el cierre **suman** lo guardado; nunca recalculan.
 - Las operaciones que mueven saldo (aprobación del pago, conversión, canje, vencimiento, cierre) van en una sola transacción, con la fila del entrenador bloqueada (`SELECT … FOR UPDATE`) y una clave única de idempotencia.
 - Los importes son `decimal(12,2)` y los puntos enteros, redondeados al entero más cercano (0,5 sube). El precio con descuento de una unidad se redondea al peso.
+- **Los pagos funcionan como en radical: un pedido = un pago.** El id que recibe la pasarela es `orders.payment_code` (`pf-<número del pedido>`), y con él el webhook busca el pedido. No existe «pagar de nuevo» un pedido ya creado ni tabla de intentos: si el pago no se aprueba, el cliente compra otra vez y sale un pedido nuevo. El webhook es lo único que cambia el estado y guarda lo que manda la pasarela en `payment_state_json`. Antes de cambiar algo de pagos, se compara con `backend-radical-nutrition`; una diferencia nueva se consulta primero (spec `backend/03`, P-24).
 - La app envía códigos y cantidades, nunca precios. El backend calcula, guarda y firma el valor del pago; el pedido lo aprueba el aviso firmado de la pasarela, solo si lo pagado cubre su valor.
 - Toda operación que el usuario puede repetir (convertir, canjear) lleva `idempotency_key`; toda acreditación lleva una `source_key` única.
 - El IVA se calcula al comprar, por línea: `VAT_PERCENTAGE` salvo los códigos de `VAT_EXEMPT_PRODUCT_CODES`. El catálogo no tiene tasa de IVA.
@@ -146,6 +147,7 @@ En PremiumFitness el «QR» es un enlace con el id del entrenador en base64 (reg
 1. Los dos enlaces abren la app web: `/r/c/<id>` registra o asocia a un cliente y `/r/t/<id>` registra a un entrenador B referido por A.
 2. La app guarda el id hasta el registro o el login, y el backend crea el vínculo (`client_referrals` o `trainer_referrals`).
 3. Un id inválido o de un entrenador inactivo no asocia a nadie.
+4. Un cliente ya asociado que abre el enlace de otro entrenador decide si cambia (`POST /api/client/trainer`, D-11). Solo cambian las compras nuevas: cada pedido guarda su entrenador en `orders_coupons`.
 
 ## Scheduled Jobs
 
@@ -174,7 +176,7 @@ interface NotificationChannelInterface
 ```
 
 - `EmailNotificationChannel` — envío por SMTP vía PHPMailer.
-- `SmsNotificationChannel` — envío por SMS vía Relax Global API (`SMS_API_URL`, `SMS_API_TOKEN`). Proveedor por confirmar (D-10). Se obtiene con `SmsChannelFactory::fromEnv()`, que según `SMS_DRIVER` entrega el canal real (`relax`, el único admitido en producción), el de desarrollo (`log`) o el de pruebas (`memory`).
+- `SmsNotificationChannel` — envío por SMS vía Relax Global API (`SMS_API_URL`, `SMS_API_TOKEN`). Proveedor confirmado el 25 nov 2026 (D-10), como en radical. Se obtiene con `SmsChannelFactory::fromEnv()`, que según `SMS_DRIVER` entrega el canal real (`relax`, el único admitido en producción), el de desarrollo (`log`) o el de pruebas (`memory`).
 - `FcmPushChannel` — push con **FCM HTTP v1** (cuenta de servicio, OAuth2 con JWT RS256). Nunca el API legacy `fcm/send` con server key, que Google retiró. Se envía desde la outbox `push_notifications`, nunca dentro de la petición del usuario.
 - Los canales se instancian con `SmsNotificationChannel::fromEnv()` o `EmailNotificationChannel::fromEnv()`.
 
@@ -244,6 +246,7 @@ TRAINER_DISCOUNT_PERCENTAGE=25
 CLIENT_PURCHASE_POINTS_PERCENTAGE=5
 TRAINER_COMMISSION_PERCENTAGE=15
 TRAINER_REFERRAL_POINTS=50000
+TRAINER_REFERRAL_MIN_PURCHASE=149000   # compra mínima de un cliente de B (productos, sin flete) que activa los puntos de A
 POINTS_EXPIRATION_MONTHS=6
 COMMISSION_CONVERSION_PERCENTAGE=50
 

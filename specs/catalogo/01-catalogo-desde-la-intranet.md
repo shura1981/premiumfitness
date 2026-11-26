@@ -91,5 +91,6 @@ No hay contradicción con `docs/requerimientos.md`, que no dice de dónde sale e
 - [x] Implementar `VatPolicy` con las pruebas de 119.000 y de Nutra C (`tests/Unit/DiscountRule/PricingTest.php`)
 - [x] Crear la tabla en la base de pruebas con los tipos reales y probar los filtros (`promo = 1`, `activo = 0` o NULL, `valor` 0), las columnas `bit(1)` leídas como número, `sap_code = 0` y los campos ocultos (`tests/E2E/Product/CatalogApiTest.php`)
 - [x] Endpoints del catálogo: listado, ficha y presentaciones
+- [x] La ficha no muestra los ingredientes: `ingredientes` no se lee (pedido de Steven, 26 nov 2026; `tests/Unit/Product/CatalogProductTest.php`)
 - [x] Copiar en `orders_items` código, nombre, precio, `sap_code` e IVA al comprar (`tests/E2E/Checkout/CheckoutTest.php`)
 - [x] Retirar o adaptar al hacer el fork las features `Product`, `Category`, `ProductGroup` y `SapProduct` de radical

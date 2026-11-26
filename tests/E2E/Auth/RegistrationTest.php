@@ -8,6 +8,7 @@ use Tests\Support\AppFactory;
 use Tests\Support\Auth;
 use Tests\Support\JwtFactory;
 use Tests\Support\Seed;
+use Tests\Support\Shop;
 
 /*
  | Registro, verificación del celular, recuperación y enlaces del entrenador
@@ -213,7 +214,8 @@ it('muestra el nombre del entrenador de un enlace y nada más', function (): voi
     $response  = AppFactory::dispatch(AppFactory::request('GET', '/api/referrals/trainers/' . ReferralLink::encodeId($trainerId)));
 
     expect($response->getStatusCode())->toBe(200)
-        ->and(array_keys(AppFactory::json($response)))->toBe(['full_name']);
+        ->and(array_keys(AppFactory::json($response)))->toBe(['full_name', 'link_id'])
+        ->and(AppFactory::json($response)['link_id'])->toBe(ReferralLink::encodeId($trainerId));
 });
 
 it('un enlace inválido, de un cliente o de un entrenador suspendido responde 404', function (callable $id): void {
@@ -333,6 +335,75 @@ it('el cupón no sirve si no existe o si quien lo escribe es un entrenador', fun
     expect($unknown->getStatusCode())->toBe(404)
         ->and(AppFactory::json($unknown)['code'])->toBe('coupon_not_found')
         ->and($trainer->getStatusCode())->toBe(403);
+});
+
+// ── Cambio de entrenador desde el enlace de otro (D-11, spec backend/03 P-36) ──
+
+function changeTrainer(int $clientId, string $linkId): Psr\Http\Message\ResponseInterface
+{
+    return AppFactory::dispatch(AppFactory::request('POST', '/api/client/trainer', ['link_id' => $linkId], JwtFactory::authHeader($clientId)));
+}
+
+it('el cliente cambia de entrenador desde el enlace de otro: solo cambian las compras nuevas', function (): void {
+    [$client, $first] = Seed::clientWithTrainer();
+    $second           = Seed::trainer();
+    $code             = Seed::catalogProduct(['valor' => 100000]);
+    $paid             = Shop::order($client, [['code' => $code, 'quantity' => 2]]);
+    Shop::pay($paid);
+    // Un pedido creado antes del cambio y pagado después sigue siendo del entrenador de ese momento.
+    $unpaid = Shop::order($client, [['code' => $code, 'quantity' => 1]]);
+
+    $response = changeTrainer($client, ReferralLink::encodeId($second));
+    Shop::pay($unpaid);
+    $after = Shop::order($client, [['code' => $code, 'quantity' => 1]]);
+    Shop::pay($after);
+
+    $trainerOf = fn (int $orderId): int => (int) Shop::rows('SELECT trainer_id FROM orders_coupons WHERE order_id = ?', [$orderId])[0]['trainer_id'];
+    $audit     = Shop::rows("SELECT user_id, data FROM audit_logs WHERE action = 'client.trainer_changed' AND entity_id = ?", [$client]);
+
+    expect($response->getStatusCode())->toBe(200)
+        ->and(AppFactory::json($response))->toMatchArray(['has_trainer' => true, 'trainer_link_id' => ReferralLink::encodeId($second)])
+        ->and(Shop::rows('SELECT trainer_id, source FROM client_referrals WHERE client_id = ?', [$client]))->toBe([['trainer_id' => $second, 'source' => 'link']])
+        ->and([$trainerOf($paid), $trainerOf($unpaid), $trainerOf($after)])->toBe([$first, $first, $second])
+        // La comisión y los puntos de lo ya comprado siguen con el primero.
+        ->and(Shop::rows("SELECT COUNT(*) n FROM commission_movements WHERE trainer_id = ? AND type = 'sale_credit'", [$first])[0]['n'])->toBe(2)
+        ->and(Shop::rows("SELECT COUNT(*) n FROM commission_movements WHERE trainer_id = ? AND type = 'sale_credit'", [$second])[0]['n'])->toBe(1)
+        ->and($audit)->toHaveCount(1)
+        ->and(json_decode($audit[0]['data'], true))->toBe(['from_trainer_id' => $first, 'to_trainer_id' => $second])
+        ->and(Shop::rows("SELECT COUNT(*) n FROM push_notifications WHERE user_id = ? AND type = 'client_linked'", [$second])[0]['n'])->toBe(1)
+        ->and(Shop::rows("SELECT COUNT(*) n FROM push_notifications WHERE user_id = ? AND type = 'client_linked'", [$first])[0]['n'])->toBe(0);
+});
+
+it('el enlace de su mismo entrenador no cambia nada, y sin entrenador lo asocia', function (): void {
+    [$client, $trainer] = Seed::clientWithTrainer();
+    $alone              = Seed::user();
+    $other              = Seed::trainer();
+
+    $same    = changeTrainer($client, ReferralLink::encodeId($trainer));
+    $without = changeTrainer($alone, ReferralLink::encodeId($other));
+
+    expect($same->getStatusCode())->toBe(200)
+        ->and(Shop::rows("SELECT COUNT(*) n FROM audit_logs WHERE action = 'client.trainer_changed' AND entity_id = ?", [$client])[0]['n'])->toBe(0)
+        ->and($without->getStatusCode())->toBe(200)
+        ->and(AppFactory::json($without))->toMatchArray(['has_trainer' => true, 'trainer_link_id' => ReferralLink::encodeId($other)])
+        ->and(Shop::rows('SELECT trainer_id FROM client_referrals WHERE client_id = ?', [$alone]))->toBe([['trainer_id' => $other]]);
+});
+
+it('no cambia de entrenador con un enlace inválido, de un entrenador suspendido o desde una cuenta de entrenador', function (): void {
+    [$client, $trainer] = Seed::clientWithTrainer();
+    $suspended          = Seed::trainer();
+    Seed::pdo()->prepare("UPDATE users SET status = 'suspended' WHERE id = ?")->execute([$suspended]);
+
+    $invalid    = changeTrainer($client, 'abc');
+    $notActive  = changeTrainer($client, ReferralLink::encodeId($suspended));
+    $fromCoach  = changeTrainer(Seed::trainer(), ReferralLink::encodeId($trainer));
+    $noLink     = AppFactory::dispatch(AppFactory::request('POST', '/api/client/trainer', [], JwtFactory::authHeader($client)));
+
+    expect($invalid->getStatusCode())->toBe(404)
+        ->and($notActive->getStatusCode())->toBe(404)
+        ->and($fromCoach->getStatusCode())->toBe(403)
+        ->and($noLink->getStatusCode())->toBe(422)
+        ->and(Shop::rows('SELECT trainer_id FROM client_referrals WHERE client_id = ?', [$client]))->toBe([['trainer_id' => $trainer]]);
 });
 
 // ── Recuperación de la contraseña ─────────────────────────────────────────

@@ -102,7 +102,9 @@ Plan técnico: [01-apps-web-y-admin.plan.md](01-apps-web-y-admin.plan.md).
 - [x] Detalle de producto con galería y presentaciones
 - [x] Checkout y resultado del pago
   - Probado contra el backend local simulando el aviso de Bold (`scripts/dev-pagar-pedido.php`). Falta probar el botón real de Bold con las llaves de PremiumFitness.
-- [x] Detalle del pedido con seguimiento, con «Pagar» si quedó pendiente
+- [x] Detalle del pedido con seguimiento
+- [~] «Pagar» en el detalle si quedó pendiente: retirado el 24 nov 2026. Un pedido = un pago, como en radical; si no se aprobó, se compra de nuevo desde el carrito (spec `backend/03`, P-19 y P-24)
+- [x] Página de respuesta por pasarela: `/pago/resultado/bold`, `/addi` y `/sistecredito`, cada una con el id de pago en su parámetro (spec `integraciones/03`)
 - [x] Canje con puntos
 - [x] Cuenta: perfil, contraseña, direcciones y notificaciones push
   - Las notificaciones quedan como «no disponibles» hasta poner la configuración web de Firebase en el entorno: falta la `apiKey` (el resto está en el spec `integraciones/01`).
@@ -140,6 +142,7 @@ Plan técnico: [01-apps-web-y-admin.plan.md](01-apps-web-y-admin.plan.md).
 - [x] Entrenadores: lista, saldos, referidos, y suspender o reactivar con motivo
 - [x] Estrategias por producto
 - [x] Ajustes por cancelación y devolución, con vista previa de lo que se revierte
+  - Desde el 25 nov 2026 es solo «Reversar»: sin tipo ni productos, con la vista previa y el motivo (spec `backend/03`, P-30)
 - [ ] Dar de alta el proyecto `premiumfitness-admin` en el gateway de sockets (`socket.elitenutapp.com`) y probar el tiempo real de pedidos
 - [x] Volver a ApexCharts 4.7.0 (MIT) y revisar las licencias de las dependencias de los tres proyectos (A-01)
 - [x] Añadir pruebas al admin: 127 pruebas (sesión, guards, validación del comprobante, estrategias, ajustes y API simulada)

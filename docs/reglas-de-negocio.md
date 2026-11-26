@@ -15,6 +15,7 @@ El diagrama resume las reglas 1 a 11 de este documento: cálculo y vencimiento d
 1. 1 peso equivale a 1 punto. Los puntos de la compra de un cliente son el 5% de **lo que el cliente pagó por los productos, con el descuento aplicado y con IVA incluido**. Se calculan una sola vez sobre el total del pedido, sin incluir el envío, y se redondean al entero más cercano (0,5 sube). Ejemplo: una Bipro de 249.900 con 10% de descuento se paga 224.910 → 224.910 × 5% = 11.245,5 → **11.246 puntos**. El IVA solo se discrimina para calcular la comisión, no los puntos. *(Definido el 9 nov 2026: antes se descontaba el IVA de cada producto.)*
 
 2. Los puntos tiene fecha de expiración, 6 meses por cada acumulacion.
+    - Corte (confirmado el 26 nov 2026): vencen a los 6 meses, al terminar ese día en hora de Colombia (11:59 p. m.); si el mes de llegada no tiene ese día, el último día del mes.
 
 3. El entrenador tiene descuento del 25% si hace compras por la app pero no puede usar pagos mixtos entre puntos y dinero.
 
@@ -28,9 +29,9 @@ El entrenador A rifiere al entrenador B (entrenador A obtiene 50 mil pero en est
 
     Precisiones (9 nov 2026):
     - Los 50.000 puntos se dan **una sola vez** por cada entrenador referido. Las compras siguientes de los clientes de B no le dan más puntos a A.
-    - Los activa la primera compra **aprobada** de cualquier cliente de B, sin monto mínimo. La compra propia de B (con su 25%) no los activa.
+    - Los activa la primera compra **aprobada** de cualquier cliente de B de al menos 149.000 en productos (con descuento e IVA, sin flete; variable `TRAINER_REFERRAL_MIN_PURCHASE`). Una compra menor no los activa: siguen pendientes hasta una que llegue. La compra propia de B (con su 25%) no los activa. *(Cambio del 26 nov 2026, D-05: antes no había monto mínimo.)*
     - Mientras están pendientes no caducan. Una vez activados, vencen a los 6 meses, como cualquier acumulación (regla 2).
-    - Si se cancela o devuelve la compra que los activó y A todavía no los ha usado, se le retiran y quedan otra vez pendientes hasta la siguiente compra aprobada de un cliente de B. Si A ya los usó, los conserva.
+    - Si se reversa la compra que los activó, se le retiran a A y quedan otra vez pendientes hasta la siguiente compra aprobada de un cliente de B. Si A ya los usó, lo que falte se retira de sus otros puntos vigentes (del más antiguo); si no le alcanzan, se retira lo que tenga y no queda deuda. *(Cambio del 25 nov 2026: antes, si A ya los había usado, los conservaba. Spec `backend/03`, P-17.)*
 
 7. Los puntos ganados por las compras de los clientes se calculan con IVA incluido. La comisión sí se calcula sobre el valor antes de IVA, discriminando el IVA de cada producto. *(Cambio del 9 nov 2026: antes los puntos también se calculaban antes de IVA.)*
 
@@ -54,12 +55,13 @@ El entrenador A rifiere al entrenador B (entrenador A obtiene 50 mil pero en est
     - Entra por el enlace del entrenador. El enlace lo lleva al login; si ya está registrado pasa al dashboard, y si no, se registra. El id del entrenador queda guardado.
     - Se registra sin enlace y luego escribe el cupón del entrenador.
     - Si ya estaba registrado sin entrenador y abre el enlace, queda asociado a ese entrenador al iniciar sesión.
+    - Si un cliente ya asociado abre el enlace de otro entrenador, la app le pregunta si quiere cambiarlo; si acepta, solo cambian las compras nuevas: las anteriores, con su comisión y sus puntos, siguen siendo del entrenador de antes (26 nov 2026, D-11).
 
     Un cliente asociado no ve el campo del cupón. Un cliente sin cupón puede comprar a precio completo y su compra no genera recompensas.
 
 14. Cuando el cliente está asociado a un entrenador, todo el catálogo se muestra con el descuento aplicado: un badge con el porcentaje, el precio con descuento y el precio real tachado.
 
-15. Los porcentajes no son fijos. El 10% del cliente, el 25% del entrenador, el 5% en puntos y el 15% de comisión son valores por defecto configurables, igual que los 50.000 puntos por referido, los 6 meses de vencimiento y el 50% de la conversión. Todas estas constantes se definen en variables de entorno, y cada pedido guarda el valor que se le aplicó. Cada producto puede tener una estrategia propia que cambie el descuento con cupón y la comisión. Ejemplo: Nutra Balance tiene un 5% adicional (el cliente recibe 15% de descuento) y la comisión del entrenador baja al 10%.
+15. Los porcentajes no son fijos. El 10% del cliente, el 25% del entrenador, el 5% en puntos y el 15% de comisión son valores por defecto configurables, igual que los 50.000 puntos por referido, la compra mínima de 149.000 que los activa, los 6 meses de vencimiento y el 50% de la conversión. Todas estas constantes se definen en variables de entorno, y cada pedido guarda el valor que se le aplicó. Cada producto puede tener una estrategia propia que cambie el descuento con cupón y la comisión. Ejemplo: Nutra Balance tiene un 5% adicional (el cliente recibe 15% de descuento) y la comisión del entrenador baja al 10%.
 
 16. La comisión es dinero que la empresa le paga al entrenador **al final de cada mes**; los términos y condiciones definen cómo. Mientras no se haya pagado, el entrenador puede convertirla a puntos. Para canjear productos con la comisión, primero tiene que convertirla. No hay canje mixto: un canje se paga solo con puntos, nunca con dinero ni con comisión.
 
@@ -69,4 +71,4 @@ El entrenador A rifiere al entrenador B (entrenador A obtiene 50 mil pero en est
 
     Ejemplo: con 100.000 puntos vigentes y 100.000 de comisión, recibe 100.000 + 50.000 = 150.000 y queda con **250.000 puntos**. El tope evita que el 50% se multiplique con conversiones pequeñas y repetidas: con 1.000.000 de puntos y 1.000 de comisión, recibe 2.000. Los puntos convertidos forman un lote que vence a los 6 meses.
 
-18. El último día de cada mes (hora de Colombia) se hace el corte: la comisión no convertida se liquida y el saldo queda en cero. Esa comisión se paga **el día 4 del mes siguiente** (o el siguiente día hábil si el 4 es sábado, domingo o festivo), en un solo pago, y el entrenador ve el comprobante en la app. Una devolución posterior al corte se descuenta del mes siguiente.
+18. El último día de cada mes (hora de Colombia) se hace el corte: la comisión no convertida se liquida y el saldo queda en cero. Esa comisión se paga **el día 4 del mes siguiente** (o el siguiente día hábil si el 4 es sábado, domingo o festivo), en un solo pago, y el entrenador ve el comprobante en la app. La reversión de un pedido posterior al corte se descuenta del mes siguiente.

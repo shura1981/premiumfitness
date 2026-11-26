@@ -75,6 +75,8 @@ class TrainerController
             'trainer_link' => "{$base}/r/t/{$linkId}",
             // Lo que gana por cada entrenador referido (regla 6): la pantalla lo explica al invitar.
             'trainer_referral_points' => $business->trainerReferralPoints,
+            // La compra mínima de un cliente del referido que los activa (regla 6, D-05).
+            'trainer_referral_min_purchase' => $business->trainerReferralMinPurchase,
             'clients'      => $this->area->clients($trainerId),
             'trainers'     => $this->area->referredTrainers($trainerId),
         ]);

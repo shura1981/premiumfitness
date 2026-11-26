@@ -39,7 +39,7 @@ Dejar documentados en `docs/casos-de-uso-y-actores.md` el procesamiento y el env
 | S-01 | Procesamiento del pedido por el agente, registro en SAP, guía y seguimiento: se confirman por indicación del usuario (7 nov 2026) y siguen a radical. | Confirmado |
 | S-02 | `requerimientos.md` no menciona estos procesos. Se añaden como decisiones de producto, sin contradecir ese documento. | Confirmado |
 | S-03 | El agente solo libera un pedido suyo que todavía no tenga código SAP, como en radical. | Derivado |
-| S-04 | La aprobación del pago llega por webhook de la pasarela, como en radical. El proveedor sigue pendiente (D-10). | Derivado |
+| S-04 | La aprobación del pago llega por webhook de la pasarela, como en radical. Las pasarelas son Bold, Addi y Sistecrédito, con las cuentas de Nutramerican (D-10, spec `backend/03`, P-24). | Confirmado |
 | S-05 | Si los canjes también pasan por SAP y por el call center. | Pendiente |
 | S-06 | Si se cobra el envío y cómo. En el checkout retail de radical, el flete se cobra como un producto interno, «Flete». Resuelto en el spec `backend/03`: el flete se cobra según la ciudad con las reglas de la tienda de radical (P-03) y se guarda en `orders.shipping_amount`, no como producto; el canje no paga envío (P-25). | Confirmado (16 nov 2026, Steven) |
 

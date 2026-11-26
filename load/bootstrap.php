@@ -28,7 +28,7 @@ $dotenv->required([
     'CLIENT_DISCOUNT_PERCENTAGE', 'TRAINER_DISCOUNT_PERCENTAGE', 'CLIENT_PURCHASE_POINTS_PERCENTAGE',
     'TRAINER_COMMISSION_PERCENTAGE', 'COMMISSION_CONVERSION_PERCENTAGE', 'VAT_PERCENTAGE',
 ])->assert(fn ($v) => is_numeric($v) && $v >= 0 && $v <= 100, 'must be a percentage between 0 and 100.');
-$dotenv->required(['TRAINER_REFERRAL_POINTS', 'POINTS_EXPIRATION_MONTHS'])->isInteger();
+$dotenv->required(['TRAINER_REFERRAL_POINTS', 'TRAINER_REFERRAL_MIN_PURCHASE', 'POINTS_EXPIRATION_MONTHS'])->isInteger();
 
 // Flete por ciudad (spec backend/03, P-03): los valores de la tienda de radical.
 $dotenv->required([
@@ -79,7 +79,7 @@ $dotenv->required([
 ])->notEmpty();
 
 // Payment Gateways — compartidas + socket post-pago
-$dotenv->required(['PAYMENT_GATEWAY_TIMEOUT_SECONDS', 'PAYMENT_GATEWAY_SPA_RETURN_URL'])->notEmpty();
+$dotenv->required(['PAYMENT_GATEWAY_TIMEOUT_SECONDS'])->notEmpty();
 $dotenv->required(['SOCKET_NOTIFICATION_URL', 'SOCKET_NOTIFICATION_TOKEN'])->notEmpty();
 $dotenv->required(['SOCKET_GATEWAY_PROJECT_ID_CLIENT', 'SOCKET_GATEWAY_PROJECT_ID_ADMIN', 'SOCKET_GATEWAY_KEY_ADMIN'])->notEmpty();
 

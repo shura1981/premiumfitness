@@ -60,6 +60,27 @@ class UserOrderRepository extends AbstractRepository
         return $order === false ? null : $order;
     }
 
+    /**
+     * Pedido de ese usuario con ese id de pago (`orders.payment_code`), para la página de respuesta.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function findByPaymentCode(int $userId, string $paymentCode): ?array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT o.order_id, o.payment_code, o.payment_gateway, o.amount, o.created_at, o.approved_at,
+                    o.payment_reference, o.payment_state_json, o.sap_order_code, o.tracking_number,
+                    s.value AS status_value
+             FROM orders o
+             LEFT JOIN status_orders s ON s.status_id = o.status_id
+             WHERE o.payment_code = ? AND o.user_id = ?'
+        );
+        $stmt->execute([trim($paymentCode), $userId]);
+        $order = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $order === false ? null : $order;
+    }
+
     /** @return list<array<string, mixed>> Las líneas, con la imagen vigente del catálogo si aún existe. */
     public function itemsOf(int $orderId): array
     {

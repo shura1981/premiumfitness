@@ -226,13 +226,15 @@ it('firma el pago en el servidor con el valor del pedido', function (): void {
     $amount   = 100000 + Shop::SHIPPING;
 
     expect($body['payment']['gateway'])->toBe('bold')
-        // El id de pago es el del intento (`pf-<id>`), no el número del pedido (P-24).
-        ->and($bold['order_id'])->toBe(Shop::reference($body['order_id']))
+        // El id de pago es el número del pedido con el prefijo (`orders.payment_code`, P-24).
+        ->and($bold['order_id'])->toBe('pf-' . $body['order_id'])
+        ->and($body['payment']['reference'])->toBe('pf-' . $body['order_id'])
+        ->and(Shop::orderRow($body['order_id'])['payment_code'])->toBe('pf-' . $body['order_id'])
         ->and($bold['amount'])->toBe($amount)
         ->and($bold['currency'])->toBe('COP')
         // Firma de integridad de Bold: sha256(id de pago + valor + moneda + secreto).
         ->and($bold['integrity_signature'])->toBe(hash('sha256', $bold['order_id'] . $amount . 'COP' . trim($_ENV['BOLD_SECRET_KEY'])))
-        ->and($bold['redirection_url'])->toStartWith(rtrim($_ENV['WEB_APP_URL'], '/') . '/pago/resultado?pedido=' . $body['order_id'])
+        ->and($bold['redirection_url'])->toBe(rtrim($_ENV['WEB_APP_URL'], '/') . '/pago/resultado/bold?orderId=' . $bold['order_id'])
         ->and($bold['description'])->toContain('PremiumFitness')
         // A la app solo viaja la llave pública (`api_key`), nunca el secreto.
         ->and($bold['api_key'])->toBe(trim($_ENV['BOLD_IDENTITY_KEY']))
@@ -245,7 +247,7 @@ it('la vuelta del pago de un entrenador abre su área, /coach', function (): voi
     $body     = AppFactory::json(Shop::checkout($trainer, [['code' => $code, 'quantity' => 1]]));
 
     expect($body['payment']['bold']['redirection_url'])
-        ->toStartWith(rtrim($_ENV['WEB_APP_URL'], '/') . '/coach/pago/resultado?pedido=' . $body['order_id']);
+        ->toBe(rtrim($_ENV['WEB_APP_URL'], '/') . '/coach/pago/resultado/bold?orderId=pf-' . $body['order_id']);
 });
 
 it('ignora los precios que envíe la app', function (): void {
@@ -282,50 +284,49 @@ it('solo ofrece las pasarelas habilitadas', function (): void {
     expect(array_column($body['data'], 'id'))->toBe(['bold', 'addi', 'sistecredito']);
 });
 
-// ── Id de pago por intento (P-24) ─────────────────────────────────────────
+// ── Id de pago del pedido (P-24): un pedido = un pago, como en radical ──────
 
-it('cada «Pagar» es un intento con su propio id de pago, consecutivo y con el prefijo pf-', function (): void {
-    $user    = Seed::user();
-    $code    = Seed::catalogProduct(['valor' => 100000]);
-    $first   = AppFactory::json(Shop::checkout($user, [['code' => $code, 'quantity' => 1]]));
-    $orderId = $first['order_id'];
-    $retry   = AppFactory::json(AppFactory::dispatch(AppFactory::request('POST', "/api/orders/{$orderId}/pay", [], JwtFactory::authHeader($user))));
+it('cada compra es un pedido nuevo con su propio id de pago', function (): void {
+    $user   = Seed::user();
+    $code   = Seed::catalogProduct(['valor' => 100000]);
+    $first  = AppFactory::json(Shop::checkout($user, [['code' => $code, 'quantity' => 1]]));
+    $second = AppFactory::json(Shop::checkout($user, [['code' => $code, 'quantity' => 1]]));
 
-    $firstRef = $first['payment']['bold']['order_id'];
-    $retryRef = $retry['payment']['bold']['order_id'];
-
-    expect($firstRef)->toMatch('/^pf-[1-9][0-9]*$/')
-        ->and($retryRef)->toMatch('/^pf-[1-9][0-9]*$/')
-        ->and((int) substr($retryRef, 3))->toBeGreaterThan((int) substr($firstRef, 3))
-        // Es el mismo pedido: volver a pagar no crea otro.
-        ->and($retry['order_id'])->toBe($orderId)
-        ->and(Shop::rows('SELECT gateway, amount FROM payment_attempts WHERE order_id = ? ORDER BY id', [$orderId]))->toBe([
-            ['gateway' => 'bold', 'amount' => Shop::orderRow($orderId)['amount']],
-            ['gateway' => 'bold', 'amount' => Shop::orderRow($orderId)['amount']],
-        ]);
+    // Si el pago no se aprueba, el cliente vuelve al checkout: otro pedido, otro id.
+    expect($second['order_id'])->not->toBe($first['order_id'])
+        ->and($first['payment']['bold']['order_id'])->toBe('pf-' . $first['order_id'])
+        ->and($second['payment']['bold']['order_id'])->toBe('pf-' . $second['order_id']);
 });
 
-it('el aviso del intento anterior también aprueba el pedido', function (): void {
+it('no existe pagar de nuevo un pedido ya creado', function (): void {
     $user    = Seed::user();
     $orderId = Shop::order($user, [['code' => Seed::catalogProduct(['valor' => 100000]), 'quantity' => 1]]);
-    $firstRef = Shop::reference($orderId);
-    AppFactory::dispatch(AppFactory::request('POST', "/api/orders/{$orderId}/pay", [], JwtFactory::authHeader($user)));
 
-    $result = Shop::boldWebhook($orderId, (float) Shop::orderRow($orderId)['amount'], reference: $firstRef);
+    $response = AppFactory::dispatch(AppFactory::request('POST', "/api/orders/{$orderId}/pay", [], JwtFactory::authHeader($user)));
 
-    expect($result)->toMatchArray(['processed' => true, 'order_id' => $orderId, 'status' => 'APROBADA']);
+    expect($response->getStatusCode())->toBeIn([404, 405]);
 });
 
-it('ignora el aviso de Bold de un pago ajeno, como los del sitio web que comparte la cuenta', function (string $reference): void {
+it('el aviso de Bold aprueba el pedido que tiene ese id de pago', function (): void {
+    $orderId = Shop::order(Seed::user(), [['code' => Seed::catalogProduct(['valor' => 100000]), 'quantity' => 1]]);
+    $other   = Shop::order(Seed::user(), [['code' => Seed::catalogProduct(['valor' => 100000]), 'quantity' => 1]]);
+
+    $result = Shop::boldWebhook($orderId, (float) Shop::orderRow($orderId)['amount'], reference: 'pf-' . $orderId);
+
+    expect($result)->toMatchArray(['processed' => true, 'order_id' => $orderId, 'status' => 'APROBADA'])
+        ->and(Shop::orderRow($other)['approved_at'])->toBeNull();
+});
+
+it('ignora el aviso de Bold de un pago ajeno, como los de otros proyectos que comparten la cuenta', function (string $reference): void {
     $orderId = Shop::order(Seed::user(), [['code' => Seed::catalogProduct(['valor' => 100000]), 'quantity' => 1]]);
     $amount  = (float) Shop::orderRow($orderId)['amount'];
 
-    // Una referencia numérica igual al número del pedido no lo toca.
-    $result = Shop::boldWebhook($orderId, $amount, reference: $reference === 'pedido' ? (string) $orderId : $reference);
+    // El número del pedido sin el prefijo, o en mayúsculas, no es su id de pago: no lo toca.
+    $result = Shop::boldWebhook($orderId, $amount, reference: str_replace('{pedido}', (string) $orderId, $reference));
 
     expect($result)->toBe(['ok' => true, 'processed' => false, 'reason' => 'foreign_reference'])
         ->and(Shop::orderRow($orderId)['approved_at'])->toBeNull();
-})->with(['pedido', 'pf-999999999']);
+})->with(['{pedido}', 'PF-{pedido}', 'pf-{pedido}-1', 'pf-999999999999']);
 
 // ── Pedidos del usuario ───────────────────────────────────────────────────
 

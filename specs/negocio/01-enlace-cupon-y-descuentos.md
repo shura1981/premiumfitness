@@ -51,7 +51,7 @@ Alinear las reglas de negocio, los casos de uso y el modelo de datos con el func
 | --- | --- | --- |
 | S-01 | El QR y el enlace son lo mismo: el QR codifica el enlace con el id del entrenador en base64. Hay un enlace para clientes y otro para entrenadores. **Cambio del 9 nov 2026:** antes decía que cada enlace abría una app distinta; ahora ambos abren la misma app web (`/r/c/<id>` y `/r/t/<id>`), spec `arquitectura/02`. | Confirmado |
 | S-02 | Cada entrenador tiene un cupón con nombre único, que el cliente puede escribir si se registró sin enlace. | Confirmado |
-| S-03 | Un cliente asociado a un entrenador no ve el campo del cupón y no puede cambiar de entrenador por sí mismo. | Confirmado |
+| S-03 | Un cliente asociado a un entrenador no ve el campo del cupón. **Cambiado el 26 nov 2026 (D-11):** antes no podía cambiar de entrenador; ahora, si abre el enlace de otro, la app le pregunta si quiere cambiarlo y, si acepta, solo cambian las compras nuevas (spec `backend/03`, P-36). | Confirmado (9 nov 2026); cambio confirmado el 26 nov 2026 |
 | S-04 | El cliente sin cupón compra a precio completo y no genera recompensas. | Confirmado |
 | S-05 | Los porcentajes por defecto (10% cliente, 25% entrenador, 5% puntos y 15% comisión) son variables de entorno. Cada producto puede tener una regla vigente que cambie el descuento con cupón y la comisión. **Cambio del 9 nov 2026:** antes decía «configuración versionada» (`rule_versions`); producto pidió llevar las constantes a variables de entorno (spec `negocio/02`). | Confirmado |
 | S-06 | La regla por producto también admite un descuento propio para la compra del entrenador. Si un valor es nulo, se usa el valor por defecto. | Derivado |
@@ -89,3 +89,4 @@ Alinear las reglas de negocio, los casos de uso y el modelo de datos con el func
 - [ ] Redibujar `docs/img/reglas-de-negocio.png` y `.svg` con la base de puntos con IVA y las reglas nuevas
 - [ ] Revisar en el PRD y el MVP las menciones al QR y a la cookie para que reflejen el enlace y el cupón
 - [x] Resolver S-07, S-09 y S-10
+- [x] Cambio de entrenador desde el enlace de otro (S-03, D-11, 26 nov 2026): `POST /api/client/trainer`, pregunta en la página del enlace (con sesión o después del login) y registro en `audit_logs`. Ver spec `backend/03`, P-36

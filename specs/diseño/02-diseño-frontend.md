@@ -272,7 +272,7 @@ El carrito del entrenador se abre desde la Tienda, y el acceso a la app de dieta
   - **Cierre mensual:** períodos, totales, descarga del Excel (solo con sesión), reenvío del correo y, por cada liquidación, **registrar el pago** con fecha, referencia y comprobante (spec `negocio/05` y `negocio/04`).
   - **Entrenadores:** lista, detalle con saldos (spec `negocio/03`) y referidos.
   - **Estrategias por producto:** `product_discount_rules`, con vigencia.
-  - **Ajustes:** cancelaciones y devoluciones con su efecto en puntos y comisión (CU-13).
+  - **Reversar:** reversión de un pedido pagado o de un canje, con su efecto en puntos y comisión (CU-13). No hay devoluciones.
 - **Se quita:** las pantallas de la tienda pública y del saldo a favor retail, si existen en el fork.
 
 ## Sistema de diseño en Claude Design

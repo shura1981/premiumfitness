@@ -41,7 +41,12 @@ it('al aprobarse el pago, el entrenador recibe la comisión y los puntos guardad
         ->and(balancesOf($trainer))->toBe(['points' => 11246, 'commission' => 28350.0])
         ->and($lot)->toBe(['source' => 'client_sale', 'initial_points' => 11246, 'remaining_points' => 11246, 'status' => 'available', 'order_id' => $orderId, 'months' => (int) $_ENV['POINTS_EXPIRATION_MONTHS']])
         ->and($movement)->toBe(['type' => 'sale_credit', 'amount' => '28350.00', 'tax_base' => '189000.00', 'order_id' => $orderId])
-        ->and(Shop::rows("SELECT type, points FROM point_movements WHERE order_id = ?", [$orderId]))->toBe([['type' => 'credit', 'points' => 11246]]);
+        ->and(Shop::rows("SELECT type, points FROM point_movements WHERE order_id = ?", [$orderId]))->toBe([['type' => 'credit', 'points' => 11246]])
+        // Vence al terminar el día que ve el entrenador, no a la hora de la compra (P-38).
+        ->and(Shop::rows(
+            'SELECT TIME(expires_at) AS time, DATE(expires_at) = DATE(DATE_ADD(accrued_at, INTERVAL ? MONTH)) AS same_day FROM point_lots WHERE order_id = ?',
+            [(int) $_ENV['POINTS_EXPIRATION_MONTHS'], $orderId]
+        )[0])->toBe(['time' => '23:59:59', 'same_day' => 1]);
 });
 
 it('repetir el aviso de pago no acredita dos veces', function (): void {
@@ -166,8 +171,8 @@ it('los puntos por referido se activan con la primera compra aprobada de un clie
     // Pendiente: registrarse no da puntos.
     expect(balancesOf($a)['points'])->toBe(0);
 
-    // Un pedido sin pagar tampoco.
-    $first = Shop::order($clientOfB, [['code' => $code, 'quantity' => 1]]);
+    // Un pedido sin pagar tampoco. Dos unidades: 180.000 pagados, por encima del mínimo de 149.000.
+    $first = Shop::order($clientOfB, [['code' => $code, 'quantity' => 2]]);
     expect(balancesOf($a)['points'])->toBe(0);
 
     Shop::pay($first);
@@ -179,7 +184,7 @@ it('los puntos por referido se activan con la primera compra aprobada de un clie
         ->and($lot)->toBe(['source' => 'trainer_referral', 'initial_points' => (int) $_ENV['TRAINER_REFERRAL_POINTS'], 'months' => (int) $_ENV['POINTS_EXPIRATION_MONTHS']])
         ->and(balancesOf($a))->toBe(['points' => (int) $_ENV['TRAINER_REFERRAL_POINTS'], 'commission' => 0.0])
         // B recibe lo suyo por la venta, no los puntos del referido.
-        ->and(balancesOf($b)['points'])->toBe(4500);
+        ->and(balancesOf($b)['points'])->toBe(9000);
 
     // La segunda compra de un cliente de B no vuelve a dar puntos a A.
     Shop::pay(Shop::order($clientOfB, [['code' => $code, 'quantity' => 1]]));
@@ -193,7 +198,7 @@ it('A recibe los puntos que valía el referido cuando B se registró, aunque la 
     $b = AppFactory::json(Auth::registerAndVerify(['role' => 'trainer'], ['kind' => 't', 'id' => ReferralLink::encodeId($a)]))['user']['id'];
     [$clientOfB] = Seed::clientWithTrainer($b);
     $atRegistration = (int) $_ENV['TRAINER_REFERRAL_POINTS'];
-    $orderId        = Shop::order($clientOfB, [['code' => Seed::catalogProduct(), 'quantity' => 1]]);
+    $orderId        = Shop::order($clientOfB, [['code' => Seed::catalogProduct(['valor' => 100000]), 'quantity' => 2]]);
 
     $_ENV['TRAINER_REFERRAL_POINTS'] = '1';
 
@@ -204,6 +209,37 @@ it('A recibe los puntos que valía el referido cuando B se registró, aunque la 
     }
 
     expect(balancesOf($a)['points'])->toBe($atRegistration);
+});
+
+it('una compra de un cliente de B por debajo del mínimo no activa los puntos de A; la siguiente que llega sí (D-05)', function (): void {
+    $a = Seed::trainer();
+    $b = AppFactory::json(Auth::registerAndVerify(['role' => 'trainer'], ['kind' => 't', 'id' => ReferralLink::encodeId($a)]))['user']['id'];
+    [$clientOfB] = Seed::clientWithTrainer($b);
+    $code        = Seed::catalogProduct(['valor' => 100000]);
+    $minimum     = (int) $_ENV['TRAINER_REFERRAL_MIN_PURCHASE'];
+
+    // 90.000 en productos: B gana lo suyo, pero A sigue pendiente.
+    $small = Shop::order($clientOfB, [['code' => $code, 'quantity' => 1]]);
+    Shop::pay($small);
+    expect($minimum)->toBe(149000)
+        ->and(balancesOf($a)['points'])->toBe(0)
+        ->and(balancesOf($b)['points'])->toBe(4500)
+        ->and(Shop::rows('SELECT activated_at FROM trainer_referrals WHERE referred_id = ?', [$b])[0]['activated_at'])->toBeNull();
+
+    // El flete no cuenta: 144.000 en productos más el flete pasan de 149.000, pero los productos no llegan.
+    $withFreight = Shop::order($clientOfB, [['code' => Seed::catalogProduct(['valor' => 160000]), 'quantity' => 1]]);
+    $row         = Shop::orderRow($withFreight);
+    Shop::pay($withFreight);
+    expect((float) $row['amount'])->toBeGreaterThan(149000.0)
+        ->and((float) $row['amount'] - (float) $row['shipping_amount'])->toBe(144000.0)
+        ->and(Shop::orderRow($withFreight)['status_value'])->toBe('APROBADA')
+        ->and(balancesOf($a)['points'])->toBe(0);
+
+    // 180.000 en productos: ahora sí.
+    $enough = Shop::order($clientOfB, [['code' => $code, 'quantity' => 2]]);
+    Shop::pay($enough);
+    expect(balancesOf($a)['points'])->toBe((int) $_ENV['TRAINER_REFERRAL_POINTS'])
+        ->and(Shop::rows('SELECT activation_order_id FROM trainer_referrals WHERE referred_id = ?', [$b])[0]['activation_order_id'])->toBe($enough);
 });
 
 it('la compra propia de B no activa los puntos de A', function (): void {

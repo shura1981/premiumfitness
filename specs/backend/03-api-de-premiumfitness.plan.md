@@ -72,6 +72,7 @@ interface User {
 | `POST /account/push-devices` | `{ token, platform: "web" }` | 204 |
 | `DELETE /account/push-devices` | `{ token }` | 204 |
 | `POST /client/coupon` | `{ coupon_code }` | `User`. Solo un cliente sin entrenador. 404 `coupon_not_found`; 409 `already_linked`. |
+| `POST /client/trainer` | `{ link_id }` | `User`. El cliente confirma el cambio al entrenador del enlace (D-11, P-36). Solo cambian las compras nuevas. Sin entrenador, lo asocia; con el mismo, no hace nada. 403 si no es cliente; 404 si el enlace no es válido o el entrenador no está activo. `User` trae `trainer_link_id` (el id del enlace de su entrenador) y `GET /referrals/trainers/{id}` trae `link_id`, para que la app compare. |
 
 ```ts
 interface Profile extends User {
@@ -119,7 +120,9 @@ interface ProductDetail extends Product {
 | `POST /checkout` | `{ items, address_id, payment_gateway, notes? }` | 201 `CheckoutResult`. 409 `out_of_stock`, `price_changed` o `shipping_unavailable` (Servientrega no llega a la ciudad de la dirección). |
 | `GET /orders` | — | `{ data: OrderSummary[] }`, los propios |
 | `GET /orders/:id` | — | `OrderDetail`; 404 si no es de quien consulta |
-| `POST /orders/:id/pay` | — | `CheckoutResult` de un pedido propio que sigue pendiente, con el valor guardado. 409 `order_not_payable` si ya se pagó, es un canje o tiene más de un día. |
+| ~~`POST /orders/:id/pay`~~ | — | **Retirado (24 nov 2026):** no existe pagar de nuevo un pedido ya creado. Si el pago no se aprueba, el cliente vuelve al checkout y `POST /checkout` crea un pedido nuevo, como en radical (spec `backend/03`, P-19 y P-24). |
+| `GET /payments/:reference` | — | `PaymentStatusResult` del pedido propio con ese id de pago (`pf-<pedido>`, `orders.payment_code`), para la página de respuesta (spec `integraciones/03`). 404 si no es suyo o no existe. Solo informa: el estado lo cambia el webhook. |
+| `PUT /account/socket` | `{ socket_token }` | 204. Registra la conexión de esta sesión en el gateway de sockets; ahí llegan `purchase.status.changed` y `order.updated`. 422 si no es válida. |
 
 ```ts
 interface CheckoutPreview {
@@ -136,10 +139,28 @@ interface CheckoutPreview {
 interface CheckoutResult {
   order_id: number;
   payment:
-    | { gateway: 'bold'; bold: { order_id: string; amount: number; currency: 'COP'; api_key: string;
+    | { gateway: 'bold'; reference: string; bold: { order_id: string; amount: number; currency: 'COP'; api_key: string;
         integrity_signature: string; description: string; redirection_url: string } }
-    | { gateway: 'addi' | 'sistecredito'; redirect_url: string };
+    | { gateway: 'addi' | 'sistecredito'; reference: string; redirect_url: string };
+  // `reference`: id de pago del pedido (`pf-<pedido>`, `orders.payment_code`). Cada pasarela devuelve al
+  // cliente a su página de la app (o `/coach/pago/resultado/…`), con el id en su parámetro:
+  //   /pago/resultado/bold?orderId=<reference>   (Bold agrega `bold-order-id` y `bold-tx-status`)
+  //   /pago/resultado/addi?id_order=<reference>
+  //   /pago/resultado/sistecredito?orderId=<reference>
 }
+interface PaymentStatusResult {
+  reference: string; order_id: number; gateway: string; gateway_name: string;
+  status: OrderStatus;                                 // del pedido; lo decide el webhook
+  gateway_status: string | null;                       // el estado que dejó el webhook (APROBADA, PAGO RECHAZADO…); null sin aviso
+  transaction_id: string | null;                       // número de la transacción en la pasarela; llega al aprobar
+  amount: number;                                      // valor del pedido
+  created_at: string; approved_at: string | null;
+}
+// Socket de elinut (spec integraciones/03). A la conexión del dueño del pedido:
+//   purchase.status.changed { order_id, order_status, status, status_id, gateway, transaction_id, amount, occurred_at }
+//   order.updated           { order_id, status, tracking_number, carrier_name, occurred_at }
+// Al admin (todos los agentes): order.created (el pedido), order.status.changed { order_id, status_id, status_value },
+//   order.processed { order_id }, order.tracking.updated { order_id, tracking_number, carrier_name }
 type OrderStatus = 'pendiente' | 'aprobado' | 'en_proceso' | 'en_camino' | 'rechazado' | 'cancelado';
 interface OrderSummary {
   id: number; created_at: string; status: OrderStatus; total: number; items_count: number; first_item: string;
@@ -159,10 +180,10 @@ interface OrderDetail extends OrderSummary {
 }
 ```
 
-- El pago con Bold usa el botón de Bold en la app (`bold`), con los datos firmados por el backend. Con Addi y Sistecrédito, la app abre `redirect_url`, la página de pago de la pasarela, que el backend pidió con el pedido guardado. Al volver, la app abre `/pago/resultado?pedido=<id>` y consulta `GET /orders/:id` hasta que el estado deje de ser `pendiente`.
+- El pago con Bold usa el botón de Bold en la app (`bold`), con los datos firmados por el backend. Con Addi y Sistecrédito, la app abre `redirect_url`, la página de pago de la pasarela, que el backend pidió con el pedido guardado. Al volver, la página de respuesta de esa pasarela consulta una vez `GET /payments/:reference` y muestra; si el webhook llega después, el socket la actualiza (spec `integraciones/03`).
 - El pedido se aprueba por el webhook de la pasarela, nunca por la app.
-- `bold.order_id` es el id del intento de pago (`pf-<consecutivo>`), no el número del pedido: cada «Pagar» (`POST /checkout` o `POST /orders/:id/pay`) crea un intento nuevo (spec `backend/03`, P-24). El número del pedido es `order_id` y la vuelta usa `?pedido=<order_id>`.
-- `payment_gateway` admite `bold`, `addi` y `sistecredito` (spec `backend/03`, P-02). Si la pasarela no entrega su página de pago, responde 502 `payment_unavailable` y el pedido queda pendiente para pagarlo desde el detalle.
+- `bold.order_id` es el id de pago del pedido, `pf-<número del pedido>` (`orders.payment_code`; spec `backend/03`, P-24): un pedido = un pago = un id, como en radical. El webhook busca el pedido por ese id.
+- `payment_gateway` admite `bold`, `addi` y `sistecredito` (spec `backend/03`, P-02). Si la pasarela no entrega su página de pago, responde 502 `payment_unavailable` («tus productos siguen en el carrito: inténtalo de nuevo») y deja el fallo en `logs/payment-gateway/`; el pedido queda pendiente y el cliente lo intenta de nuevo desde el checkout (otro pedido), como en radical.
 - `total` incluye el IVA y el envío; `tax_amount` es informativo («incluye $X de IVA»).
 - En un canje, `total` es 0, `redemption_points` es el total de puntos y `items[].redemption_points` es el de la línea completa (precio × cantidad). Su línea de tiempo empieza en «Canje confirmado», sin pasos de pago. Los importes en dinero de un canje son informativos (el precio completo): la app muestra los puntos.
 
@@ -171,7 +192,7 @@ interface OrderDetail extends OrderSummary {
 | Método y ruta | Cuerpo | Respuesta |
 | --- | --- | --- |
 | `GET /trainer/dashboard` | — | `TrainerDashboard` |
-| `GET /trainer/referrals` | — | `TrainerReferrals`, con `trainer_referral_points`: los puntos que gana por cada entrenador referido (`TRAINER_REFERRAL_POINTS`), para explicarlo al invitar. |
+| `GET /trainer/referrals` | — | `TrainerReferrals`, con `trainer_referral_points`: los puntos que gana por cada entrenador referido (`TRAINER_REFERRAL_POINTS`), y `trainer_referral_min_purchase`: la compra mínima en productos de un cliente del referido que los activa (`TRAINER_REFERRAL_MIN_PURCHASE`), para explicarlo al invitar. |
 | `GET /trainer/points?source=` | — | `TrainerPoints` |
 | `GET /trainer/commission` | — | `TrainerCommission` |
 | `GET /trainer/commission/conversion-preview` | — | `ConversionPreview`. 409 `conversion_blocked` o `nothing_to_convert`. |
@@ -307,23 +328,23 @@ El cierre lo dispara el cron (`POST /cron-job/commission/close`, día 1 a la 01:
 | `GET /admin/reports/redemptions?date_from=&date_to=` | — | Reporte de canjes (spec `negocio/07`), solo gerentes: `{ date_from, date_to, totals: { redemptions, points, units, trainers, cancelled, cancelled_points }, days: [{ date, redemptions, points }], products: [{ code, name, units, points }], trainers: [{ id, full_name, redemptions, points }], redemptions: [{ order_id, approved_at, trainer_id, trainer_name, city, units, points, status, sap_order_code, tracking_number }] }`. Sin fechas, los últimos 30 días; 422 si una fecha no es válida o «desde» es mayor que «hasta». |
 | `GET /admin/reports/redemptions/export?date_from=&date_to=` | — | Una fila por producto canjeado para Excel: `pedido_id, fecha, hora, entrenador, documento_entrenador, ciudad, departamento, codigo_producto, producto, cantidad, puntos_linea, puntos_pedido, forma_pago, precio_completo_referencia, valor_linea_referencia, base_sin_iva_referencia, iva_referencia, estado, pedido_sap, guia`. Solo gerentes. |
 | `GET /admin/orders/:id/adjustments` | — | `{ data: Adjustment[], preview: AdjustmentEffect, can_adjust: boolean }` |
-| `POST /admin/orders/:id/adjustments/preview` | `{ type, items? }` | `AdjustmentEffect` de ese ajuste, sin aplicarlo |
-| `POST /admin/orders/:id/adjustments` | `{ type, reason, items? }` | 201 `Adjustment`. 409 `already_adjusted` u `order_not_approved`. |
+| `POST /admin/orders/:id/adjustments/preview` | `{ type: 'cancellation' }` | `AdjustmentEffect` de reversar el pedido, sin aplicarlo |
+| `POST /admin/orders/:id/adjustments` | `{ type: 'cancellation', reason }` | 201 `Adjustment`: el pedido queda «REVERSADA». 409 `already_adjusted` u `order_not_approved`. 422 con otro `type`. |
 
 ```ts
-type AdjustmentType = 'cancellation' | 'full_return' | 'partial_return';
+type AdjustmentType = 'cancellation';            // «Reversar»: no hay devoluciones (P-30)
 interface AdjustmentEffect { commission_amount: number; points: number; trainer_name: string | null }
 interface Adjustment {
-  id: number; type: AdjustmentType; reason: string; agent_name: string; created_at: string;
+  id: number; type: AdjustmentType | 'restitution'; reason: string; created_at: string;
+  agent_name: string;                           // «Automático (Bold)» si lo hizo la anulación de Bold (P-28)
   effect: AdjustmentEffect;                     // lo que se revirtió al entrenador (valores negativos)
 }
 ```
 
-- `items` solo en `partial_return`: `[{ item_id, quantity }]`, con cantidad entre 1 y la comprada.
-- `preview` del `GET` es lo que revertiría una cancelación total hoy. Los valores son negativos cuando se le quitan al entrenador y positivos cuando se le devuelven (canje cancelado).
-- Un pedido admite un solo ajuste. `can_adjust` es falso si ya lo tiene o si no está pagado.
-- De los puntos solo se retira lo que quede en el lote de ese pedido; lo ya usado no genera deuda.
-- Un canje solo admite `cancellation`: devuelve los puntos en un lote nuevo.
+- `preview` del `GET` es lo que revertiría reversar el pedido hoy. Los valores son negativos cuando se le quitan al entrenador y positivos cuando se le devuelven (canje reversado).
+- Un pedido se reversa una sola vez y completo. `can_adjust` es falso si ya se reversó o si no está pagado.
+- Los puntos de la venta se retiran completos: primero del lote del pedido y lo ya usado de los otros lotes vigentes por FIFO, sin deuda (P-17). `effect.points` es lo que se le retira al entrenador del pedido; si la venta activó un referido, lo que se le retira a A queda en la auditoría (`effect.referral_points`), no en `effect`.
+- Reversar un canje le devuelve los puntos al entrenador en un lote nuevo (se guarda como `restitution`).
 
 ## Servidor a servidor y crons
 

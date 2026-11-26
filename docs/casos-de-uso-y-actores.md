@@ -46,7 +46,7 @@ El alcance confirmado comprende:
 3. Asociación del cliente con el entrenador, por el enlace o por su cupón.
 4. Compras de clientes con un descuento del 10%.
 5. Reconocimiento al entrenador del 5% en puntos (con IVA incluido) y del 15% de comisión sin IVA cuando una compra es aprobada. Los porcentajes son configurables por producto.
-6. 50.000 puntos por referir a otro entrenador, que se activan con la primera compra aprobada de un cliente del referido.
+6. 50.000 puntos por referir a otro entrenador, que se activan con la primera compra aprobada de un cliente del referido de al menos 149.000 en productos.
 7. Conversión del total de la comisión a puntos (comisión + 50% de los puntos vigentes, con tope en la comisión) o pago en dinero de la comisión no convertida al final de cada mes.
 8. Canje de puntos por productos exclusivamente a través de la app.
 9. Descuento del 25% para entrenadores en todo el portafolio.
@@ -91,7 +91,7 @@ Una misma persona puede participar en varias de estas situaciones. No se define 
 | --- | --- | --- |
 | Persona aún no registrada | Inicia el registro de cliente o entrenador. | Estado previo de ACT-01 o ACT-02; no se asume un tercer rol de negocio. |
 | App web que conserva el id del enlace | Mantiene el identificador del entrenador entre la apertura del enlace y el registro o login (cookie o almacenamiento del navegador). | Mecanismo técnico confirmado; no es un actor de negocio. Su soporte en una app nativa está pendiente. |
-| Origen del estado de compra «Aprobada» | Proporciona el evento que habilita las recompensas por venta. | La condición existe, pero los requisitos no indican quién la informa. Derivado de radical: la pasarela de pagos confirma el pago por webhook y el pedido pasa a «Aprobada». El proveedor sigue pendiente (D-10). |
+| Origen del estado de compra «Aprobada» | Proporciona el evento que habilita las recompensas por venta. | La condición existe, pero los requisitos no indican quién la informa. Derivado de radical: la pasarela de pagos confirma el pago por webhook y el pedido pasa a «Aprobada». Las pasarelas son Bold, Addi y Sistecrédito, con las cuentas de Nutramerican (D-10, resuelta el 25 nov 2026). |
 | Pasarela de pagos | Cobra el pedido e informa el resultado del pago. | Derivado de radical. No es un actor de negocio. |
 | SAP Business One | Recibe el pedido que registra el agente y devuelve el código del pedido SAP. Define los artículos y las bodegas. | Sistema externo, confirmado por producto. |
 | Transportadora | Transporta el pedido y expone el rastreo de la guía. En radical: Servientrega, Melonn y Envía. | Sistema externo, confirmado por producto. Las transportadoras de PremiumFitness están por confirmar. |
@@ -110,7 +110,7 @@ No se incluyen como actores un operador de bodega ni un soporte, porque ni los r
 | RN-04 | Las recompensas al entrenador por una venta se reconocen cuando la compra está aprobada. | Confirmado. Los demás estados no se definen. | «Cuando la compra sea Aprobada…». |
 | RN-05 | El entrenador recibe en puntos el 5% de lo que pagó el cliente por los productos (con descuento y con IVA, sin envío), calculado sobre el total del pedido y redondeado al entero más cercano. | Confirmado; base, redondeo y envío definidos por producto el 9 nov 2026. | Párrafo de aprobación y beneficio 1. |
 | RN-06 | El entrenador recibe una comisión sobre el valor sin IVA de cada producto comprado. El porcentaje por defecto es del 15% y puede variar por producto (RN-22). | Confirmado por el párrafo de aprobación; existe una contradicción posterior sobre el beneficiario. | Párrafo de aprobación y beneficio 2. |
-| RN-07 | El entrenador A recibe 50.000 puntos por referir a otro entrenador (B). Quedan pendientes al registrarse B y se activan una sola vez con la primera compra aprobada de un cliente de B, sin monto mínimo. La compra propia de B no los activa. Los puntos pendientes no caducan; una vez activados, vencen a los 6 meses. | Confirmado por producto (9 nov 2026). El monto es la variable de entorno `TRAINER_REFERRAL_POINTS`. | Párrafo posterior a «Entrenador comparte qr con otro entrenador». |
+| RN-07 | El entrenador A recibe 50.000 puntos por referir a otro entrenador (B). Quedan pendientes al registrarse B y se activan una sola vez con la primera compra aprobada de un cliente de B de al menos 149.000 en productos (con descuento e IVA, sin flete; variable `TRAINER_REFERRAL_MIN_PURCHASE`). La compra propia de B no los activa. Los puntos pendientes no caducan; una vez activados, vencen a los 6 meses. | Confirmado por producto (9 nov 2026). El monto es la variable de entorno `TRAINER_REFERRAL_POINTS`. | Párrafo posterior a «Entrenador comparte qr con otro entrenador». |
 | RN-08 | La app de dietas opera en modalidad de suscripción y se desactiva si el entrenador incumple una regla de negocio. | Confirmado. Regla, evaluación y alcance de la desactivación pendientes. | Beneficios para entrenadores, punto 1. |
 | RN-09 | Los puntos se canjean por productos exclusivamente en la app; no se entregan en efectivo. | Confirmado. | Beneficios, punto 2, y último párrafo. |
 | RN-10 | El entrenador tiene un descuento para todo el portafolio, del 25% por defecto y configurable. | Confirmado. Acumulación con otros beneficios pendiente. | Beneficios para entrenadores, punto 3. |
@@ -123,7 +123,7 @@ No se incluyen como actores un operador de bodega ni un soporte, porque ni los r
 | RN-17 | El despacho sale de la bodega SAP asignada a la ciudad de entrega. Cada ciudad tiene hasta tres bodegas en orden de prioridad. | Confirmado por producto. | Confirmación del 7 nov 2026; radical. |
 | RN-18 | El envío se registra con número de guía y transportadora, que se guardan juntos. | Confirmado por producto. | Confirmación del 7 nov 2026; radical. |
 | RN-19 | El comprador puede consultar el estado de su pedido y, cuando existe guía, el rastreo en la transportadora. | Confirmado por producto. No se define un historial de cambios de estado. | Confirmación del 7 nov 2026; radical. |
-| RN-20 | Cada entrenador tiene un cupón con nombre único. Un cliente sin entrenador puede asociarse escribiendo ese cupón. Un cliente ya asociado no ve el campo del cupón y no cambia de entrenador por sí mismo. | Confirmado por producto. | Confirmación del 9 nov 2026. |
+| RN-20 | Cada entrenador tiene un cupón con nombre único. Un cliente sin entrenador puede asociarse escribiendo ese cupón. Un cliente ya asociado no ve el campo del cupón. Si un cliente ya asociado abre el enlace de otro entrenador, la app le pregunta si quiere cambiarlo; si acepta, solo cambian las compras nuevas: las anteriores, con su comisión y sus puntos, siguen siendo del entrenador de antes (26 nov 2026, D-11). | Confirmado por producto. | Confirmación del 9 nov 2026; cambio de entrenador desde el enlace, 26 nov 2026. |
 | RN-21 | Un cliente sin entrenador puede comprar a precio completo; su compra no genera descuento ni recompensas. | Confirmado por producto. | Confirmación del 9 nov 2026. |
 | RN-22 | Los porcentajes no están fijos en el código. Descuento del cliente, descuento del entrenador, puntos y comisión tienen valores por defecto (10%, 25%, 5% y 15%) que, como los 50.000 puntos por referido, los 6 meses de vencimiento y el 50% de conversión, se definen en variables de entorno. Cada producto puede tener una estrategia propia; por ejemplo, Nutra Balance da un 5% más de descuento (15%) y su comisión baja al 10%. | Confirmado por producto. Falta definir quién administra las estrategias y si pueden tener vigencia. | Confirmación del 9 nov 2026. |
 | RN-23 | Una cuenta es cliente o entrenador, nunca ambas, y su celular es único. Se registra en la app de su rol verificando el celular por SMS, inicia sesión con celular y contraseña, y recupera la contraseña por SMS. La sesión dura 30 días. | Confirmado por producto (9 nov 2026). | Spec `specs/seguridad/01-autenticacion-y-sesiones.md`. |
@@ -149,7 +149,7 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 | CU-05 | Reconocer puntos y comisión por compra aprobada | Entrenador beneficiario; evento de aprobación como disparador | Confirmado; cálculos incompletos. |
 | CU-06 | Compartir el enlace para entrenadores | Entrenador A | Confirmado; enlace confirmado por producto. |
 | CU-07 | Registrar entrenador referido | Entrenador B | Derivado del flujo confirmado de referidos. |
-| CU-08 | Activar los 50.000 puntos por entrenador referido | Entrenador A beneficiario; primera compra aprobada de un cliente de B como disparador | Confirmado por producto (9 nov 2026). |
+| CU-08 | Activar los 50.000 puntos por entrenador referido | Entrenador A beneficiario; primera compra aprobada de un cliente de B, de al menos 149.000 en productos, como disparador | Confirmado por producto (9 nov 2026). |
 | CU-09 | Consultar puntos y movimientos | Entrenador | Derivado para permitir el uso informado de puntos. |
 | CU-10 | Consultar comisiones | Entrenador | Confirmado por producto (9 nov 2026). |
 | CU-11 | Convertir el total de la comisión a puntos | Entrenador | Confirmado por producto (9 nov 2026). |
@@ -257,7 +257,7 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 - **Compra sin aprobación:** no se otorgan todavía las recompensas de CU-05.
 - **Cliente sin entrenador:** compra a precio completo y no genera recompensas (RN-21). Puede asociarse antes de pagar con CU-20.
 - **Nueva compra del mismo cliente:** conserva el descuento mientras siga asociado al entrenador.
-- **Cancelación, rechazo o devolución:** los estados y sus efectos sobre beneficios no están definidos.
+- **Rechazo o reversión:** un pago rechazado o cancelado por la pasarela no da beneficios; un pedido pagado que se reversa queda «REVERSADA» y se le revierten al entrenador la comisión y los puntos. No hay devoluciones (spec `backend/03`, P-26 y P-30).
 
 **Resultado:** compra registrada con el descuento correspondiente; las recompensas dependen de su aprobación.
 
@@ -286,7 +286,7 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 - **Compra no aprobada:** el caso no se ejecuta.
 - **Entrenador no identificable o importes insuficientes:** se propone no acreditar una recompensa calculada con datos incompletos y dejar la incidencia identificable; tratamiento operativo pendiente.
 - **Aprobación recibida más de una vez:** se propone evitar duplicar puntos y comisión por la misma compra. Es un control derivado.
-- **Devolución posterior:** no se define reversión, retención ni descuento de saldos.
+- **Reversión posterior:** de los puntos solo se retira lo que quede del pedido; la comisión se descuenta, y si el mes ya se pagó, del siguiente.
 
 **Resultado:** puntos y comisión reconocidos al entrenador por la compra aprobada. Esto no equivale a un pago o retiro de la comisión.
 
@@ -331,7 +331,7 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 4. Se guarda la relación A → B con 50.000 puntos pendientes para A. El valor se toma de la variable de entorno `TRAINER_REFERRAL_POINTS` y queda fijado en el referido.
 5. Los puntos pendientes no se pueden canjear y no caducan. B no gana puntos por registrarse.
 
-**Alternativas y errores:** si B se registra sin el enlace de A, no queda referido por A: no hay cupón para entrenadores. B tiene un solo referente. El autorreferido y un B ya registrado siguen pendientes (D-05).
+**Alternativas y errores:** si B se registra sin el enlace de A, no queda referido por A: no hay cupón para entrenadores. B tiene un solo referente. Un B ya registrado no queda referido (solo cuentas nuevas) y A no puede referirse a sí mismo. Las cuentas falsas con datos de otra persona se frenan con la compra mínima de 149.000 que activa los puntos, los términos y condiciones y la suspensión del entrenador (D-05, resuelta el 26 nov 2026).
 
 **Resultado:** B registrado y 50.000 puntos pendientes para A.
 
@@ -359,10 +359,9 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 - **Se activan una sola vez:** las compras siguientes de los clientes de B no le dan más puntos a A.
 - **Compra propia de B:** no activa los puntos de A.
 - **Pago no aprobado:** no activa nada.
-- **Cancelación o devolución de la compra que los activó:**
-  - Si A no ha usado los puntos, se le retiran y vuelven a quedar pendientes hasta la siguiente compra aprobada de un cliente de B.
-  - Si los usó en parte, se retira solo el remanente.
-  - Si los usó por completo, los conserva.
+- **Reversión de la compra que los activó:**
+  - Se le retiran a A los 50.000 puntos y vuelven a quedar pendientes hasta la siguiente compra aprobada de un cliente de B.
+  - Si A ya usó una parte o todos, lo que falte se retira de sus otros puntos vigentes, del más antiguo; si no le alcanzan, se retira lo que tenga y no queda deuda (25 nov 2026, spec `backend/03` P-17).
 
 **Resultado:** 50.000 puntos disponibles para A, una sola vez por referido.
 
@@ -395,7 +394,7 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 
 - Las cifras responden de inmediato porque se calculan con índices que cubren la consulta (spec `specs/negocio/03-saldos-del-entrenador.md`).
 - Un lote vencido deja de contar como vigente en cuanto pasa su fecha, aunque el proceso de vencimiento no haya corrido.
-- Cada lote vence a los 6 meses de su acumulación.
+- Cada lote vence a los 6 meses de su acumulación, al terminar ese día en hora de Colombia (spec `backend/03`, P-38).
 
 ### CU-10. Consultar comisiones
 
@@ -476,7 +475,7 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 - **Puntos insuficientes:** no se presupone pago mixto de dinero y puntos; debe definirse si se admite.
 - **Solicitud de efectivo:** no corresponde a un canje permitido.
 - **Canje fuera de la app:** no corresponde al canal autorizado por RN-09.
-- **Producto no disponible o canje cancelado:** reposición de puntos, reserva de inventario y devolución están pendientes.
+- **Producto no disponible o canje reversado:** los puntos se le devuelven al entrenador en un lote nuevo; la reserva de inventario sigue pendiente.
 - **Uso del descuento del 25%:** no se presume su acumulación con el canje.
 
 **Resultado:** canje registrado por productos. Como propuesta derivada, el canje sigue el mismo procesamiento y envío que una compra (CU-16 a CU-19). Falta confirmar si se registra en SAP y con qué documento (PD-18). Los tiempos de cumplimiento no están especificados.
@@ -619,7 +618,7 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 
 - **Guía sin transportadora o transportadora sin guía:** no se acepta.
 - **Guía incorrecta:** el agente puede corregirla. Como no se guarda un historial, el valor anterior se pierde (PD-19).
-- **Cancelación o devolución después del envío:** los estados existen en radical, pero sus efectos sobre puntos y comisiones siguen pendientes (PD-13).
+- **Reversión después del envío:** el pedido queda «REVERSADA» y se revierten la comisión y los puntos (PD-13). No hay devoluciones.
 
 **Resultado:** pedido enviado, con guía y transportadora.
 
@@ -697,8 +696,8 @@ La restricción de no entregar efectivo se refiere al canje de puntos. La comisi
 **Alternativas y errores:**
 
 - **Mes ya cerrado:** responde 409 y no toca nada. Con `force` solo regenera el Excel y reenvía el correo; nunca recalcula importes.
-- **Total negativo** (por devoluciones): no se paga nada y la diferencia pasa al mes siguiente.
-- **Devolución o corrección posterior al cierre:** entra como ajuste en el mes siguiente. Un mes cerrado no cambia.
+- **Total negativo** (por reversiones): no se paga nada y la diferencia pasa al mes siguiente.
+- **Reversión o corrección posterior al cierre:** entra como ajuste en el mes siguiente. Un mes cerrado no cambia.
 - **Fallo del correo:** el cierre queda hecho y el correo se reenvía con `force`.
 
 **Resultado:** período cerrado, Excel enviado a financiero y cada liquidación pagada con su comprobante visible para el entrenador.
@@ -758,14 +757,14 @@ Las recompensas de CU-05 dependen de la aprobación del pago (paso 1), no del en
 | PD-03 | Redondeo de puntos | Resuelto el 9 nov 2026: una sola vez por pedido, al entero más cercano (0,5 sube). | Ninguna. | CU-05, CU-09. |
 | PD-04 | Base de comisión | Se exige retirar el IVA, sin detallar descuentos, tasas, envío o pedidos con tratamientos tributarios diferentes. | Definir la base sin IVA por compra o por producto. | CU-05. |
 | PD-05 | Puntos por referido | **Resuelta (9 nov 2026):** son 50.000 puntos, definidos en la variable de entorno `TRAINER_REFERRAL_POINTS`. | — | CU-08. |
-| PD-06 | Compra que activa el referido | **Resuelta (9 nov 2026):** la primera compra aprobada de cualquier cliente de B, una sola vez y sin monto mínimo; la compra propia de B no cuenta. Si se cancela o devuelve y A no ha usado los puntos, vuelven a quedar pendientes. | — | CU-07, CU-08. |
+| PD-06 | Compra que activa el referido | **Resuelta (9 nov 2026):** la primera compra aprobada de cualquier cliente de B, una sola vez; la compra propia de B no cuenta. Desde el 26 nov 2026 debe ser de al menos 149.000 en productos (D-05). Si se reversa, se le retiran a A y vuelven a quedar pendientes (25 nov 2026, P-17). | — | CU-07, CU-08. |
 | PD-07 | Conversión de comisión | **Resuelta (9 nov 2026):** total de la comisión; puntos recibidos = comisión + mín(50% × puntos vigentes, comisión). | — | CU-10, CU-11. |
 | PD-08 | Permanencia en dietas | **Resuelta (9 nov 2026):** meta en puntos por clientes del mes anterior (249.000, provisional), mes gratis de 30 días desde el primer ingreso, canje de 50.000 puntos por mes y estado calculado en cada consulta. La lógica de la meta puede cambiar. | Valor definitivo de la meta. | CU-14, CU-15. |
 | PD-09 | Suscripción de dietas | **Resuelta (9 nov 2026):** no hay pago en dinero; el acceso se gana con la meta o se compra con 50.000 puntos al mes. La app de dietas es aparte y desacoplada (Nutrition & Fitness Plus, con su propio backend); pregunta a PremiumFitness por documento si el entrenador puede entrar (15 nov 2026). | Ninguna del lado de PremiumFitness. | CU-14, CU-15. |
-| PD-10 | Enlace y asociación | Resuelto en parte el 9 nov 2026: la asociación se guarda en la cuenta y no se cambia por el cliente. Falta definir cuánto tiempo guarda la app el id del enlace antes del registro. | Definir el almacenamiento temporal del id. | CU-02, CU-03. |
+| PD-10 | Enlace y asociación | **Resuelta (26 nov 2026, D-11):** la asociación se guarda en la cuenta. La app guarda el id del enlace hasta que se cierra la pestaña; si se pierde, el cliente escribe el cupón. Vale el último enlace abierto. Un cliente asociado que abre el enlace de otro entrenador decide si cambia; solo cambian las compras nuevas. | Ninguna. | CU-02, CU-03. |
 | PD-11 | Continuidad del descuento | Resuelto el 9 nov 2026: el descuento aplica a todo el catálogo mientras el cliente esté asociado. | Ninguna. | CU-04. |
 | PD-12 | Acumulación y valoración | No se indica si descuentos, promociones y puntos se combinan ni cuál es el precio de canje. | Definir compatibilidad, base del descuento y valor de productos en puntos. | CU-04, CU-12, CU-13. |
-| PD-13 | Aprobación y reversión | No se define quién informa la aprobación ni qué ocurre con cancelaciones o devoluciones. | Definir origen del estado, transición válida y efectos sobre puntos y comisión. Los 50.000 puntos por referido ya tienen regla (CU-08). | CU-04, CU-05, CU-08, CU-12. |
+| PD-13 | Aprobación y reversión | **Resuelta (25 nov 2026):** la aprobación la informa solo la pasarela con su webhook. Un pedido pagado se reversa completo (estado «REVERSADA»), con un ajuste que revierte comisión y puntos; no hay devoluciones (spec `backend/03`, P-26, P-29 y P-30). | Ninguna. | CU-04, CU-05, CU-08, CU-12. |
 | PD-14 | Liquidación de comisión | **Resuelta (9 nov 2026):** la comisión no convertida se paga en dinero al final de cada mes (CU-21). Pendiente en términos y condiciones: medio, plazo, mínimo y retenciones. | Términos y condiciones. | CU-10, CU-11, CU-21. |
 | PD-15 | Mecánica del canje | Sin reglas de pago mixto, inventario, reserva, entrega o cancelación. | Definir qué hace efectivo el canje y cuándo se consumen o restituyen puntos. | CU-12. |
 | PD-16 | Registro y acceso | No hay campos, credenciales, verificación ni coexistencia de roles. | Definir datos mínimos, identificación y permisos. | CU-01, CU-03, CU-07 y consultas. |

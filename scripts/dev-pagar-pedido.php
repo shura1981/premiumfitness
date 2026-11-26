@@ -9,14 +9,13 @@ declare(strict_types=1);
  *
  *   php scripts/dev-pagar-pedido.php <id del pedido> [valor pagado]
  *
- * Sin el valor, paga exactamente lo que vale el pedido. El aviso lleva la referencia del último
- * intento de pago del pedido (`pf-<id>`, spec backend/03, P-24); si no tiene ninguno, crea uno.
+ * Sin el valor, paga exactamente lo que vale el pedido. El aviso lleva el id de pago del pedido
+ * (`pf-<pedido>`, `orders.payment_code`; spec backend/03, P-24).
  * Se niega a correr fuera de local.
  */
 
 require __DIR__ . '/../load/bootstrap.php';
 
-use App\Features\PaymentGateway\PaymentAttemptRepository;
 use App\Infrastructure\Database\DatabaseConfig;
 use App\Infrastructure\Database\DB;
 use App\Infrastructure\Http\CurlHttpClient;
@@ -34,17 +33,18 @@ if ($orderId <= 0) {
 }
 
 DB::boot(DatabaseConfig::fromEnv());
-$stmt = DB::getInstance()->prepare('SELECT amount FROM orders WHERE order_id = ?');
+$stmt = DB::getInstance()->prepare('SELECT amount, payment_code FROM orders WHERE order_id = ?');
 $stmt->execute([$orderId]);
-$amount = $stmt->fetchColumn();
+$order  = $stmt->fetch(PDO::FETCH_ASSOC);
+$amount = is_array($order) ? $order['amount'] : false;
 
 if ($amount === false) {
     fwrite(STDERR, "No existe el pedido {$orderId}.\n");
     exit(1);
 }
 
-$attempts  = new PaymentAttemptRepository();
-$reference = $attempts->referencesFor($orderId)[0] ?? $attempts->create($orderId, 'bold', (float) $amount);
+// El id de pago del pedido (`pf-<pedido>`), el mismo que recibió la pasarela.
+$reference = (string) $order['payment_code'];
 
 $body = json_encode([
     'id'   => 'evt-local-' . bin2hex(random_bytes(6)),

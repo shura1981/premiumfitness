@@ -11,9 +11,9 @@ use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
 /**
- *   GET  /api/admin/orders/{id}/adjustments           → ajustes del pedido y lo que revertiría cancelarlo
- *   POST /api/admin/orders/{id}/adjustments/preview   → lo que revertiría un ajuste, sin aplicarlo
- *   POST /api/admin/orders/{id}/adjustments           → registra el ajuste
+ *   GET  /api/admin/orders/{id}/adjustments           → la reversión del pedido, si tiene, y lo que revertiría
+ *   POST /api/admin/orders/{id}/adjustments/preview   → lo que revertiría reversarlo, sin aplicarlo
+ *   POST /api/admin/orders/{id}/adjustments           → reversa el pedido (`type: cancellation`, «Reversar»)
  */
 class AdjustmentController
 {
@@ -44,7 +44,7 @@ class AdjustmentController
     {
         $body = (array) ($request->getParsedBody() ?? []);
 
-        return $this->json($response, $this->adjustments->preview($id, (string) ($body['type'] ?? ''), $body['items'] ?? null));
+        return $this->json($response, $this->adjustments->preview($id, (string) ($body['type'] ?? '')));
     }
 
     public function create(Request $request, Response $response, int $id): Response
@@ -56,7 +56,7 @@ class AdjustmentController
             throw ApiException::invalid('Revisa los datos e inténtalo de nuevo.', errors: ['reason' => 'Escribe el motivo (entre 5 y 500 caracteres).']);
         }
 
-        $adjustmentId = $this->adjustments->create($id, AdminRequest::agentId($request), (string) ($body['type'] ?? ''), $reason, $body['items'] ?? null);
+        $adjustmentId = $this->adjustments->create($id, AdminRequest::agentId($request), (string) ($body['type'] ?? ''), $reason);
 
         foreach ($this->adjustments->listFor($id) as $adjustment) {
             if ($adjustment['id'] === $adjustmentId) {

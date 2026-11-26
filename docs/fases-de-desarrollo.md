@@ -152,12 +152,12 @@ Elegir motor de base de datos, migraciones, índices y restricciones. Diseñar t
 
 - Ante la compra aprobada del cliente, calcular 5% en puntos sobre el valor con IVA incluido y la comisión (15% por defecto, o la del producto) sobre la base sin IVA.
 - Guardar base, porcentaje, redondeo y referencia del pedido para explicar cada recompensa.
-- Activar una sola vez los 50.000 puntos de A con la primera compra aprobada de un cliente de B; B recibe sus recompensas por esa compra.
+- Activar una sola vez los 50.000 puntos de A con la primera compra aprobada de un cliente de B de al menos 149.000 en productos; B recibe sus recompensas por esa compra.
 - Crear lotes por acumulación con seis meses de vigencia y procesos de vencimiento.
 - Mostrar acumulado de comisiones, puntos inactivos, disponibles, usados y caducados; adaptar la UI de `join.nutramerican.com`.
 - Implementar conversión del total de comisión (comisión + mín(50% × puntos vigentes, comisión)) con vista previa, aviso y débito/crédito indivisibles.
 - Implementar el corte mensual de la comisión (cron del hosting), el Excel y el correo a financiero.
-- Registrar ajustes sin borrar movimientos originales, conforme a la política de devoluciones acordada.
+- Registrar la reversión de un pedido pagado sin borrar movimientos originales (no hay devoluciones).
 
 **Entregables:** cuenta de comisiones y puntos, activación de los puntos por referido, historial, vencimientos y conversión.
 
@@ -189,7 +189,7 @@ Elegir motor de base de datos, migraciones, índices y restricciones. Diseñar t
 
 - Ejecutar los escenarios de aceptación del [MVP](MVP-PremiumFitness.md).
 - Probar flujo cliente referido, flujo A → B, compra propia, conversión, canje, FIFO y vencimiento.
-- Verificar pagos rechazados, aprobaciones duplicadas, concurrencia, devoluciones y restituciones según política acordada.
+- Verificar pagos rechazados, aprobaciones duplicadas, concurrencia y reversiones de pedidos y canjes.
 - Revisar permisos, recuperación de acceso, navegación móvil e instalación por dispositivo si se adopta PWA.
 - Preparar catálogo, integraciones, configuración, copias de seguridad, restauración y monitoreo.
 - Definir usuarios del piloto, responsables de soporte, entrega y conciliación; desplegar y medir incidencias.

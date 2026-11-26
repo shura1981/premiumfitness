@@ -1,6 +1,6 @@
 # 01 — Diagrama entidad relación (DER)
 
-**Estado:** propuesta v0.17 lista para revisión · **Creado:** 7 de noviembre de 2026
+**Estado:** propuesta v0.21 lista para revisión · **Creado:** 7 de noviembre de 2026
 
 ## Petición original
 
@@ -30,7 +30,7 @@
 **Revisión v0.9, 9 de noviembre de 2026:** cambios del spec `specs/negocio/02-puntos-por-referido-y-constantes.md`.
 
 - **Constantes:** las constantes del negocio pasan a variables de entorno. Se elimina `rule_versions` junto con todas las FK `rule_version_id`. Cada registro guarda el valor que aplicó: `orders.reward_percentage`, `trainer_referrals.referral_points` y `commission_conversions.conversion_percentage`.
-- **Puntos por referido:** los 50.000 puntos pendientes viven en `trainer_referrals`. El lote de A se crea solo al activarse, con la primera compra aprobada de un cliente de B.
+- **Puntos por referido:** los 50.000 puntos pendientes viven en `trainer_referrals`. El lote de A se crea solo al activarse, con la primera compra aprobada de un cliente de B de al menos `TRAINER_REFERRAL_MIN_PURCHASE` (149.000) en productos.
 - **Estados:** se eliminan el estado `inactive` de `point_lots` y el tipo `activation` de `point_movements`.
 - **Puntos por pedido:** los puntos se calculan por pedido (`orders.reward_points`), no por línea.
 
@@ -62,6 +62,14 @@
 - **Sin FK al catálogo:** `orders_items.product_sku` y `product_discount_rules.product_sku` guardan el `codigo` de la intranet, sin FK. `orders_items` añade `product_name` y copia al comprar el nombre, el precio y el `sap_code`.
 - **IVA:** ya no hay tasa por producto. Cada línea toma `VAT_PERCENTAGE` (19), salvo los códigos de `VAT_EXEMPT_PRODUCT_CODES` (Nutra C, código 103040), y guarda tasa, base e IVA.
 - **Tipos:** la tabla externa se dibuja con los tipos reales (`SHOW COLUMNS`, 15 nov 2026).
+
+**Revisión v0.21, 25 de noviembre de 2026:** `adjustments.type` queda en `cancellation` (reversar un pedido pagado), `restitution` (reversar un canje) y `correction`; salen `full_return` y `partial_return`: no hay devoluciones (spec `backend/03`, P-30).
+
+**Revisión v0.20, 25 de noviembre de 2026:** `adjustments.agent_id` admite NULL: el ajuste lo registró la pasarela (Bold anuló un pago aprobado; spec `backend/03`, P-28). La auditoría de ese ajuste queda sin agente ni usuario, con la pasarela en sus datos.
+
+**Revisión v0.19, 24 de noviembre de 2026:** los pagos vuelven al diseño de radical: un pedido = un pago. Se **elimina `payment_attempts`** (v0.17 y v0.18) y se añade `orders.payment_code` (`varchar(30)`, única, comparada exacta): el id de pago que recibe la pasarela, `pf-<order_id>`. El prefijo evita que choque con los pedidos de otros proyectos que comparten las cuentas de las pasarelas. Lo que manda la pasarela queda en el pedido (`payment_state_json`), como en radical (spec `backend/03`, P-24).
+
+**Revisión v0.18, 24 de noviembre de 2026:** `payment_attempts` guarda lo que reportó la pasarela en su webhook: `status`, `transaction_id`, `payment_method`, `paid_amount` y `notified_at`. Con ellos la página de respuesta muestra el resultado consultando el id de pago (spec `integraciones/03`).
 
 **Revisión v0.17, 16 de noviembre de 2026:** cada intento de pago tiene su propio id. Se añade `payment_attempts`: su `id` da la referencia `pf-<id>` que recibe la pasarela (spec `backend/03`, P-24; S-49).
 
@@ -162,7 +170,7 @@ Proponer el modelo de datos del MVP comercial para revisarlo con negocio y tecno
 | S-26 | `orders_items.sap_code` es una copia del `sap_code` del producto, sin FK, para conservar el histórico si cambia el maestro. | Derivado | Radical lo modela así. |
 | S-27 | Como en radical, el agente crea el pedido en SAP y registra `sap_order_code`, `tracking_number` y `carrier_name` desde el admin. Si más adelante el pedido se envía a SAP de forma automática, se añadiría una tabla de jobs similar a `payment_event_jobs`. | Confirmado | Indicación del usuario; radical `PATCH /api/admin/orders/{id}/sap-order-code/by-agent` y `/tracking-number`. |
 | S-28 | `users.document_type_id` + `document_id` identifican al cliente (socio de negocio) en SAP, como en el login por QR de radical. Falta definir si los entrenadores y clientes de PremiumFitness se crean primero en SAP o en el portal. | Pendiente | Radical `QrController`. |
-| S-29 | Falta definir si los canjes (`order_type = redemption`) también se registran en SAP y con qué documento. | Pendiente | D-02. |
+| S-29 | Los canjes (`order_type = redemption`) siguen el camino de una compra: el agente los registra en SAP a mano y escribe el número en el admin. La app no envía nada a SAP. Con qué documento se registran lo define contabilidad, fuera de la app (spec `backend/03`, P-37). | Confirmado (26 nov 2026, Steven) | D-02. |
 | S-31 | Los agentes del call center son los empleados de `crisenri_intranet.tb_empleados`. Esa tabla es externa: no se migra, se consulta por JOIN con `orders.agent_id = tb_empleados.id_usuario`, y el admin inicia sesión con ella. | Confirmado | Indicación del usuario; radical `EmpleadoRepository` y `AdminAuthController`. Falta confirmar que PremiumFitness usa la misma intranet. |
 | S-32 | El agente toma un pedido sin asignar y solo puede liberarlo si es suyo y todavía no tiene `sap_order_code`. | Confirmado | Radical `takeByAgent` y `releaseByAgent`. |
 | S-33 | La trazabilidad que ve el cliente usa `status_orders` (los mismos estados de radical), la guía y la transportadora, consultada en la API de la transportadora. No se guarda un historial de cambios de estado. Si negocio lo pide, se añadiría `order_status_history`. | Derivado | Radical `CarrierController` y `ServientregaTrackingService`. |
@@ -173,7 +181,7 @@ Proponer el modelo de datos del MVP comercial para revisarlo con negocio y tecno
 | S-38 | Los valores por defecto son variables de entorno (antes: `rule_versions.parameters`, eliminada en v0.9). `product_discount_rules` define excepciones por producto con vigencia: descuento con cupón, descuento del entrenador y comisión (NULL = valor por defecto). Al comprar, cada línea copia los porcentajes vigentes y el pedido copia el de puntos (`orders.reward_percentage`). | Confirmado; descuento del entrenador por producto derivado | Regla 15; spec negocio/02. |
 | S-39 | Comisión por línea: `commission_amount = tax_base × commission_percentage`; `commission_movements.amount` suma las líneas. Puntos por pedido: `orders.reward_points = round(Σ line_total de productos × porcentaje de puntos)`, al entero más cercano y sin el envío. | Confirmado | Reglas 1 y 7 (9 nov 2026). |
 | S-40 | Al registrarse B desde el enlace de A se crea `trainer_referrals` con `referral_points` = `TRAINER_REFERRAL_POINTS` (50.000), sin lote. La primera compra aprobada de un cliente de B guarda `activation_order_id` y `activated_at` y crea el lote de A (`source='trainer_referral'`) una sola vez. La compra propia de B no cuenta. | Confirmado | Regla 6; spec negocio/02. |
-| S-41 | Si se cancela o devuelve la compra que activó los 50.000 puntos y A no los ha usado, se revierte el remanente del lote con un ajuste y el referido vuelve a quedar pendiente. Si ya los usó, se mantienen. | Confirmado; reversión parcial derivada | Spec negocio/02. |
+| S-41 | Si se reversa la compra que activó los 50.000 puntos, se le retiran a A con ajustes (lo que quede en el lote y lo ya usado de sus otros lotes vigentes por FIFO, sin deuda) y el referido vuelve a quedar pendiente. | Confirmado (25 nov 2026, spec `backend/03` P-17) | Spec negocio/02. |
 | S-42 | No hay tabla de saldos precalculados: los saldos se calculan sumando `point_lots`, `trainer_referrals` y `commission_movements` con índices que cubren cada consulta. La comisión no convertida se liquida al corte del último día del mes en `commission_settlements` (única por `trainer_id` + `period`); los movimientos liquidados guardan `settlement_id`. | Confirmado (pago mensual); sin tabla de saldos: Derivado | Specs `negocio/03` y `negocio/04`. |
 | S-43 | Un período cerrado no se recalcula: `force` solo regenera el Excel y el correo. Las correcciones posteriores entran como ajustes del mes siguiente. El Excel se guarda fuera de la carpeta pública. | Derivado | Spec `negocio/05`: en api-comisiones `force` sobrescribe meses cerrados y el Excel se descarga sin autenticación. |
 | S-44 | `refresh_tokens` guarda solo el hash del token. Cada renovación crea una fila nueva y enlaza la anterior (`replaced_by_id`); reutilizar una fila ya reemplazada revoca toda la `family_id`. | Confirmado | Spec `seguridad/01`; skill `jwt-security`. |
@@ -182,7 +190,7 @@ Proponer el modelo de datos del MVP comercial para revisarlo con negocio y tecno
 | S-30 | No se usan los tramos por cantidad de radical (`products.discount_list`): los descuentos de PremiumFitness dependen del rol y de `product_discount_rules`. Antes decía: se conserva por la integración. | Derivado | Spec `catalogo/01`. |
 | S-47 | El catálogo es `crisenri_intranet.tb_productos_megaplexstars`, externa y de solo lectura. Entran los productos con `activo = 1` y `promo = 0`; no se leen `descuento` ni `old_price`. Los combos son productos con su propio artículo SAP; si tienen `promo = 1`, no entran. El nombre es `producto`. La app la lee por la interfaz `ProductCatalog`. | Confirmado (15 nov 2026) | Spec `catalogo/01`. |
 | S-48 | `orders_items.product_sku` y `product_discount_rules.product_sku` guardan el `codigo` de la intranet sin FK, porque la tabla vive en otra base. Al comprar, la línea copia `product_name`, `product_full_price` (el `valor`) y `sap_code`. | Derivado | Spec `catalogo/01`; mismo criterio que `tb_empleados` (S-31). |
-| S-49 | `payment_attempts` registra cada intento de pago: un pedido puede tener varios y cada uno tiene su propio id, `pf-<id>`, que es la referencia que recibe la pasarela y con la que el webhook encuentra el pedido. `orders.payment_reference` sigue guardando el id de la transacción que informa la pasarela al aprobar. | Confirmado (16 nov 2026, Steven) | Spec `backend/03`, P-24. La cuenta de Bold se comparte con el sitio web de Nutramerican: el prefijo con letras evita que sus referencias numéricas choquen. |
+| S-49 | ~~`payment_attempts` registra cada intento de pago.~~ **Reemplazado (v0.19):** un pedido = un pago, como en radical. `orders.payment_code` (`pf-<order_id>`, única) es el id que recibe la pasarela y con el que el webhook encuentra el pedido. `orders.payment_reference` sigue guardando la transacción aprobada, para que un mismo pago no apruebe dos pedidos. | Confirmado | 24 nov 2026, Steven |
 
 ## Plan
 
@@ -221,7 +229,6 @@ Diagrama editable: [diagrama-entidad-relacion.drawio](../../docs/img/diagrama-en
 | Pedidos y catálogo | `orders` | Adaptada | Conserva `agent_id` y `sap_order_code`. Añade tipo de pedido, totales de descuento e IVA, puntos ganados por el pedido (`reward_points`), puntos del canje, referencia de pago y versión de regla. El entrenador se toma de `orders_coupons`. |
 | Pedidos y catálogo | `orders_items` | Adaptada | Copia del catálogo el código, el nombre (`product_name`), el precio y `sap_code`, sin FK. Usa `discount_percentage` para el descuento vigente del producto. Añade tasa, base e IVA; porcentaje y monto de comisión, y puntos del canje. |
 | Pedidos y catálogo | `status_orders` | Existente | Estados del pedido. |
-| Pedidos y catálogo | `payment_attempts` | Nueva | Intentos de pago de un pedido. Su `id` es el consecutivo del id de pago `pf-<id>` que recibe la pasarela; guarda la pasarela y el valor enviado. |
 | Pedidos y catálogo | `payment_event_jobs` | Existente | Reintento de webhooks que llegan antes que el pedido. |
 | Recompensas y operación | `commission_movements` | Nueva | Abono de comisión del pedido (suma de líneas), débitos por conversión y ajustes. |
 | Recompensas y operación | `commission_conversions` | Nueva | Conversión del total de comisión a puntos: comisión, puntos base, adicional con tope y total. |
@@ -229,7 +236,7 @@ Diagrama editable: [diagrama-entidad-relacion.drawio](../../docs/img/diagrama-en
 | Recompensas y operación | `commission_periods` | Nueva | Cierre del mes: totales, archivo del reporte y envío del correo. |
 | Recompensas y operación | `point_lots` | Nueva | Lote con cantidad inicial, remanente, estado, fecha de acumulación y caducidad. |
 | Recompensas y operación | `point_movements` | Nueva | Abono, consumo FIFO, caducidad y ajuste por lote. |
-| Recompensas y operación | `adjustments` | Nueva | Cancelaciones, devoluciones y restituciones ligadas al pedido original y al agente que las registra. |
+| Recompensas y operación | `adjustments` | Nueva | Reversiones de pedidos pagados y de canjes, ligadas al pedido original y al agente que las registra (vacío si la hizo la anulación de Bold). No hay devoluciones. |
 | Recompensas y operación | `audit_logs` | Nueva | Agente o usuario, acción, entidad y datos de cada operación sensible. |
 | SAP y bodegas | `city_warehouses` | Existente | Tres bodegas SAP por ciudad, en orden de prioridad. |
 | Call center | `tb_empleados` | Externa | Agentes del call center en la intranet (`crisenri_intranet`). No se migra. |
@@ -245,7 +252,7 @@ Diagrama editable: [diagrama-entidad-relacion.drawio](../../docs/img/diagrama-en
   - `commission_movements (trainer_id, amount)`
   - `orders_coupons (trainer_id, order_id)`
 - **Idempotencia:** son únicos `orders.payment_reference`, `commission_movements.source_key`, `point_lots.source_key`, `point_movements.source_key` y `commission_conversions.idempotency_key`. El dispatcher de radical ya trata como no-op un pedido aprobado.
-- **Puntos por referido una sola vez:** `trainer_referrals.referred_id`, `trainer_referrals.activation_order_id` y `point_lots.trainer_referral_id` son únicos.
+- **Puntos por referido una sola vez:** `trainer_referrals.referred_id` y `trainer_referrals.activation_order_id` son únicos, y la clave del lote (`referral:<id>:order:<pedido>`) también. `point_lots.trainer_referral_id` tiene índice, no único: si se reversa la venta que activó el referido, se le retiran los puntos a A y otra venta lo activa con un lote nuevo (spec `backend/03`, P-17).
 - **Liquidación única:** `commission_periods.period` y `commission_settlements (period_id, trainer_id)` son únicos.
 - **Conversión única:** `commission_movements.conversion_id` y `point_lots.conversion_id` son únicos. Cada conversión tiene un débito y un crédito.
 - **FIFO:** el consumo sigue `point_lots.accrued_at` con desempate por `id` (PRD §7.3). El saldo canjeable es la suma de `remaining_points` de los lotes `available` no caducados.
@@ -286,6 +293,9 @@ Diagrama editable: [diagrama-entidad-relacion.drawio](../../docs/img/diagrama-en
 - [x] Registrar el pago de la liquidación con comprobante (v0.14)
 - [x] Leer el catálogo de la intranet: quitar las tablas de catálogo de radical, copiar el producto en `orders_items` y sacar el IVA del catálogo (v0.15)
 - [x] Quitar la app `diets`: la app de dietas consulta el acceso por documento (v0.16)
-- [x] Añadir `payment_attempts`: un id de pago por intento (v0.17)
-- [ ] Dibujar `payment_attempts` en el diagrama (`.drawio` y PNG)
+- [~] Añadir `payment_attempts`: un id de pago por intento (v0.17). Eliminada en la v0.19
+- [~] Columnas del resultado de la pasarela en `payment_attempts` (v0.18). Eliminadas en la v0.19
+- [~] Dibujar `payment_attempts` en el diagrama: ya no existe
+- [x] `orders.payment_code` y eliminación de `payment_attempts` en el `.sql` y la base local (v0.19)
+- [ ] Añadir `payment_code` a `orders` en el diagrama (`.drawio` y PNG)
 - [ ] Revisión y aprobación del modelo por negocio y tecnología

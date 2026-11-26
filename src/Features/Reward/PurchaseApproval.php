@@ -90,7 +90,7 @@ class PurchaseApproval
     private function lockOrder(PDO $pdo, int $orderId): ?array
     {
         $stmt = $pdo->prepare(
-            'SELECT order_id, user_id, order_type, amount, approved_at, reward_points FROM orders WHERE order_id = ? FOR UPDATE'
+            'SELECT order_id, user_id, order_type, amount, shipping_amount, approved_at, reward_points FROM orders WHERE order_id = ? FOR UPDATE'
         );
         $stmt->execute([$orderId]);
         $order = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -111,7 +111,8 @@ class PurchaseApproval
         }
 
         $trainerId = (int) $trainerId;
-        $referral  = $this->pendingReferralOf($pdo, $trainerId);
+        // Los puntos del referido de A los activa una compra de al menos TRAINER_REFERRAL_MIN_PURCHASE en productos (regla 6, D-05).
+        $referral  = $this->activatesReferral($order) ? $this->pendingReferralOf($pdo, $trainerId) : null;
 
         // Se bloquean los entrenadores en orden de id para que dos aprobaciones no se crucen.
         $toLock = array_values(array_unique(array_filter([$trainerId, $referral['referrer_id'] ?? null])));
@@ -178,6 +179,19 @@ class PurchaseApproval
         }
     }
 
+    /**
+     * Lo pagado por los productos (con descuento e IVA, sin flete) llega al mínimo que activa los puntos del
+     * referido. Una compra menor no los activa: el referido sigue pendiente hasta una que sí llegue.
+     *
+     * @param array<string, mixed> $order
+     */
+    private function activatesReferral(array $order): bool
+    {
+        $products = (float) $order['amount'] - (float) ($order['shipping_amount'] ?? 0);
+
+        return $products >= $this->business->trainerReferralMinPurchase;
+    }
+
     /** @return array{id:int, referrer_id:int}|null El referido pendiente del entrenador B, si lo tiene. */
     private function pendingReferralOf(PDO $pdo, int $referredId): ?array
     {
@@ -190,7 +204,8 @@ class PurchaseApproval
 
     /**
      * Primera compra aprobada de un cliente de B: A recibe los puntos que valía el referido cuando
-     * B se registró (regla 15). `activation_order_id` y `trainer_referral_id` son únicos.
+     * B se registró (regla 15). `activation_order_id` es único. La clave del lote lleva el pedido que lo activa:
+     * si esa venta se reversa, el referido vuelve a quedar pendiente y otra venta lo activa con un lote nuevo (S-06).
      */
     private function activateReferral(PDO $pdo, int $orderId, int $referredId, int $referralId): void
     {
@@ -207,7 +222,7 @@ class PurchaseApproval
 
         $referrerId = (int) $referral['referrer_id'];
         $points     = (int) $referral['referral_points'];
-        $lotId      = $this->lots->credit($referrerId, 'trainer_referral', $points, $this->business->pointsExpirationMonths, "referral:{$referralId}", [
+        $lotId      = $this->lots->credit($referrerId, 'trainer_referral', $points, $this->business->pointsExpirationMonths, "referral:{$referralId}:order:{$orderId}", [
             'trainer_referral_id' => $referralId,
         ]);
 
@@ -218,7 +233,7 @@ class PurchaseApproval
                 'Tu referido ya vendió',
                 sprintf('Un entrenador que referiste hizo su primera venta: ganaste %s puntos.', number_format($points, 0, ',', '.')),
                 ['route' => '/coach/referidos', 'trainer_id' => $referredId],
-                "referral:{$referralId}",
+                "referral:{$referralId}:order:{$orderId}",
             );
         }
     }

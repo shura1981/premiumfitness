@@ -96,6 +96,9 @@ final class Seed
             ->execute([$userId, $amount, $paymentGateway]);
 
         $orderId = (int) $pdo->lastInsertId();
+        // Como el checkout: el id de pago es el número del pedido con el prefijo (P-24).
+        $pdo->prepare('UPDATE orders SET payment_code = ? WHERE order_id = ?')
+            ->execute([\App\Features\PaymentGateway\PaymentCode::forOrder($orderId), $orderId]);
         $stmt    = $pdo->prepare(
             'INSERT INTO orders_items
                 (order_id, product_sku, product_name, product_full_price, sap_code, quantity, unit_price, discount_percentage, line_total)

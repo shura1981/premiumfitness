@@ -75,8 +75,8 @@ SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
 CREATE TABLE `adjustments` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `order_id` bigint(20) NOT NULL,
-  `agent_id` int(11) NOT NULL COMMENT 'agente que lo registra (tb_empleados)',
-  `type` enum('cancellation','full_return','partial_return','restitution','correction') NOT NULL,
+  `agent_id` int(11) DEFAULT NULL COMMENT 'agente que lo registra (tb_empleados); NULL si lo registró la pasarela (anulación de Bold)',
+  `type` enum('cancellation','restitution','correction') NOT NULL COMMENT 'cancellation = reversar un pedido pagado; restitution = reversar un canje',
   `reason` text NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
@@ -2744,6 +2744,7 @@ CREATE TABLE `orders` (
   `reward_points` int(11) DEFAULT NULL,
   `redemption_points` int(11) DEFAULT NULL COMMENT 'costo del canje',
   `payment_gateway` enum('epayco','addi','sistecredito','bold') DEFAULT NULL COMMENT 'NULL en los canjes',
+  `payment_code` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT 'id de pago que va a la pasarela: pf-<order_id>, comparado exacto; NULL en los canjes',
   `payment_reference` varchar(100) DEFAULT NULL,
   `address_id` int(11) DEFAULT NULL,
   `order_notes` text DEFAULT NULL,
@@ -2757,6 +2758,7 @@ CREATE TABLE `orders` (
   `updated_at` timestamp NULL DEFAULT NULL ON UPDATE current_timestamp(),
   PRIMARY KEY (`order_id`),
   UNIQUE KEY `uk_orders_payment_reference` (`payment_reference`),
+  UNIQUE KEY `uk_orders_payment_code` (`payment_code`),
   KEY `idx_orders_user` (`user_id`),
   KEY `idx_orders_status` (`status_id`),
   KEY `idx_orders_agent` (`agent_id`),
@@ -2852,20 +2854,6 @@ COMMIT;
 SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
-CREATE TABLE `payment_attempts` (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT 'consecutivo del id de pago: pf-<id>',
-  `order_id` bigint(20) NOT NULL,
-  `gateway` enum('addi','sistecredito','bold') NOT NULL,
-  `amount` decimal(12,2) NOT NULL COMMENT 'valor enviado a la pasarela',
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`id`),
-  KEY `ix_payment_attempts_order` (`order_id`),
-  CONSTRAINT `fk_payment_attempts_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='intentos de pago: cada «Pagar» es uno, con su propio id';
-/*!40101 SET character_set_client = @saved_cs_client */;
-
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `payment_event_jobs` (
   `job_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `order_id` bigint(20) NOT NULL,
@@ -2901,17 +2889,17 @@ CREATE TABLE `point_lots` (
   `remaining_points` int(11) NOT NULL,
   `status` enum('available','used','expired') NOT NULL DEFAULT 'available',
   `accrued_at` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'orden FIFO',
-  `expires_at` timestamp NOT NULL COMMENT 'accrued_at + POINTS_EXPIRATION_MONTHS',
+  `expires_at` timestamp NOT NULL COMMENT 'accrued_at + POINTS_EXPIRATION_MONTHS, a las 23:59:59 de ese día',
   `source_key` varchar(64) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_point_lots_source` (`source_key`),
   UNIQUE KEY `uk_point_lots_conversion` (`conversion_id`),
-  UNIQUE KEY `uk_point_lots_trainer_referral` (`trainer_referral_id`),
   KEY `ix_point_lots_balance` (`trainer_id`,`status`,`expires_at`,`source`,`remaining_points`),
   KEY `ix_point_lots_history` (`trainer_id`,`source`,`accrued_at`,`initial_points`),
   KEY `ix_point_lots_fifo` (`trainer_id`,`status`,`accrued_at`,`id`),
   KEY `ix_point_lots_expiration` (`status`,`expires_at`),
   KEY `ix_point_lots_order` (`order_id`),
+  KEY `ix_point_lots_trainer_referral` (`trainer_referral_id`),
   KEY `fk_point_lots_adjustment` (`adjustment_id`),
   CONSTRAINT `fk_point_lots_adjustment` FOREIGN KEY (`adjustment_id`) REFERENCES `adjustments` (`id`),
   CONSTRAINT `fk_point_lots_conversion` FOREIGN KEY (`conversion_id`) REFERENCES `commission_conversions` (`id`),

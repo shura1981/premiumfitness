@@ -13,7 +13,6 @@ use App\Features\Order\OrderController;
 use App\Features\Order\OrderAgentIdValidator;
 use App\Features\Order\OrderSapCodeByAgentValidator;
 use App\Features\Order\OrderSapCodeValidator;
-use App\Features\Order\OrderStatusUpdateValidator;
 use App\Features\Order\OrderTrackingValidator;
 use App\Features\PaymentGateway\PaymentGatewayController;
 use App\Features\Reports\ReportsController;
@@ -55,9 +54,8 @@ return static function (\Slim\App $app): void {
         $group->get('/orders/{id:[0-9]+}', [$orderController, 'getById'])
             ->add($adminMiddleware);
 
-        $group->patch('/orders/{id:[0-9]+}/status', [$orderController, 'updateStatus'])
-            ->add(new ValidationMiddleware(new OrderStatusUpdateValidator(), $app->getResponseFactory()))
-            ->add($adminMiddleware);
+        // No hay cambio de estado a mano: el estado del pago lo cambia solo la pasarela con su webhook,
+        // y «REVERSADA» se pone con el ajuste «Reversar», que quita los puntos y la comisión (P-26, P-29).
 
         $group->patch('/orders/{id:[0-9]+}/sap-order-code', [$orderController, 'updateSapOrderCode'])
             ->add(new ValidationMiddleware(new OrderSapCodeValidator(), $app->getResponseFactory()))

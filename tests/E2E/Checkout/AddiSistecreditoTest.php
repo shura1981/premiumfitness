@@ -3,7 +3,8 @@
 declare(strict_types=1);
 
 use App\Features\Checkout\GatewayPayment;
-use App\Features\PaymentGateway\PaymentAttemptRepository;
+use App\Features\PaymentGateway\Logging\PaymentGatewayLogService;
+use App\Shared\Exceptions\ApiException;
 use App\Infrastructure\Config\BusinessConfig;
 use Tests\Support\Seed;
 use Tests\Support\Shop;
@@ -14,14 +15,12 @@ use Tests\Support\Shop;
  */
 
 /**
- * Pedido sin pagar con la pasarela indicada y un intento de pago suyo. Se crea con Bold para no
- * llamar a la pasarela real.
+ * Pedido sin pagar con la pasarela indicada. Se crea con Bold para no llamar a la pasarela real.
  */
 function orderWithGateway(int $userId, string $gateway, int $price = 100000): int
 {
     $orderId = Shop::order($userId, [['code' => Seed::catalogProduct(['valor' => $price]), 'quantity' => 1]]);
     Seed::pdo()->prepare('UPDATE orders SET payment_gateway = ? WHERE order_id = ?')->execute([$gateway, $orderId]);
-    (new PaymentAttemptRepository())->create($orderId, $gateway, orderAmount($orderId));
 
     return $orderId;
 }
@@ -88,6 +87,47 @@ it('ignora el aviso con una referencia ajena', function (string $gateway, string
         ->and(Shop::orderRow($orderId)['approved_at'])->toBeNull();
 })->with('pasarelas sin firma');
 
+it('un pago que la pasarela cancela queda CANCELADA, distinto de un pedido reversado por un gerente', function (string $gateway, string $cancelled): void {
+    $orderId = orderWithGateway(Seed::user(), $gateway);
+
+    Shop::gatewayWebhook($gateway, $orderId, orderAmount($orderId), $cancelled);
+
+    // Nunca se aprobó: no hay dinero, puntos ni comisión que revertir.
+    expect(Shop::orderRow($orderId))->toMatchArray(['status_value' => 'CANCELADA', 'approved_at' => null])
+        ->and(Shop::orderRow($orderId)['status_value'])->not->toBe('REVERSADA');
+})->with(['Addi' => ['addi', 'DECLINED'], 'Sistecrédito' => ['sistecredito', 'Cancelled']]);
+
+it('un estado que no está en la tabla queda en el pedido con su nombre y no lo aprueba', function (string $gateway, string $raw): void {
+    $orderId = orderWithGateway(Seed::user(), $gateway);
+    $name    = $raw . '_' . strtoupper(bin2hex(random_bytes(4)));
+
+    $result = Shop::gatewayWebhook($gateway, $orderId, orderAmount($orderId), $name);
+
+    expect($result)->toMatchArray(['processed' => true, 'status' => $name])
+        ->and(Shop::orderRow($orderId))->toMatchArray(['status_value' => $name, 'approved_at' => null])
+        ->and(Shop::rows('SELECT COUNT(*) n FROM status_orders WHERE value = ?', [$name])[0]['n'])->toBe(1);
+})->with(['Addi' => ['addi', 'EXPIRED'], 'Sistecrédito' => ['sistecredito', 'Expired']]);
+
+it('un evento de Bold que no está en la tabla queda en el pedido con su nombre y no lo aprueba', function (): void {
+    $orderId = Shop::order(Seed::user(), [['code' => Seed::catalogProduct(['valor' => 100000]), 'quantity' => 1]]);
+    $name    = 'SALE_PENDING_' . strtoupper(bin2hex(random_bytes(4)));
+
+    $result = Shop::boldWebhook($orderId, orderAmount($orderId), type: $name);
+
+    expect($result)->toMatchArray(['processed' => true, 'status' => $name])
+        ->and(Shop::orderRow($orderId))->toMatchArray(['status_value' => $name, 'approved_at' => null]);
+});
+
+it('un pago que llega después de un estado desconocido sí aprueba el pedido', function (): void {
+    $orderId = Shop::order(Seed::user(), [['code' => Seed::catalogProduct(['valor' => 100000]), 'quantity' => 1]]);
+
+    Shop::boldWebhook($orderId, orderAmount($orderId), type: 'aprobada');
+    $paid = Shop::boldWebhook($orderId, orderAmount($orderId));
+
+    expect($paid)->toMatchArray(['processed' => true, 'status' => 'APROBADA'])
+        ->and(Shop::orderRow($orderId)['approved_at'])->not->toBeNull();
+});
+
 // ── Datos que se envían a cada pasarela ───────────────────────────────────
 
 /** @return array<string, mixed> */
@@ -102,7 +142,7 @@ function gatewayOrder(): array
 
 it('arma la solicitud de Addi con el pedido guardado y la vuelta a la app', function (): void {
     $items   = [['product_sku' => 103040, 'product_name' => 'NUTRA C', 'quantity' => 2, 'unit_price' => '112455.00', 'tax_amount' => '35910.08']];
-    $payload = (new GatewayPayment(BusinessConfig::fromEnv()))->addiPayload(gatewayOrder(), 'pf-77', $items, 'https://app.test/pago/resultado?pedido=901');
+    $payload = (new GatewayPayment(BusinessConfig::fromEnv()))->addiPayload(gatewayOrder(), 'pf-77', $items, GatewayPayment::returnUrl('addi', 'https://app.test/pago/resultado', 'pf-77'));
 
     expect($payload)->toMatchArray([
         'orderId' => 'pf-77', 'totalAmount' => '224910.0', 'shippingAmount' => '0.0', 'totalTaxesAmount' => '35910.1', 'currency' => 'COP',
@@ -113,16 +153,50 @@ it('arma la solicitud de Addi con el pedido guardado y la vuelta a la app', func
             'cellphone' => '3009000001', 'cellphoneCountryCode' => '+57',
         ])
         ->and($payload['shippingAddress'])->toBe(['lineOne' => 'CL 1 2 3', 'city' => 'Cali', 'country' => 'CO'])
-        ->and($payload['allyUrlRedirection']['redirectionUrl'])->toBe('https://app.test/pago/resultado?pedido=901');
+        // Addi vuelve con el id de pago en `id_order`, como en radical y en el sitio.
+        ->and($payload['allyUrlRedirection']['redirectionUrl'])->toBe('https://app.test/pago/resultado/addi?id_order=pf-77');
 });
 
 it('arma la orden de Sistecrédito con el pedido guardado y la vuelta a la app', function (): void {
-    expect(GatewayPayment::sistecreditoPayload(gatewayOrder(), 'pf-77', 'https://app.test/pago/resultado?pedido=901'))->toBe([
+    expect(GatewayPayment::sistecreditoPayload(gatewayOrder(), 'pf-77', GatewayPayment::returnUrl('sistecredito', 'https://app.test/pago/resultado', 'pf-77')))->toBe([
         'invoice'     => 'pf-77',
         'description' => 'Pedido PremiumFitness #901',
         'value'       => 224910,
         'docType'     => 'CE',
         'document'    => '1234567',
-        'urlResponse' => 'https://app.test/pago/resultado?pedido=901',
+        // Sistecrédito vuelve con el id de pago en `orderId`.
+        'urlResponse' => 'https://app.test/pago/resultado/sistecredito?orderId=pf-77',
     ]);
+});
+
+// ── Log de errores de las pasarelas, como en radical: solo cuando falla ───
+
+it('si la pasarela no abre, responde 502 y deja una línea en el log de errores, sin datos sensibles', function (string $gateway): void {
+    $directory = sys_get_temp_dir() . '/pf-payment-log-' . bin2hex(random_bytes(6));
+    $orderId   = orderWithGateway(Seed::user(), $gateway);
+    $payment   = new GatewayPayment(BusinessConfig::fromEnv(), new PaymentGatewayLogService($directory));
+
+    // En las pruebas la API de la pasarela apunta a un puerto cerrado (tests/bootstrap.php).
+    expect(fn () => $payment->start($orderId, 'https://app.test/pago/resultado'))
+        ->toThrow(fn (ApiException $e) => expect($e->getMessage())->toContain('siguen en el carrito'));
+
+    $files = glob($directory . '/errors-*.log') ?: [];
+    $entry = json_decode((string) file_get_contents($files[0]), true);
+
+    expect($files)->toHaveCount(1)
+        ->and($entry)->toMatchArray(['level' => 'error', 'gateway' => $gateway, 'source' => 'checkout', 'order_id' => $orderId])
+        ->and($entry['context']['payment_code'])->toBe('pf-' . $orderId)
+        ->and((string) file_get_contents($files[0]))->not->toContain((string) Shop::rows('SELECT u.email FROM orders o JOIN users u ON u.id = o.user_id WHERE o.order_id = ?', [$orderId])[0]['email']);
+
+    array_map('unlink', $files);
+    rmdir($directory);
+})->with(['addi', 'sistecredito']);
+
+it('un pago que abre bien no escribe nada en el log', function (): void {
+    $directory = sys_get_temp_dir() . '/pf-payment-log-' . bin2hex(random_bytes(6));
+    $orderId   = Shop::order(Seed::user(), [['code' => Seed::catalogProduct(['valor' => 100000]), 'quantity' => 1]]);
+
+    (new GatewayPayment(BusinessConfig::fromEnv(), new PaymentGatewayLogService($directory)))->start($orderId, 'https://app.test/pago/resultado');
+
+    expect(is_dir($directory))->toBeFalse();
 });

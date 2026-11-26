@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Features\PaymentGateway\Events;
 
+use App\Features\Adjustment\AdjustmentService;
 use App\Features\Order\OrderRepository;
 use App\Features\Order\StatusOrderRepository;
 use App\Features\PaymentGateway\Events\Handlers\PaymentEventHandlerInterface;
@@ -11,6 +12,7 @@ use App\Features\PaymentGateway\Normalizer\PaymentStatus;
 use App\Features\PaymentGateway\Result\PaymentResult;
 use App\Features\Reward\AmountMismatchException;
 use App\Features\Reward\PurchaseApproval;
+use App\Shared\Exceptions\ApiException;
 
 /**
  * Punto único de entrada para los webhooks ya normalizados.
@@ -36,10 +38,11 @@ final class PaymentEventDispatcher
         private readonly StatusOrderRepository $statuses,
         private readonly array $handlers = [],
         private readonly ?PurchaseApproval $approval = null,
+        private readonly ?AdjustmentService $adjustments = null,
     ) {}
 
     /**
-     * @return array{processed: bool, reason?: string, order_id?: int, status?: string, handler_errors?: list<string>}
+     * @return array{processed: bool, reason?: string, message?: string, order_id?: int, status?: string, handler_errors?: list<string>}
      */
     public function dispatch(PaymentResult $result): array
     {
@@ -48,7 +51,15 @@ final class PaymentEventDispatcher
             return ['processed' => false, 'reason' => 'order_not_found'];
         }
 
-        if ($order->status_value === PaymentStatus::TEXT_APROBADA) {
+        // Un pedido que ya se aprobó no vuelve a cambiar con un aviso, aunque después se haya reversado.
+        // La excepción es la anulación de Bold, que lo reversa una sola vez.
+        $wasApproved = $order->status_value === PaymentStatus::TEXT_APROBADA || $order->approved_at !== null;
+
+        if ($wasApproved && self::isBoldVoid($result)) {
+            return $this->revertVoidedPayment($order->order_id, $result);
+        }
+
+        if ($wasApproved) {
             return [
                 'processed' => false,
                 'reason'    => 'already_approved',
@@ -97,5 +108,36 @@ final class PaymentEventDispatcher
         }
 
         return $response;
+    }
+
+    /** Bold anuló el pago (`VOID_APPROVED`): le devolvió el dinero al cliente. */
+    private static function isBoldVoid(PaymentResult $result): bool
+    {
+        return $result->gateway === 'bold' && ($result->rawPayload['type'] ?? null) === 'VOID_APPROVED';
+    }
+
+    /**
+     * Bold anuló el pago de un pedido aprobado: el pedido queda «REVERSADA» con el mismo ajuste que registra
+     * un gerente al cancelarlo (comisión y puntos de ese pedido revertidos), sin agente (spec backend/03, P-28).
+     * Un pedido admite un solo ajuste: si ya tiene uno, el aviso no hace nada.
+     *
+     * @return array{processed: bool, reason?: string, message?: string, order_id?: int, status?: string}
+     */
+    private function revertVoidedPayment(int $orderId, PaymentResult $result): array
+    {
+        try {
+            ($this->adjustments ?? new AdjustmentService())->create(
+                $orderId,
+                null,
+                'cancellation',
+                sprintf('Bold anuló el pago (VOID_APPROVED), transacción %s.', $result->transactionId),
+                gateway: $result->gateway,
+            );
+        } catch (ApiException $e) {
+            // Por ejemplo, el pedido ya tenía un ajuste: no se revierte dos veces.
+            return ['processed' => false, 'reason' => 'not_reverted', 'message' => $e->getMessage(), 'order_id' => $orderId];
+        }
+
+        return ['processed' => true, 'order_id' => $orderId, 'status' => AdjustmentService::STATUS_REVERTED];
     }
 }

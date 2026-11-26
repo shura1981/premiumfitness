@@ -43,7 +43,7 @@ PremiumFitness debe permitir:
 | --- | --- | --- |
 | Activar entrenadores | Activación a siete días | Entrenadores que completan registro y comparten al menos uno de sus QR dentro de siete días / registros de entrenadores de la cohorte. |
 | Convertir referidos | Conversión de referido a primera compra | Clientes vinculados que realizan una primera compra pagada dentro de 30 días / clientes vinculados de la cohorte. |
-| Impulsar ventas | Ventas atribuidas | Valor de compras pagadas atribuidas a entrenadores, menos devoluciones; excluir pedidos de prueba. |
+| Impulsar ventas | Ventas atribuidas | Valor de compras pagadas atribuidas a entrenadores, sin las reversadas; excluir pedidos de prueba. |
 | Promover recompra | Recompra a 60 días | Clientes con una segunda compra pagada dentro de 60 días de la primera / clientes de la cohorte con ventana completa. |
 | Dar confianza en los beneficios | Exactitud del registro | Operaciones auditadas sin diferencias entre pedido, descuento, comisión y puntos / operaciones auditadas. |
 | Favorecer uso de puntos | Uso antes del vencimiento | Puntos canjeados / puntos emitidos de los mismos lotes, medidos al cierre de su vigencia. |
@@ -129,9 +129,9 @@ Un pedido pendiente o rechazado no genera recompensas. La aprobación repetida n
 2. Se registra A → B con 50.000 puntos pendientes para A (`TRAINER_REFERRAL_POINTS`), separados del saldo utilizable. Los puntos pendientes no caducan.
 3. B comparte su QR de clientes; uno de sus clientes compra.
 4. Al aprobarse esa compra, se activan los 50.000 puntos de A y se acreditan a B los beneficios habituales de su venta.
-5. Se guarda el pedido que activó los puntos para no volver a activarlos. Si ese pedido se cancela o devuelve y A no ha usado los puntos, se retiran y vuelven a quedar pendientes; si los usó, los conserva.
+5. Se guarda el pedido que activó los puntos para no volver a activarlos. Si ese pedido se reversa, a A se le retiran los 50.000 aunque ya los haya usado (lo que falte sale de sus otros puntos, sin deuda) y vuelven a quedar pendientes (spec `backend/03`, P-17).
 
-Se usa aprobación por continuidad con el primer flujo de compra. La activación única por relación A → B es el control derivado para no duplicar los 50.000 puntos; nuevas ventas de los clientes de B no crean otro lote. La compra propia de B no los activa y no hay monto mínimo (confirmado el 9 nov 2026). No se añade comisión de la venta a A ni cadena multinivel.
+Se usa aprobación por continuidad con el primer flujo de compra. La activación única por relación A → B es el control derivado para no duplicar los 50.000 puntos; nuevas ventas de los clientes de B no crean otro lote. La compra propia de B no los activa (confirmado el 9 nov 2026) y la compra del cliente debe ser de al menos 149.000 en productos, sin flete (`TRAINER_REFERRAL_MIN_PURCHASE`; confirmado el 26 nov 2026, P-35). No se añade comisión de la venta a A ni cadena multinivel.
 
 ### 6.5. Consulta y conversión — CU-09, CU-10 y CU-11
 
@@ -207,19 +207,20 @@ El ejemplo de requerimientos que asigna 12.500 puntos a un precio de 249.900 usa
 - FIFO usa la fecha de acumulación de los lotes disponibles, con desempate estable por identificador; no se reemplaza por ordenar únicamente por vencimiento.
 - Un lote parcialmente consumido mantiene su fecha de caducidad original. Un consumo no renueva su vigencia.
 - Las conversiones crean un nuevo lote con seis meses de vigencia. Los 50.000 puntos por referido vencen a los seis meses de activarse; mientras están pendientes no caducan.
-- Se propone computar meses calendario y resolver fin de mes según la zona horaria acordada. Es una precisión técnica pendiente, no un cambio al plazo de seis meses.
+- Corte (confirmado el 26 nov 2026, spec `backend/03` P-38): meses calendario; el lote vence al terminar ese día en hora de Colombia (11:59 p. m.), que es la fecha que ve el entrenador. Si el mes de llegada no tiene ese día, vence el último día del mes.
 - Débitos y créditos se ejecutan con transacciones; el servidor verifica saldo, precio, permisos y estado al confirmar.
 - Los cambios de reglas aplican a operaciones futuras; el historial conserva la versión del cálculo original.
 
-### 7.4. Cancelaciones, devoluciones y ajustes — propuesta operativa
+### 7.4. Reversión de un pedido pagado
 
-Las fuentes no fijan la política completa de devoluciones. Se conserva esta propuesta del PRD para cerrarla antes del piloto:
+No hay devoluciones totales ni parciales (25 nov 2026, spec `backend/03` P-30). El único ajuste es **reversar**: el cliente pide cancelar un pedido ya pagado, el comercio le devuelve el dinero por fuera de la app y el pedido queda «REVERSADA».
 
-- Compra rechazada o cancelada antes de aprobarse: sin recompensas.
-- Devolución total: reversión de beneficios del pedido; parcial: recálculo sobre los importes conservados y ajuste de la diferencia, sin exceder el beneficio original.
-- Devolución de la venta que activó un referido: si A no ha usado los 50.000 puntos, se retiran (o su remanente) y vuelven a quedar pendientes; si los usó, los conserva.
-- Si puntos/comisiones ya se consumieron, definir compensación o deuda de ajuste antes de aplicarla; no imponer un bloqueo sin política acordada.
-- Canje no entregable: restitución trazable con vigencia por definir; no renovar ni perder puntos silenciosamente.
+- Compra rechazada o cancelada por la pasarela antes de aprobarse: sin recompensas.
+- Pedido reversado: se revierten la comisión y los puntos de ese pedido, completos. Solo se reversa un pedido pagado, y una sola vez.
+- Puntos de la venta ya usados: lo que falte se retira de los otros puntos vigentes del entrenador, del más antiguo; si no le alcanzan, se retira lo que tenga y no queda deuda (25 nov 2026, spec `backend/03` P-17). La comisión se descuenta completa; si el mes ya se liquidó, del siguiente.
+- Reversión de la venta que activó un referido: a A se le retiran los 50.000 puntos con la misma regla (lo que quede en ese lote y lo ya usado de sus otros puntos, sin deuda) y el referido vuelve a quedar pendiente: la próxima compra aprobada de un cliente de B los activa otra vez. Nadie cobra dos veces el mismo referido.
+- Los términos y condiciones explican estas reglas a los entrenadores antes del piloto (spec `negocio/04`).
+- Canje reversado: los puntos se le devuelven al entrenador en un lote nuevo, trazable; no se renuevan ni se pierden en silencio.
 - Los ajustes registran actor, motivo y operación original. No se borra el historial ni se descuenta dos veces un mismo saldo por reintentos.
 
 ## 8. Requisitos funcionales y aceptación
@@ -240,14 +241,14 @@ Las fuentes no fijan la política completa de devoluciones. Se conserva esta pro
 | RF-10 | MVP | Recompensas | Compra aprobada de cliente genera 5% en puntos (con IVA incluido) y 15% de comisión (sin IVA) una sola vez, con origen trazable. |
 | RF-11 | MVP | Saldos e historial | El entrenador ve siempre sus puntos por compras de clientes (acumulado histórico y vigentes), sus puntos por entrenadores referidos (vigentes, pendientes y detalle por B) y su comisión convertible; muestra remanentes y vencimientos. Las consultas se resuelven con índices que las cubren (spec `negocio/03`). |
 | RF-12 | MVP | Conversión total | Consume todo el saldo de comisión y acredita comisión + mín(50% × puntos vigentes, comisión) una sola vez; si falla, no deja saldos a medias. |
-| RF-13 | MVP | Caducidad | Cada lote vence a seis meses según el corte definido; no queda canjeable ni vuelve a descontarse. |
+| RF-13 | MVP | Caducidad | Cada lote vence a los seis meses, al terminar ese día en hora de Colombia (P-38); no queda canjeable ni vuelve a descontarse. |
 | RF-14 | MVP | Canje | Precio completo, sin pago mixto, FIFO y remanentes; concurrencia no provoca sobregiro; IVA persistido. |
 | RF-15 | Posterior | Dietas | La app de dietas (Nutrition & Fitness Plus, aparte y desacoplada, con su propio backend) consulta a PremiumFitness por el documento del entrenador (`POST /api/integrations/diet-access`, servidor a servidor). Acceso por mes gratis (30 días desde el primer ingreso), meta del mes anterior (249.000 puntos por clientes, provisional) o canje de 50.000 puntos por el mes, que se hace en la app web; desactivación limitada a dietas (spec `integraciones/02`). |
 | RF-16 | MVP | Operación mínima | Acceso autorizado para gestionar/consultar datos necesarios de catálogo, pedidos, canjes y movimientos; ajustes auditados. |
-| RF-17 | MVP | Ajustes | Cancelaciones/devoluciones generan ajustes según la política acordada, ligados al original y sin duplicados. |
+| RF-17 | MVP | Reversión | Reversar un pedido pagado (o un canje) genera un ajuste ligado al original, una sola vez y sin duplicados. No hay devoluciones. |
 | RF-18 | MVP | Notificaciones push | FCM HTTP v1 desde el backend con outbox y cron; los fallos de envío no revierten compras, conversiones ni canjes (spec `integraciones/01`). |
 | RF-19 | MVP | Reportes | Por período y entrenador: ventas/IVA, IVA de canjes, comisiones y puntos emitidos, redimidos, vencidos y disponibles conciliados. Excel mensual generado en el cierre (CU-21), con hoja de cuadre y descarga solo con sesión de administrador (spec `negocio/05`). |
-| RF-20 | MVP | Activar puntos por referido | Primera compra aprobada de un cliente de B activa una sola vez los 50.000 puntos de A, sin monto mínimo. La compra propia de B no cuenta. B recibe sus recompensas normales. |
+| RF-20 | MVP | Activar puntos por referido | Primera compra aprobada de un cliente de B de al menos 149.000 en productos (con descuento e IVA, sin flete; variable `TRAINER_REFERRAL_MIN_PURCHASE`) activa una sola vez los 50.000 puntos de A. La compra propia de B no cuenta. B recibe sus recompensas normales. |
 | RF-21 | Mejora | Aviso de vencimiento | Avisos por lote y canal sin duplicados. Las fechas visibles sí forman parte del MVP. |
 | RF-22 | MVP | Liquidación mensual | Al corte del último día del mes se liquida la comisión no convertida y el Excel se envía a financiero. Financiero paga el día 4 del mes siguiente (o el siguiente día hábil), en un solo pago, por fuera de la app, y registra cada pago con fecha, referencia y comprobante; el entrenador recibe un push y ve el comprobante. La transferencia bancaria automática queda fuera. |
 | RF-23 | MVP | Compra entrenador | 25% en compra con dinero sobre todo el portafolio; no se aplica en canjes ni se mezcla dinero/puntos. |
@@ -295,14 +296,14 @@ Se conservan los identificadores del PRD anterior para facilitar revisión: RF-0
 ### Estados y consistencia
 
 - **Cuenta — propuesta:** pendiente de verificación, activa o suspendida; no confundirla con la disponibilidad de dietas.
-- **Pago:** pendiente, aprobado, rechazado o cancelado; devoluciones separadas según la política acordada.
-- **Pedido — propuesta:** creado, pendiente de pago, aprobado, en preparación, enviado y entregado; cancelaciones/devoluciones conservan historial.
+- **Pago:** pendiente, aprobado, rechazado o cancelado (los pone la pasarela); reversado, cuando se reversa un pedido pagado.
+- **Pedido — propuesta:** creado, pendiente de pago, aprobado, en preparación, enviado y entregado; una reversión conserva el historial.
 - **Comisión:** disponible tras compra aprobada; se consume por conversión, por ajuste o por la liquidación mensual, que se paga en dinero.
 - **Lote:** disponible, usado o caducado. Un lote parcial conserva remanente; el estado no sustituye las cantidades.
 - **Canje — propuesta:** solicitado, confirmado, en entrega, entregado o cancelado con restitución trazable.
 - **Dietas — posterior:** prueba gratuita, acceso por meta, acceso por puntos o desactivado.
 
-Pago, pedido, lote y acceso a dietas son estados distintos. Una devolución no borra la aprobación histórica; un ajuste no sobrescribe el movimiento original.
+Pago, pedido, lote y acceso a dietas son estados distintos. Una reversión no borra la aprobación histórica; un ajuste no sobrescribe el movimiento original.
 
 ## 11. Requisitos no funcionales
 
@@ -347,7 +348,7 @@ Los controles técnicos siguientes se verifican en el MVP. El cambio de entrenad
 | El precio o las existencias cambian durante el checkout | El servidor actualiza el resumen y exige revisar el nuevo total antes de iniciar un pago nuevo. |
 | Dos conversiones o canjes simultáneos | Solo se confirman operaciones cubiertas por saldo; nunca se produce sobregiro por concurrencia. |
 | Un lote vence durante el canje | La disponibilidad se valida en el momento de confirmar la transacción. |
-| Devolución posterior al consumo de recompensas | Se aplica la política aprobada de ajuste y conciliación, conservando todos los movimientos. |
+| Reversión posterior al consumo de recompensas | De los puntos solo se retira lo que quede del pedido; la comisión ya pagada se descuenta del mes siguiente. Se conservan todos los movimientos. |
 | Cambio de reglas durante una compra | La operación utiliza su versión de reglas; una cotización vencida exige revisión antes del pago. |
 | Proveedor de SMS/pagos o integración externa caído | Se ofrece reintento o estado de indisponibilidad sin perder el saldo ni alterar compras confirmadas. |
 
@@ -358,16 +359,16 @@ Estas decisiones completan las reglas; no dejan en duda los porcentajes, seis me
 | ID | Precisión | Responsable propuesto | Momento/impacto |
 | --- | --- | --- | --- |
 | D-01 | Moneda técnica, zona horaria y corte de períodos. | Negocio y tecnología | Arquitectura y cálculo temporal. |
-| D-02 | Catálogo, inventario, envío, entrega y cancelación de canjes. | Operación | Antes de checkout/canje real. |
+| D-02 | Resuelta el 26 nov 2026 (spec `backend/03`, P-37). Se canjea cualquier producto del catálogo, a precio completo y sin flete; un producto agotado no se canjea; la entrega sigue el camino de una compra (call center, SAP, guía); el gerente cancela con «Reversar» y se devuelven los puntos. Pendiente fuera de la app: el documento con que contabilidad registra un canje en SAP. | Operación | — |
 | D-03 | Resuelta el 9 nov 2026. **Puntos:** 5% de lo pagado por los productos (con descuento e IVA, sin envío), por pedido y redondeado al entero más cercano. **Comisión:** porcentaje vigente del producto sobre lo pagado con descuento, sin IVA y sin envío, por línea con 2 decimales; el total liquidado se redondea al peso. Es la misma base que usa hoy api-comisiones. | Negocio y finanzas | — |
 | D-04 | Resuelta el 9 nov 2026: puntos recibidos = comisión + mín(50% × puntos vigentes, comisión). | Negocio y finanzas | — |
-| D-05 | Parcialmente resuelta el 9 nov 2026: un rol por cuenta, `num_cell` único, login con celular y contraseña. Pendiente: autorreferidos y cuentas duplicadas. | Producto y tecnología | Acceso y referidos. |
+| D-05 | Resuelta el 26 nov 2026 (spec `backend/03`, P-35). Un rol por cuenta; celular (verificado por SMS), documento y correo únicos; el referido solo con una cuenta nueva y nunca a sí mismo. Contra cuentas falsas con datos de otra persona: los 50.000 puntos los activa una compra de al menos 149.000 en productos, los términos y condiciones lo prohíben y el gerente puede suspender al entrenador. No se bloquean compras por dirección o datos parecidos. | Producto y tecnología | Acceso y referidos. |
 | D-06 | Resuelta el 9 nov 2026: los 50.000 puntos pendientes no caducan; una vez activados, vencen a los seis meses. | Negocio | — |
-| D-07 | Corte exacto de seis meses y política de devolución con beneficios consumidos, incluyendo puntos restituidos (los 50.000 puntos de A ya tienen regla). | Negocio y finanzas | Antes del piloto. |
+| D-07 | Resuelta el 26 nov 2026. Reversión con beneficios consumidos: §7.4 y spec `backend/03`, P-17. Corte de los seis meses (P-38): cada lote vence al terminar ese día en hora de Colombia, la fecha que muestra la app; si el mes no tiene ese día, el último día del mes. | Negocio y finanzas | — |
 | D-08 | Resuelta el 9 nov 2026: la comisión no convertida se paga en dinero al final de cada mes. Pendiente en términos y condiciones: medio, plazo, mínimo y retenciones. | Negocio y legal | Antes del piloto. |
 | D-09 | Resuelta el 9 nov 2026 salvo el valor definitivo de la meta (249.000 puntos provisional, lógica sujeta a cambio): costo 50.000 puntos, mes gratis desde el primer ingreso, meta del mes anterior. | Negocio y producto | Antes de la fase de dietas. |
-| D-10 | Proveedor de pagos/SMS, verificación y conciliación disponibles en repositorios de referencia. | Tecnología y operación | Revisión e integración. |
-| D-11 | Duración y sustitución de cookie, varios QR, cliente existente, cambio de referente, ausencia de referencia y continuidad del 10%. | Negocio y producto | Antes de cerrar atribución/checkout. |
+| D-10 | Resuelta el 25 nov 2026. **Pagos:** Bold, Addi y Sistecrédito, con las cuentas de Nutramerican; un pedido = un pago, como en radical, con el id `pf-<pedido>` (spec `backend/03`, P-24). **SMS:** Relax Global, como en radical. | Tecnología y operación | — |
+| D-11 | Resuelta el 26 nov 2026 (spec `backend/03`, P-36). El enlace se guarda hasta cerrar la pestaña (si se pierde, el cliente escribe el cupón) y vale el último abierto. Un cliente asociado que abre el enlace de otro entrenador decide si cambia: solo cambian las compras nuevas. Sin entrenador, precio completo y sin recompensas. El 10% aplica mientras esté asociado. | Negocio y producto | — |
 | D-12 | Base de datos, distribución PWA, infraestructura y tamaño/concurrencia del piloto. | Tecnología y producto | Después de revisar repositorios; el backend (fork de radical, PHP 8.5 + MariaDB) y Angular ya están definidos. |
 | D-13 | Condiciones del programa, conservación de datos y permisos operativos/nutricionales. | Negocio y operación | Antes de uso real de cada módulo. |
 
@@ -381,7 +382,7 @@ Las decisiones de dietas no bloquean el MVP comercial.
 | Aplicación inconsistente de equivalencia o activación de los puntos por referido | Expectativas y saldos inconsistentes | Mostrar 1 peso = 1 punto y el origen/estado de los puntos por referido; verificar su activación única. |
 | Registros repetidos y autorreferidos | Abuso de puntos por referido y recompensas | Verificación, límites, trazabilidad y revisión de casos sospechosos con criterios acordados. |
 | Duplicación de pagos o recompensas | Diferencias financieras | Idempotencia, transacciones y conciliación con alertas. |
-| Devoluciones posteriores al canje | Saldo sin respaldo | Política explícita de ajustes y conciliación, respetando la acreditación al aprobar la compra. |
+| Reversiones posteriores al canje | Saldo sin respaldo | Política explícita de ajustes y conciliación, respetando la acreditación al aprobar la compra. |
 | App de dietas sin backend SaaS ni parámetros de acceso | Entrega posterior incompleta | Revisar Flutter/Angular, construir backend y precisar meta y costo antes de esa fase. |
 | Vencimientos poco visibles | Reclamos y pérdida de confianza | Fechas visibles por lote e historial; avisos previos en una siguiente iteración. |
 
@@ -407,7 +408,7 @@ Las [fases de desarrollo](fases-de-desarrollo.md) contienen tareas, repositorios
 3. Flujo A → QR entrenadores → B → compra aprobada de cliente de B → activación única de 50.000 para A.
 4. Compra propia con 25%, canje a precio completo, rechazo de pago mixto y conversión total probados.
 5. FIFO, consumo parcial, caducidad, saldo insuficiente y operaciones concurrentes sin doble gasto.
-6. Aprobaciones repetidas, pagos rechazados y devoluciones/ajustes según política acordada sin duplicar movimientos.
+6. Aprobaciones repetidas, pagos rechazados y reversiones sin duplicar movimientos.
 7. Ventas, IVA, comisiones y puntos conciliados; aislamiento de roles, recuperación y experiencia móvil verificados.
 8. Operación de pedidos/canjes, soporte, configuración, copias y restauración preparados para el piloto.
 

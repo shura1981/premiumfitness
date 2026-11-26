@@ -9,7 +9,7 @@ Que la gerencia vea en el admin los canjes de productos con puntos (CU-12), apar
 ## Alcance
 
 - Endpoint `GET /api/admin/reports/redemptions?date_from=&date_to=`, solo para gerentes, con:
-  - totales del rango: canjes efectivos, puntos canjeados, unidades, entrenadores que canjearon, canjes cancelados y sus puntos devueltos;
+  - totales del rango: canjes efectivos, puntos canjeados, unidades, entrenadores que canjearon, canjes reversados y sus puntos devueltos;
   - canjes y puntos por día;
   - productos más canjeados (unidades y puntos);
   - entrenadores que más canjean (canjes y puntos);
@@ -26,7 +26,7 @@ Que la gerencia vea en el admin los canjes de productos con puntos (CU-12), apar
 ## Criterios de aceptación
 
 1. Solo aparecen pedidos de canje (`order_type = 'redemption'`); ninguna compra.
-2. Un canje efectivo es uno en estado «APROBADA»; uno cancelado (estado «CANCELADA») no suma a los puntos canjeados y aparece aparte, con sus puntos devueltos.
+2. Un canje efectivo es uno en estado «APROBADA»; uno cancelado por un gerente (estado «REVERSADA», spec `backend/03` P-26) no suma a los puntos canjeados y aparece aparte, con sus puntos devueltos.
 3. Los puntos salen de lo guardado en cada pedido y línea (`redemption_points`); el reporte no recalcula precios.
 4. Un agente del call center recibe 403; un gerente ve el reporte.
 5. Un rango de fechas inválido o con «desde» mayor que «hasta» responde 422.
@@ -36,7 +36,7 @@ Que la gerencia vea en el admin los canjes de productos con puntos (CU-12), apar
 | # | Punto | Estado |
 | --- | --- | --- |
 | C-01 | La fecha de un canje es la de su aprobación (`approved_at`), que en un canje es la misma de su creación: no espera pago. | Derivado |
-| C-02 | Un canje cancelado devuelve todos sus puntos al entrenador en un lote nuevo (ajustes, RF-17): «puntos devueltos» es el costo del canje cancelado. | Confirmado (código de `AdjustmentService`) |
+| C-02 | Un canje reversado devuelve todos sus puntos al entrenador en un lote nuevo (RF-17): «puntos devueltos» es el costo del canje reversado. | Confirmado (código de `AdjustmentService`) |
 | C-03 | Solo lo ven los gerentes (`ADMIN_MANAGER_ROLES`), como entrenadores, estrategias y comisión, porque muestra lo que gasta cada entrenador. | Derivado |
 | C-04 | El Excel incluye el precio completo y el IVA de cada línea, que el canje guarda como referencia («entre más información se tenga mejor», Steven, 24 nov 2026). Son valores de referencia: no entró dinero. | Confirmado (24 nov 2026, Steven) |
 

@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Features\PaymentGateway\PaymentGatewayController;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
@@ -19,12 +18,8 @@ return static function (\Slim\App $app): void {
     // La recuperación de la contraseña va por la API y por SMS (spec seguridad/01, regla 7),
     // y el autologin por QR (`/qr`) tampoco existe: el «QR» es el enlace del entrenador (regla 12).
 
-    // -------------------------------------------------------------------------
-    // Payment Gateway Response Pages — HTML público para redirects del proveedor
-    // -------------------------------------------------------------------------
-    $paymentGatewayController = new PaymentGatewayController();
-
-    $app->get('/response/bold', [$paymentGatewayController, 'responseBold']);
+    // Las páginas de respuesta de las pasarelas (`/response/*` en radical) están en la app web:
+    // `/pago/resultado/<pasarela>` (spec integraciones/03).
 
     // Las apps Angular (web y admin) no se sirven desde el backend: cada una se despliega como
     // estáticos en su subdominio (spec arquitectura/02).

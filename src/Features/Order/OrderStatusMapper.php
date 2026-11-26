@@ -39,9 +39,9 @@ final class OrderStatusMapper
         $value = mb_strtoupper(trim((string) $statusValue));
 
         return match (true) {
-            // Una devolución total se muestra como un pedido cancelado.
-            str_contains($value, 'CANCELAD'), str_contains($value, 'ABANDONAD'), str_contains($value, 'DEVOLUCI') => self::CANCELLED,
-            str_contains($value, 'RECHAZAD'), str_contains($value, 'ERROR'), str_contains($value, 'REVERSAD'),
+            // Al cliente, un pedido reversado se le muestra cancelado.
+            str_contains($value, 'CANCELAD'), str_contains($value, 'ABANDONAD'), str_contains($value, 'REVERSAD') => self::CANCELLED,
+            str_contains($value, 'RECHAZAD'), str_contains($value, 'ERROR'),
             str_contains($value, 'EXPIRAD'), str_contains($value, 'ANTIFRAUDE') => self::REJECTED,
             !$isApproved                                                      => self::PENDING,
             $hasTracking                                                      => self::ON_THE_WAY,

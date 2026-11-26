@@ -22,6 +22,23 @@ class ReferralRepository extends AbstractRepository
         return $stmt->fetchColumn() !== false;
     }
 
+    /** Entrenador actual del cliente, o null si no tiene. */
+    public function trainerOf(int $clientId): ?int
+    {
+        $stmt = $this->pdo->prepare('SELECT trainer_id FROM client_referrals WHERE client_id = ?');
+        $stmt->execute([$clientId]);
+        $trainerId = $stmt->fetchColumn();
+
+        return $trainerId === false ? null : (int) $trainerId;
+    }
+
+    /** Cambia el entrenador del cliente (D-11). `linked_at` pasa a ser la fecha del cambio. */
+    public function changeClientTrainer(int $clientId, int $trainerId): void
+    {
+        $this->pdo->prepare("UPDATE client_referrals SET trainer_id = ?, source = 'link', linked_at = NOW() WHERE client_id = ?")
+            ->execute([$trainerId, $clientId]);
+    }
+
     /**
      * Asocia el cliente al entrenador. `client_id` es único: si ya tenía entrenador no cambia nada.
      * Devuelve true si creó el vínculo.

@@ -109,6 +109,7 @@ it('muestra el cupón, los dos enlaces, los clientes y los entrenadores referido
         ->and($body['client_link'])->toBe($_ENV['WEB_APP_URL'] . '/r/c/' . $id)
         ->and($body['trainer_link'])->toBe($_ENV['WEB_APP_URL'] . '/r/t/' . $id)
         ->and($body['trainer_referral_points'])->toBe((int) $_ENV['TRAINER_REFERRAL_POINTS'])
+        ->and($body['trainer_referral_min_purchase'])->toBe((int) $_ENV['TRAINER_REFERRAL_MIN_PURCHASE'])
         ->and($body['clients'][0])->toMatchArray(['id' => $client, 'orders_count' => 1])
         ->and($body['trainers'][0])->toMatchArray(['id' => $referred, 'status' => 'pendiente', 'points' => 50000, 'remaining_points' => 0])
         // De un cliente solo viaja el nombre: ni celular, ni correo, ni documento.

@@ -61,7 +61,7 @@ it('cuenta solo canjes, con los puntos exactos, y deja aparte los cancelados', f
             'cancelled_points' => $before['cancelled_points'] + 50000,
         ])
         ->and($list[$kept])->toMatchArray(['trainer_id' => $trainer, 'units' => 2, 'points' => 200000, 'status' => 'APROBADA', 'city' => 'CALI'])
-        ->and($list[$undone])->toMatchArray(['units' => 1, 'points' => 50000, 'status' => 'CANCELADA'])
+        ->and($list[$undone])->toMatchArray(['units' => 1, 'points' => 50000, 'status' => 'REVERSADA'])
         ->and($list)->not->toHaveKey($purchase)
         // Rankings: solo lo efectivo.
         ->and(array_column($repo->trainers($day, $day, 100000), null, 'id')[$trainer])->toBe(['id' => $trainer, 'full_name' => Shop::rows('SELECT full_name FROM users WHERE id = ?', [$trainer])[0]['full_name'], 'redemptions' => 1, 'points' => 200000])

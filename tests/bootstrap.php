@@ -13,6 +13,12 @@ $_ENV['SMS_DRIVER'] = 'memory';
 // máquina rechaza la conexión al instante, y el aviso, que no es crítico, se descarta.
 $_ENV['SOCKET_NOTIFICATION_URL'] = 'http://127.0.0.1:9';
 
+// Las pruebas nunca llaman a Addi ni a Sistecrédito: el .env local tiene las credenciales reales
+// (las del sitio de Nutramerican). Igual que el socket, sus API apuntan a un puerto cerrado.
+foreach (['ADDI_URL_TOKEN', 'ADDI_URL_REDIRECTION', 'SISTECREDITO_URL_CREATE_ORDER', 'SISTECREDITO_URL_QUERY_TRANSACTION'] as $gatewayUrl) {
+    $_ENV[$gatewayUrl] = 'http://127.0.0.1:9/' . strtolower($gatewayUrl);
+}
+
 // Sin caché del catálogo: las pruebas cambian productos y leen el resultado de inmediato.
 $_ENV['PRODUCT_CATALOG_CACHE_SECONDS'] = '0';
 

@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace App\Features\PaymentGateway\Gateways\Bold;
 
+use App\Features\Order\OrderRepository;
 use App\Features\PaymentGateway\ForeignPaymentReferenceException;
 use App\Features\PaymentGateway\Normalizer\PaymentStatusNormalizer;
-use App\Features\PaymentGateway\PaymentAttemptRepository;
-use App\Features\PaymentGateway\PaymentReferenceResolver;
 use App\Features\PaymentGateway\Result\PaymentResult;
 use RuntimeException;
 
@@ -35,7 +34,7 @@ final class BoldWebhookProcessor
 
     public function __construct(
         private readonly PaymentStatusNormalizer $normalizer = new PaymentStatusNormalizer(),
-        private ?PaymentReferenceResolver $references = null,
+        private ?OrderRepository $orders = null,
     ) {}
 
     /**
@@ -95,8 +94,8 @@ final class BoldWebhookProcessor
             throw new RuntimeException('Bold webhook: unsupported currency.');
         }
 
-        // La referencia es la del intento de pago (`pf-<id>`); la cuenta se comparte con el sitio web.
-        $orderId = $this->references()->orderIdFor($reference)
+        // El pedido se busca por su id de pago (`orders.payment_code`, P-24); la cuenta se comparte con otros proyectos.
+        $orderId = ($this->orders ??= new OrderRepository())->findOrderIdByPaymentCode($reference)
             ?? throw ForeignPaymentReferenceException::for('Bold', $reference);
 
         [$codStatus, $statusText] = $this->normalizer->normalize('bold', $rawType);
@@ -110,10 +109,5 @@ final class BoldWebhookProcessor
             amount:        (float) $rawTotal,
             rawPayload:    $payload,
         );
-    }
-
-    private function references(): PaymentReferenceResolver
-    {
-        return $this->references ??= new PaymentAttemptRepository();
     }
 }

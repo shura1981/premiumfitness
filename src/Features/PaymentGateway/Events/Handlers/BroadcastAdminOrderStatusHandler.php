@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Features\PaymentGateway\Events\Handlers;
 
 use App\Features\PaymentGateway\Events\PaymentEvent;
-use App\Infrastructure\Notification\SocketGatewayClient;
+use App\Infrastructure\Notification\RealtimeGateway;
 
 /**
  * Hace broadcast al panel admin tras cualquier cambio de estado de pago.
@@ -17,7 +17,7 @@ use App\Infrastructure\Notification\SocketGatewayClient;
 final class BroadcastAdminOrderStatusHandler implements PaymentEventHandlerInterface
 {
     public function __construct(
-        private readonly SocketGatewayClient $socket,
+        private readonly RealtimeGateway $socket,
     ) {}
 
     public function supports(PaymentEvent $event): bool
